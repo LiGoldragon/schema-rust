@@ -1,7 +1,16 @@
 # Architecture
 
-`schema-rust` emits Rust interface source from typed schema data. Its
-source-facing input is `schema::SchemaSource`, the schema-in-Rust value
+`schema-rust` emits Rust interface source from typed schema data and owns the
+shared build-driver orchestrator for generated schema modules. This repository
+owns the Rust code-generation step and that orchestrator; it does not define
+schema semantics, which belong to `schema`. Rust emission is a separate step
+from Rust macros: schema generates Rust code first, and macros are a later or
+separate consumption surface. Generated Rust is emitted into the consumer crate
+source tree under `src/schema/`, not hidden in `OUT_DIR`, so source-visible
+generated interfaces stay reviewable and can become committed or
+freshness-checked build artifacts.
+
+Its source-facing input is `schema::SchemaSource`, the schema-in-Rust value
 produced when authored `.schema` deserializes into Rust datatypes that fully
 define the schema and serialize through rkyv. Its semantic emission input is
 `schema::Schema`; there is no older assembled-schema artifact or path API
@@ -12,7 +21,9 @@ beside that typed source/schema pipeline.
 - `RustEmitter` is the code-generation engine.
 - `RustSchemaLowering` is the entry trait implemented for `schema::Schema`.
   The deserialized semantic schema object owns the lowering call; the emitter
-  supplies policy such as target, NOTA surface, and generator name.
+  supplies policy such as target, NOTA surface, and generator name. The trait
+  lives in this repository rather than in `schema` because `schema` owns schema
+  semantics and must not depend on Rust emission.
 - `RustSchemaSourceLowering` is the trait implemented for
   `schema::SchemaSource`. It lowers typed source through `SchemaEngine`
   and then through `RustSchemaLowering`.
