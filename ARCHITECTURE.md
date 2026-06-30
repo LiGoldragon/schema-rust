@@ -176,7 +176,12 @@ inline operation payloads. This emitter sees the typed source/schema data from
   Bare source bindings such as `Topic String`, `Topics (Vec Topic)`, or
   `Rejected SignalRejection` emit as Rust `type` aliases. A brace-body
   declaration with exactly one field emits as a tuple newtype.
-  `TypeDeclaration::Struct` is the named-field map shape.
+  `TypeDeclaration::Struct` is the named-field map shape. A newtype in
+  the assembled schema is a single-element brace with just the wrapped
+  type — `(Public Topic { String })`, not a derived field name; the
+  authoring surface for it is `Topic@String` / `Topic@{ String }`. The
+  generated tuple newtype carries a NOTA-transparent shape so
+  `Topic([foo])` and `topic.0` round-trip without a wrapper field name.
 - Generated Rust is source-visible under `src/schema/`; consumers include or
   compile that source rather than hiding the interface in `OUT_DIR` or behind a
   compiler macro expansion. The emitter builds every section as `proc_macro2`
@@ -189,6 +194,19 @@ inline operation payloads. This emitter sees the typed source/schema data from
   above).
 - Emission is tested by source fixture comparison and by compiling the fixture
   as Rust code.
+- Same-shape sibling variants consolidate by semantic family. When
+  several variants of a closed-sum enum carry identical payload shapes
+  (the common case for rkyv-wrapped closed sums), the emitter groups
+  them under one family-named variant whose body carries the original
+  variant name as data, rather than repeating one identical-shape
+  variant per name.
+- No `Interact` / `InteractionActor` trait surface is emitted. A method
+  call on an actor *is* the interaction, so the emitter produces no
+  mediator-interaction trait scaffolding; the mediator pattern survives
+  only as ordinary actor-method topology where the method body decides.
+  What stays is the two-languages distinction (internal effect vocabulary
+  vs external wire vocabulary), effect-table match-driven dispatch, and
+  actor fan-out expressed as method returns.
 - `RustEmissionTarget::WireContract` emits the external signal or meta-signal
   wire surface: schema nouns, derives, NOTA/rkyv codecs, short-header route
   constants, and the universal `signal-frame` request/reply surface (`Frame`,
@@ -410,7 +428,16 @@ inline operation payloads. This emitter sees the typed source/schema data from
   symbols, with generated defaults for symbols that have no explicit
   description. Generated help actions or client help output render that typed
   description data at the client edge; they are not hand-written CLI string
-  tables.
+  tables. The model is hybrid: `schema` owns the rkyv-encodable help
+  catalog as schema data, this emitter emits that catalog alongside the
+  generated contract with type-attached help accessors so a local text
+  client resolves Help without daemon transport, and `schema-daemon`
+  indexes the same catalogs by schema identity and content hash as the
+  reusable registry and query surface for `mentci`, language-service, and
+  other schema-aware clients. Each Help request exposes one structural
+  level through schema-emitted nouns and newtypes; primitive scalar
+  backing types appear only at scalar-backed leaf boundaries, and
+  containers keep their constructor with named element references.
 - Mail identifiers, origin routes, and short headers use the generated scalar
   floor (`Integer`) rather than bespoke primitive widths. This keeps the runtime
   mail support closer to schema-authored nouns while the core mail schema is
