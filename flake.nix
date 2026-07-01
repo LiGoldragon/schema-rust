@@ -186,7 +186,7 @@
             ! grep -R --include='*.generated.rs' "pub struct NotaBlock" ${src}/tests/fixtures
             ! grep -R --include='*.generated.rs' "pub struct NotaCollection" ${src}/tests/fixtures
             grep -R --include='*.generated.rs' "pub use nota" ${src}/tests/fixtures >/dev/null
-            grep -R --include='*.generated.rs' "derive(nota::NotaDecode, nota::NotaEncode" ${src}/tests/fixtures >/dev/null
+            grep -R --include='*.generated.rs' "derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode" ${src}/tests/fixtures >/dev/null
             ! grep -R --include='*.generated.rs' "impl NotaDecode for Input" ${src}/tests/fixtures
             ! grep -R --include='*.generated.rs' "impl NotaEncode for Input" ${src}/tests/fixtures
             touch $out
