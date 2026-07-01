@@ -237,24 +237,30 @@ fn emits_terminal_value_domains_as_scope_all() {
         .expect("schema source lowers");
     let generated = RustEmitter::default().emit_code_from_schema(&schema);
 
-    assert_code_contains(generated.as_str(), "Programming(Option<ProgrammingLeaf>),");
+    // Strict positional NOTA: the variant payload is required, so it carries
+    // the leaf directly with no `Option` wrapper and no bespoke codec.
+    assert_code_contains(generated.as_str(), "Programming(ProgrammingLeaf),");
+    assert_code_excludes(generated.as_str(), "Programming(Option<ProgrammingLeaf>)");
+    // The value leaf enum names its whole-category case with an explicit `All`
+    // member; the scope enum keeps its own catch-all `All` without duplication.
+    assert_code_contains(generated.as_str(), "pub enum ProgrammingLeaf");
     assert_code_contains(generated.as_str(), "pub enum ProgrammingLeafScope");
     assert_code_contains(generated.as_str(), "All,");
+    // Scope lowering is uniform: every payload variant maps `payload.into()`,
+    // with no optional-specific `match payload { Some / None }` branch.
     assert_code_contains(
         generated.as_str(),
         "Domain::Technology(payload) => Self::Technology(payload.into())",
     );
     assert_code_contains(
         generated.as_str(),
-        "Software::Programming(payload) => {\n                match payload",
+        "Software::Programming(payload) => Self::Programming(payload.into())",
     );
-    assert_code_contains(
+    // The leaf's `All` member collapses into the scope catch-all.
+    assert_code_contains(generated.as_str(), "ProgrammingLeaf::All => Self::All");
+    assert_code_excludes(
         generated.as_str(),
         "None => Self::Programming(ProgrammingLeafScope::All)",
-    );
-    assert_code_contains(
-        generated.as_str(),
-        "Some(payload) => Self::Programming(payload.into())",
     );
 }
 

@@ -1519,12 +1519,6 @@ impl RustEnum {
     pub fn has_only_unit_variants(&self) -> bool {
         self.variants.iter().all(RustEnumVariant::has_no_payload)
     }
-
-    fn has_optional_payload_variant(&self) -> bool {
-        self.variants
-            .iter()
-            .any(|variant| matches!(variant.payload(), Some(TypeReference::Optional(_))))
-    }
 }
 
 impl LowerToRust<RustEnum> for EnumDeclaration {
@@ -1927,21 +1921,16 @@ impl RustRenderContext {
     }
 
     fn enum_type_attributes(&self, enumeration: &RustEnum) -> Vec<TokenStream> {
-        self.derive_attributes_with_nota(
+        self.derive_attributes(
             enumeration.has_only_unit_variants(),
             self.map_key_type_names
                 .iter()
                 .any(|name| name == enumeration.name().as_str()),
-            !enumeration.has_optional_payload_variant(),
         )
     }
 
     fn root_enum_type_attributes(&self, enumeration: &RustEnum) -> Vec<TokenStream> {
-        self.derive_attributes_with_nota(
-            enumeration.has_only_unit_variants(),
-            false,
-            !enumeration.has_optional_payload_variant(),
-        )
+        self.derive_attributes(enumeration.has_only_unit_variants(), false)
     }
 
     fn scope_enum_type_attributes(&self) -> Vec<TokenStream> {
@@ -1949,22 +1938,13 @@ impl RustRenderContext {
     }
 
     fn derive_attributes(&self, includes_copy: bool, includes_ordering: bool) -> Vec<TokenStream> {
-        self.derive_attributes_with_nota(includes_copy, includes_ordering, true)
-    }
-
-    fn derive_attributes_with_nota(
-        &self,
-        includes_copy: bool,
-        includes_ordering: bool,
-        includes_nota: bool,
-    ) -> Vec<TokenStream> {
         let mut attributes = Vec::new();
-        if includes_nota && let NotaSurface::FeatureGated { feature } = &self.nota_surface {
+        if let NotaSurface::FeatureGated { feature } = &self.nota_surface {
             attributes.push(quote! {
                 #[cfg_attr(feature = #feature, derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode))]
             });
         }
-        let nota_derives = if includes_nota && self.nota_surface.includes_nota_in_derive() {
+        let nota_derives = if self.nota_surface.includes_nota_in_derive() {
             quote! { nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode, }
         } else {
             TokenStream::new()
@@ -4344,12 +4324,10 @@ impl ScopeEnumModel {
                         Self::push_model(payload, emitted.clone(), false, declarations, models);
                         emitted
                     });
-                let terminal_payload = variant.payload().is_some_and(Self::is_optional_payload);
                 ScopeEnumVariantModel::new(
                     variant.name().as_str().to_owned(),
                     payload_source,
                     payload_scope,
-                    terminal_payload,
                 )
             })
             .collect();
@@ -4381,15 +4359,8 @@ impl ScopeEnumModel {
     fn scope_payload_source_name(reference: &TypeReference) -> Option<String> {
         match reference {
             TypeReference::Plain(name) => Some(name.as_str().to_owned()),
-            TypeReference::Optional(inner) => {
-                inner.plain_name().map(|name| name.as_str().to_owned())
-            }
             _ => None,
         }
-    }
-
-    fn is_optional_payload(reference: &TypeReference) -> bool {
-        matches!(reference, TypeReference::Optional(_))
     }
 
     fn model_named<'model>(
@@ -4446,22 +4417,27 @@ struct ScopeEnumVariantModel {
     name: String,
     payload_source: Option<String>,
     payload_scope: Option<String>,
-    terminal_payload: bool,
 }
 
 impl ScopeEnumVariantModel {
-    fn new(
-        name: String,
-        payload_source: Option<String>,
-        payload_scope: Option<String>,
-        terminal_payload: bool,
-    ) -> Self {
+    /// The scope-universal variant name. A non-root scope enum always carries
+    /// this catch-all (`Self::All`), and a source enum whose own leaf-unspecified
+    /// member is named `All` collapses into that same catch-all rather than
+    /// producing a second variant.
+    const UNIVERSAL: &'static str = "All";
+
+    fn new(name: String, payload_source: Option<String>, payload_scope: Option<String>) -> Self {
         Self {
             name,
             payload_source,
             payload_scope,
-            terminal_payload,
         }
+    }
+
+    /// Whether this source variant is the leaf-unspecified `All` member that a
+    /// non-root scope enum represents with its auto-injected `Self::All`.
+    fn is_universal(&self) -> bool {
+        self.name == Self::UNIVERSAL
     }
 }
 
@@ -4548,16 +4524,21 @@ impl ToTokens for ScopeEnumTokens<'_, '_> {
                 All,
             }
         });
-        let variants = self.model.variants.iter().map(|variant| {
-            let variant_name = RustIdentifier::new(&variant.name);
-            match &variant.payload_scope {
-                Some(payload_scope) => {
-                    let payload = RustIdentifier::new(payload_scope);
-                    quote! { #variant_name(#payload), }
+        let variants = self
+            .model
+            .variants
+            .iter()
+            .filter(|variant| self.model.root || !variant.is_universal())
+            .map(|variant| {
+                let variant_name = RustIdentifier::new(&variant.name);
+                match &variant.payload_scope {
+                    Some(payload_scope) => {
+                        let payload = RustIdentifier::new(payload_scope);
+                        quote! { #variant_name(#payload), }
+                    }
+                    None => quote! { #variant_name, },
                 }
-                None => quote! { #variant_name, },
-            }
-        });
+            });
         quote! {
             #(#attributes)*
             #visibility enum #name {
@@ -4586,21 +4567,6 @@ impl ToTokens for ScopeOperationImplTokens<'_> {
         let from_arms = self.model.variants.iter().map(|variant| {
             let variant_name = RustIdentifier::new(&variant.name);
             match &variant.payload_source {
-                Some(_) if variant.terminal_payload => {
-                    let payload_scope = variant.payload_scope.as_ref().unwrap_or_else(|| {
-                        panic!(
-                            "terminal scope variant {} has no scope payload",
-                            variant.name
-                        )
-                    });
-                    let payload_scope = RustIdentifier::new(payload_scope);
-                    quote! {
-                        #source::#variant_name(payload) => match payload {
-                            Some(payload) => Self::#variant_name(payload.into()),
-                            None => Self::#variant_name(#payload_scope::All),
-                        },
-                    }
-                }
                 Some(_) => quote! {
                     #source::#variant_name(payload) => Self::#variant_name(payload.into()),
                 },
@@ -4609,19 +4575,24 @@ impl ToTokens for ScopeOperationImplTokens<'_> {
                 },
             }
         });
-        let contains_arms = self.model.variants.iter().map(|variant| {
-            let variant_name = RustIdentifier::new(&variant.name);
-            match &variant.payload_scope {
-                Some(_) => quote! {
-                    (Self::#variant_name(left), Self::#variant_name(right)) => {
-                        left.contains_scope(right)
-                    }
-                },
-                None => quote! {
-                    (Self::#variant_name, Self::#variant_name) => true,
-                },
-            }
-        });
+        let contains_arms = self
+            .model
+            .variants
+            .iter()
+            .filter(|variant| self.model.root || !variant.is_universal())
+            .map(|variant| {
+                let variant_name = RustIdentifier::new(&variant.name);
+                match &variant.payload_scope {
+                    Some(_) => quote! {
+                        (Self::#variant_name(left), Self::#variant_name(right)) => {
+                            left.contains_scope(right)
+                        }
+                    },
+                    None => quote! {
+                        (Self::#variant_name, Self::#variant_name) => true,
+                    },
+                }
+            });
         let all_contains_arm = (!self.model.root).then(|| {
             quote! {
                 (Self::All, _) => true,
@@ -4638,12 +4609,17 @@ impl ToTokens for ScopeOperationImplTokens<'_> {
                     (Self::All, _)
                 }
             });
-            let leaf_patterns = self.model.variants.iter().map(|variant| {
-                let variant_name = RustIdentifier::new(&variant.name);
-                quote! {
-                    (Self::#variant_name, Self::#variant_name)
-                }
-            });
+            let leaf_patterns = self
+                .model
+                .variants
+                .iter()
+                .filter(|variant| self.model.root || !variant.is_universal())
+                .map(|variant| {
+                    let variant_name = RustIdentifier::new(&variant.name);
+                    quote! {
+                        (Self::#variant_name, Self::#variant_name)
+                    }
+                });
             let patterns = all_pattern.into_iter().chain(leaf_patterns);
             quote! {
                 matches!((self, scope), #(#patterns)|*)
@@ -4816,380 +4792,6 @@ impl ToTokens for RustEnumTokens<'_, '_> {
             #visibility enum #name #generics {
                 #(#variants)*
             }
-        }
-        .to_tokens(tokens);
-
-        if self.enumeration.has_optional_payload_variant() && self.context.nota_surface.emits_nota()
-        {
-            RustOptionalEnumNotaTokens::new(self.enumeration, self.context).to_tokens(tokens);
-        }
-    }
-}
-
-struct RustOptionalEnumNotaTokens<'enumeration, 'context> {
-    enumeration: &'enumeration RustEnum,
-    context: &'context RustRenderContext,
-}
-
-impl<'enumeration, 'context> RustOptionalEnumNotaTokens<'enumeration, 'context> {
-    fn new(enumeration: &'enumeration RustEnum, context: &'context RustRenderContext) -> Self {
-        Self {
-            enumeration,
-            context,
-        }
-    }
-
-    /// Emit `NotaDecodeTraced` for this optional-leaf enum, mirroring its
-    /// hand-emitted `NotaBodyDecode` exactly so the per-instance schema rides
-    /// the same decode path. The enum-name is the expected reference; the chosen
-    /// variant is read from the value only to select the payload decoder. An
-    /// optional-leaf variant carries an `Optional` body (`None` for a bare
-    /// variant atom, `Some(<leaf>)` for `(Variant Leaf)`); a plain payload
-    /// variant carries the payload's own captured schema.
-    fn traced_tokens(&self) -> TokenStream {
-        let gate = self.context.nota_feature_gate();
-        let name = RustIdentifier::new(self.enumeration.name().as_str());
-        let enum_name = Literal::string(self.enumeration.name().as_str());
-
-        let unit_atom_arms = self
-            .enumeration
-            .variants()
-            .iter()
-            .filter(|variant| variant.payload().is_none())
-            .map(|variant| {
-                let variant_name = RustIdentifier::new(variant.name().as_str());
-                let tag = Literal::string(variant.name().as_str());
-                quote! {
-                    #tag => return Ok(nota::DecodedWithSchema::new(
-                        Self::#variant_name,
-                        nota::InstanceSchema::new(
-                            <Self as nota::NotaDecodeTraced>::instance_reference(),
-                            nota::InstanceSchemaBody::EnumPayload(None),
-                        ),
-                    )),
-                }
-            });
-
-        let optional_unit_atom_arms = self
-            .enumeration
-            .variants()
-            .iter()
-            .filter(|variant| matches!(variant.payload(), Some(TypeReference::Optional(_))))
-            .map(|variant| {
-                let variant_name = RustIdentifier::new(variant.name().as_str());
-                let tag = Literal::string(variant.name().as_str());
-                let optional_reference = self.optional_payload_reference(variant);
-                quote! {
-                    #tag => return Ok(nota::DecodedWithSchema::new(
-                        Self::#variant_name(None),
-                        nota::InstanceSchema::new(
-                            <Self as nota::NotaDecodeTraced>::instance_reference(),
-                            nota::InstanceSchemaBody::EnumPayload(Some(Box::new(
-                                nota::InstanceSchema::new(
-                                    #optional_reference,
-                                    nota::InstanceSchemaBody::Optional(None),
-                                ),
-                            ))),
-                        ),
-                    )),
-                }
-            });
-
-        let payload_arms = self.enumeration.variants().iter().filter_map(|variant| {
-            let payload = variant.payload()?;
-            let variant_name = RustIdentifier::new(variant.name().as_str());
-            let tag = Literal::string(variant.name().as_str());
-            match payload {
-                TypeReference::Optional(inner) => {
-                    let inner = RustTypeReferenceTokens::new(inner);
-                    let optional_reference = self.optional_payload_reference(variant);
-                    Some(quote! {
-                        #tag => {
-                            let leaf = <#inner as nota::NotaDecodeTraced>::from_nota_block_traced(&children[1])?;
-                            let (leaf_value, leaf_schema) = leaf.into_parts();
-                            Ok(nota::DecodedWithSchema::new(
-                                Self::#variant_name(Some(leaf_value)),
-                                nota::InstanceSchema::new(
-                                    <Self as nota::NotaDecodeTraced>::instance_reference(),
-                                    nota::InstanceSchemaBody::EnumPayload(Some(Box::new(
-                                        nota::InstanceSchema::new(
-                                            #optional_reference,
-                                            nota::InstanceSchemaBody::Optional(Some(Box::new(leaf_schema))),
-                                        ),
-                                    ))),
-                                ),
-                            ))
-                        }
-                    })
-                }
-                _ => {
-                    let payload = RustTypeReferenceTokens::new(payload);
-                    Some(quote! {
-                        #tag => {
-                            let decoded = <#payload as nota::NotaDecodeTraced>::from_nota_block_traced(&children[1])?;
-                            let (payload_value, payload_schema) = decoded.into_parts();
-                            Ok(nota::DecodedWithSchema::new(
-                                Self::#variant_name(payload_value),
-                                nota::InstanceSchema::new(
-                                    <Self as nota::NotaDecodeTraced>::instance_reference(),
-                                    nota::InstanceSchemaBody::EnumPayload(Some(Box::new(payload_schema))),
-                                ),
-                            ))
-                        }
-                    })
-                }
-            }
-        });
-
-        quote! {
-            #gate
-            impl nota::NotaDecodeTraced for #name {
-                fn instance_reference() -> nota::TypeReference {
-                    nota::TypeReference::named(#enum_name)
-                }
-
-                fn from_nota_block_traced(
-                    block: &nota::Block,
-                ) -> Result<nota::DecodedWithSchema<Self>, nota::NotaDecodeError> {
-                    if let Some(variant) = block.demote_to_string() {
-                        match variant {
-                            #(#unit_atom_arms)*
-                            #(#optional_unit_atom_arms)*
-                            other => return Err(nota::NotaDecodeError::UnknownVariant {
-                                enum_name: #enum_name,
-                                variant: other.to_owned(),
-                            }),
-                        }
-                    }
-                    let body = nota::NotaBlock::new(block).expect_body(
-                        nota::Delimiter::Parenthesis,
-                        #enum_name,
-                    )?;
-                    let children = body.expect_fields(#enum_name, 2)?;
-                    let variant = children[0].demote_to_string().ok_or(
-                        nota::NotaDecodeError::ExpectedAtom {
-                            type_name: "enum variant",
-                        },
-                    )?;
-                    match variant {
-                        #(#payload_arms)*
-                        other => Err(nota::NotaDecodeError::UnknownVariant {
-                            enum_name: #enum_name,
-                            variant: other.to_owned(),
-                        }),
-                    }
-                }
-            }
-        }
-    }
-
-    /// The `(Optional Leaf)` reference for an optional-leaf variant's payload
-    /// position, lifted into a nota `TypeReference` so the trace names the
-    /// optional and its element. Falls back to the enum name if the variant is
-    /// not optional (unreachable for the call sites, which pre-filter).
-    fn optional_payload_reference(&self, variant: &RustEnumVariant) -> TokenStream {
-        match variant.payload() {
-            Some(TypeReference::Optional(inner)) => {
-                let element = self.reference_to_instance(inner);
-                quote! { nota::TypeReference::optional(#element) }
-            }
-            _ => {
-                let enum_name = Literal::string(self.enumeration.name().as_str());
-                quote! { nota::TypeReference::named(#enum_name) }
-            }
-        }
-    }
-
-    /// Build the nota `TypeReference` constructor expression for a schema
-    /// `TypeReference`, matching the projection in schema's
-    /// `SourceReference::from_instance_reference`.
-    fn reference_to_instance(&self, reference: &TypeReference) -> TokenStream {
-        match reference {
-            TypeReference::Plain(name) => {
-                let literal = Literal::string(name.as_str());
-                quote! { nota::TypeReference::named(#literal) }
-            }
-            TypeReference::String => quote! { nota::TypeReference::named("String") },
-            TypeReference::Integer => quote! { nota::TypeReference::named("Integer") },
-            TypeReference::Boolean => quote! { nota::TypeReference::named("Boolean") },
-            TypeReference::Path => quote! { nota::TypeReference::named("Path") },
-            TypeReference::Bytes => quote! { nota::TypeReference::named("Bytes") },
-            TypeReference::FixedBytes(width) => {
-                let width = Literal::usize_unsuffixed(*width as usize);
-                quote! { nota::TypeReference::FixedBytes(#width) }
-            }
-            TypeReference::Vector(inner) => {
-                let inner = self.reference_to_instance(inner);
-                quote! { nota::TypeReference::vector(#inner) }
-            }
-            TypeReference::Optional(inner) => {
-                let inner = self.reference_to_instance(inner);
-                quote! { nota::TypeReference::optional(#inner) }
-            }
-            TypeReference::Map(key, value) => {
-                let key = self.reference_to_instance(key);
-                let value = self.reference_to_instance(value);
-                quote! { nota::TypeReference::map(#key, #value) }
-            }
-            other => {
-                // Scope and other compound references are not used at optional
-                // leaf positions in the spirit taxonomy; name them by their
-                // rendered form so the trace stays total.
-                let rendered = Literal::string(&format!("{other:?}"));
-                quote! { nota::TypeReference::named(#rendered) }
-            }
-        }
-    }
-}
-
-impl ToTokens for RustOptionalEnumNotaTokens<'_, '_> {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let gate = self.context.nota_feature_gate();
-        let name = RustIdentifier::new(self.enumeration.name().as_str());
-        let enum_name = Literal::string(self.enumeration.name().as_str());
-        let unit_arms = self
-            .enumeration
-            .variants()
-            .iter()
-            .filter(|variant| variant.payload().is_none())
-            .map(|variant| {
-                let variant_name = RustIdentifier::new(variant.name().as_str());
-                let tag = Literal::string(variant.name().as_str());
-                quote! { #tag => Ok(Self::#variant_name), }
-            });
-        let optional_unit_arms = self
-            .enumeration
-            .variants()
-            .iter()
-            .filter(|variant| matches!(variant.payload(), Some(TypeReference::Optional(_))))
-            .map(|variant| {
-                let variant_name = RustIdentifier::new(variant.name().as_str());
-                let tag = Literal::string(variant.name().as_str());
-                quote! { #tag => Ok(Self::#variant_name(None)), }
-            });
-        let payload_arms = self.enumeration.variants().iter().filter_map(|variant| {
-            let payload = variant.payload()?;
-            let variant_name = RustIdentifier::new(variant.name().as_str());
-            let tag = Literal::string(variant.name().as_str());
-            match payload {
-                TypeReference::Optional(inner) => {
-                    let inner = RustTypeReferenceTokens::new(inner);
-                    Some(quote! {
-                        #tag => Ok(Self::#variant_name(Some(
-                            <#inner as nota::NotaDecode>::from_nota_block(&children[1])?
-                        ))),
-                    })
-                }
-                _ => {
-                    let payload = RustTypeReferenceTokens::new(payload);
-                    Some(quote! {
-                        #tag => Ok(Self::#variant_name(
-                            <#payload as nota::NotaDecode>::from_nota_block(&children[1])?
-                        )),
-                    })
-                }
-            }
-        });
-        let encode_arms = self.enumeration.variants().iter().map(|variant| {
-            let variant_name = RustIdentifier::new(variant.name().as_str());
-            let tag = Literal::string(variant.name().as_str());
-            match variant.payload() {
-                None => quote! {
-                    Self::#variant_name => nota::NotaBodyEncoding::new(vec![#tag.to_owned()]),
-                },
-                Some(TypeReference::Optional(_)) => quote! {
-                    Self::#variant_name(payload) => {
-                        let mut fields = vec![#tag.to_owned()];
-                        if let Some(payload) = payload {
-                            fields.push(nota::NotaEncode::to_nota(payload));
-                        }
-                        nota::NotaBodyEncoding::new(fields)
-                    },
-                },
-                Some(_) => quote! {
-                    Self::#variant_name(payload) => nota::NotaBodyEncoding::new(vec![
-                        #tag.to_owned(),
-                        nota::NotaEncode::to_nota(payload),
-                    ]),
-                },
-            }
-        });
-        let traced = self.traced_tokens();
-        quote! {
-            #gate
-            impl nota::NotaBodyDecode for #name {
-                fn from_nota_body(
-                    body: &nota::NotaBody<'_>,
-                ) -> Result<Self, nota::NotaDecodeError> {
-                    let root_objects = body.root_objects();
-                    if root_objects.len() == 1
-                        && let Some(variant) = root_objects[0].demote_to_string()
-                    {
-                        return match variant {
-                            #(#unit_arms)*
-                            #(#optional_unit_arms)*
-                            other => Err(nota::NotaDecodeError::UnknownVariant {
-                                enum_name: #enum_name,
-                                variant: other.to_owned(),
-                            }),
-                        };
-                    }
-                    let children = body.expect_fields(#enum_name, 2)?;
-                    let variant = children[0].demote_to_string().ok_or(
-                        nota::NotaDecodeError::ExpectedAtom {
-                            type_name: "enum variant",
-                        },
-                    )?;
-                    match variant {
-                        #(#payload_arms)*
-                        other => Err(nota::NotaDecodeError::UnknownVariant {
-                            enum_name: #enum_name,
-                            variant: other.to_owned(),
-                        }),
-                    }
-                }
-            }
-
-            #gate
-            impl nota::NotaDecode for #name {
-                fn from_nota_block(
-                    block: &nota::Block,
-                ) -> Result<Self, nota::NotaDecodeError> {
-                    if block.demote_to_string().is_some() {
-                        let root_objects = std::slice::from_ref(block);
-                        let body = nota::NotaBody::new(root_objects);
-                        return <Self as nota::NotaBodyDecode>::from_nota_body(&body);
-                    }
-                    let body = nota::NotaBlock::new(block).expect_body(
-                        nota::Delimiter::Parenthesis,
-                        #enum_name,
-                    )?;
-                    <Self as nota::NotaBodyDecode>::from_nota_body(&body)
-                }
-            }
-
-            #gate
-            impl nota::NotaBodyEncode for #name {
-                fn to_nota_body(&self) -> nota::NotaBodyEncoding {
-                    match self {
-                        #(#encode_arms)*
-                    }
-                }
-            }
-
-            #gate
-            impl nota::NotaEncode for #name {
-                fn to_nota(&self) -> String {
-                    let body = <Self as nota::NotaBodyEncode>::to_nota_body(self);
-                    if body.fields().len() == 1 {
-                        body.to_nota()
-                    } else {
-                        body.to_delimited_nota(nota::Delimiter::Parenthesis)
-                    }
-                }
-            }
-
-            #traced
         }
         .to_tokens(tokens);
     }
