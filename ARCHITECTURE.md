@@ -497,3 +497,10 @@ inline operation payloads. This emitter sees the typed source/schema data from
   from `tests/fixtures/` through `tests/support::FixtureSchema` and
   `FixtureNota`. Inline Rust strings remain for short expected generated-code
   fragments; the actual schema/NOTA input surfaces stay visible as files.
+- `MigrationEmitter` in `src/migration.rs` derives upgrade/compatibility code
+  from a `schema::UpgradeObject`. It emits a Rust module containing `mod
+  historical` (the previous-version field shapes needed to read archived records)
+  and `mod current` (the next-version field shapes) and `impl From<historical::T>
+  for current::T` per changed type, materializing the `FieldMigration` directive.
+  Correctness is proved by a Layer-2 rustc-subprocess witness that compiles the
+  emitted code, not by a grep test.
