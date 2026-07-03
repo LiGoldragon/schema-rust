@@ -89,6 +89,10 @@ fn daemon_module_emits_the_component_daemon_hook_trait() {
     assert_code_contains(code, "const PROCESS_NAME: &'static str;");
     assert_code_contains(
         code,
+        "fn validate_configuration(configuration: &Self::Configuration) -> Result<(), Self::ConfigurationError>",
+    );
+    assert_code_contains(
+        code,
         "fn build_runtime(configuration: &Self::Configuration) -> Result<Self::Engine, Self::Error>;",
     );
     // The non-stream, non-component-decoded tier is the actor tier: the engine
@@ -109,6 +113,7 @@ fn daemon_module_emits_the_command_and_exit_entry() {
     assert_code_contains(code, "pub struct DaemonCommand<Daemon: ComponentDaemon>");
     assert_code_contains(code, "self.command.signal_file_argument()?");
     assert_code_contains(code, "Daemon::load_configuration(file.as_path())");
+    assert_code_contains(code, "Daemon::validate_configuration(&configuration)");
     assert_code_contains(code, "tokio::runtime::Runtime::new()");
     assert_code_contains(code, "pub trait DaemonEntry: ComponentDaemon");
     assert_code_contains(code, "fn run_to_exit_code() -> std::process::ExitCode");
