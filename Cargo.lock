@@ -493,7 +493,7 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 [[package]]
 name = "schema"
 version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/schema.git?branch=main#9af2c546f10c9aec5fd6669592aed32f72077df2"
+source = "git+https://github.com/LiGoldragon/schema.git?branch=drop-next#a393c8c822cea737d7ed8e823eae7d821ea19bf2"
 dependencies = [
  "blake3",
  "nota",
@@ -505,7 +505,7 @@ dependencies = [
 [[package]]
 name = "schema-cc"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/schema.git?branch=main#9af2c546f10c9aec5fd6669592aed32f72077df2"
+source = "git+https://github.com/LiGoldragon/schema.git?branch=drop-next#a393c8c822cea737d7ed8e823eae7d821ea19bf2"
 dependencies = [
  "nota",
  "prettyplease",
