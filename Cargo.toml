@@ -13,11 +13,11 @@ name = "schema_rust"
 path = "src/lib.rs"
 
 [dependencies]
-nota = { package = "nota", git = "https://github.com/LiGoldragon/nota-next.git", branch = "main" }
+nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", branch = "main" }
 prettyplease = "0.2"
 proc-macro2 = "1"
 quote = "1"
-schema = { package = "schema", git = "https://github.com/LiGoldragon/schema-next.git", branch = "main" }
+schema = { package = "schema", git = "https://github.com/LiGoldragon/schema.git", branch = "main" }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
 triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
