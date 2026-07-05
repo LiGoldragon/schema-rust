@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     print!(
         "{}",
         RustEmitter::default()
-            .emit_code_from_schema(&schema)
+            .emit_code_from_true_schema(&schema)
             .as_str()
     );
     Ok(())

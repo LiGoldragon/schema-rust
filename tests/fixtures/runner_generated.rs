@@ -117,9 +117,13 @@ pub struct StashHandle(Integer);
 
 #[rustfmt::skip]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct RecordCount(Integer);
+
+#[rustfmt::skip]
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct StashResult {
     pub stash_handle: StashHandle,
-    pub record_count: Integer,
+    pub record_count: RecordCount,
     pub database_marker: DatabaseMarker,
 }
 
@@ -295,6 +299,25 @@ impl StashHandle {
 }
 #[rustfmt::skip]
 impl From<Integer> for StashHandle {
+    fn from(payload: Integer) -> Self {
+        Self::new(payload)
+    }
+}
+
+#[rustfmt::skip]
+impl RecordCount {
+    pub fn new(payload: Integer) -> Self {
+        Self(payload)
+    }
+    pub fn payload(&self) -> &Integer {
+        &self.0
+    }
+    pub fn into_payload(self) -> Integer {
+        self.0
+    }
+}
+#[rustfmt::skip]
+impl From<Integer> for RecordCount {
     fn from(payload: Integer) -> Self {
         Self::new(payload)
     }

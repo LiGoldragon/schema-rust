@@ -130,6 +130,22 @@ pub struct Topic(String);
     derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Healthy(Boolean);
+
+#[rustfmt::skip]
+#[cfg_attr(
+    feature = "nota-text",
+    derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)
+)]
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ConfigPath(Path);
+
+#[rustfmt::skip]
+#[cfg_attr(
+    feature = "nota-text",
+    derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)
+)]
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Digest(Bytes);
 
 #[rustfmt::skip]
@@ -150,8 +166,8 @@ pub struct Cluster {
     pub service_vector: Vec<Service>,
     pub node_config_by_node_name: std::collections::BTreeMap<NodeName, NodeConfig>,
     pub optional_node_config: Option<NodeConfig>,
-    pub healthy: Boolean,
-    pub config_path: Path,
+    pub healthy: Healthy,
+    pub config_path: ConfigPath,
     pub digest: Digest,
     pub fingerprint: Fingerprint,
 }
@@ -269,6 +285,44 @@ impl Topic {
 #[rustfmt::skip]
 impl From<String> for Topic {
     fn from(payload: String) -> Self {
+        Self::new(payload)
+    }
+}
+
+#[rustfmt::skip]
+impl Healthy {
+    pub fn new(payload: Boolean) -> Self {
+        Self(payload)
+    }
+    pub fn payload(&self) -> &Boolean {
+        &self.0
+    }
+    pub fn into_payload(self) -> Boolean {
+        self.0
+    }
+}
+#[rustfmt::skip]
+impl From<Boolean> for Healthy {
+    fn from(payload: Boolean) -> Self {
+        Self::new(payload)
+    }
+}
+
+#[rustfmt::skip]
+impl ConfigPath {
+    pub fn new(payload: impl Into<String>) -> Self {
+        Self(payload.into())
+    }
+    pub fn payload(&self) -> &Path {
+        &self.0
+    }
+    pub fn into_payload(self) -> Path {
+        self.0
+    }
+}
+#[rustfmt::skip]
+impl From<Path> for ConfigPath {
+    fn from(payload: Path) -> Self {
         Self::new(payload)
     }
 }

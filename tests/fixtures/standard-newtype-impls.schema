@@ -1,9 +1,9 @@
 [(Record NameText)]
 [(Accepted NameText)]
 {
-  NameText String {| Display AsRef PartialEq |}
-  FilePath Path {| Display AsRef PartialEq |}
-  Count Integer {| Display PartialEq PartialOrd |}
-  Enabled Boolean {| Display PartialEq |}
+  NameText String { | Display AsRef PartialEq | }
+  FilePath Path { | Display AsRef PartialEq | }
+  Count Integer { | Display PartialEq PartialOrd | }
+  Enabled Boolean { | Display PartialEq | }
   WrappedName NameText
 }

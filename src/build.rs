@@ -680,15 +680,17 @@ impl GeneratedModule {
         )
         .validate()?;
         let rust_file = match emission.daemon_shape() {
-            Some(daemon_shape) => {
-                DaemonModule::new(daemon_shape.clone(), environment.schema(), "schema-rust")
-                    .to_generated_file()
-            }
+            Some(daemon_shape) => DaemonModule::new(
+                daemon_shape.clone(),
+                environment.true_schema(),
+                "schema-rust",
+            )
+            .to_generated_file(),
             None => {
                 let module = RustEmitter::new(emission.options().clone())
-                    .emit_module_from_specified_schema(environment.specified());
+                    .emit_module_from_true_schema(environment.true_schema());
                 module.verify_names()?;
-                module.verify_catalog(environment.schema())?;
+                module.verify_catalog(environment.true_schema())?;
                 GeneratedFile {
                     path: module.file_path().to_owned(),
                     code: module.render(),

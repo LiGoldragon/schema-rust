@@ -1,53 +1,50 @@
-{
-  Work reaction:reaction:Work
-  Action reaction:reaction:Action
-}
+{ Work reaction:reaction:Work Action reaction:reaction:Action }
 (Work SignalInput SemaWriteOutput SemaReadOutput EffectOutcome)
 (Action SignalOutput SemaWriteSet SemaReadInput EffectCommand (Work SignalInput SemaWriteOutput SemaReadOutput EffectOutcome))
 {
-  SignalInput { payload.String }
-  SignalOutput { reply.String }
-  SemaReadInput { selector.String }
-  SemaReadOutput { records.Integer }
-  SemaWriteOutput { written.Boolean }
-  Records { count.Integer }
-  RecordCount { value.Integer }
-  StashHandle { value.Integer }
+  SignalInput { String }
+  SignalOutput { String }
+  SemaReadInput { String }
+  SemaReadOutput { Integer }
+  SemaWriteOutput { Boolean }
+  Records { Integer }
+  RecordCount { Integer }
+  StashHandle { Integer }
   DatabaseMarker { commitSequence.Integer stateDigest.Integer }
-  Statement { text.String }
-  RecordRequest { domain.String }
-  Proposal { domain.String }
-  Entry { domain.String }
-  Clarification { text.String }
-  Supersession { reason.String }
-  Retirement { reason.String }
-  SemaReceipt { identifier.RecordIdentifier marker.DatabaseMarker }
-  ClarificationReceipt { ok.Boolean }
-  SupersessionReceipt { ok.Boolean }
-  RetirementReceipt { ok.Boolean }
-  RemoveReceipt { ok.Boolean }
-  RecordChangeReceipt { ok.Boolean }
-  GuardianRejection { reason.GuardianRejectionReason Explanation }
-  GuardianRejectionReason { code.String }
-  ReferentGuardianRejection { reason.ReferentGuardianRejectionReason Explanation }
-  ReferentGuardianRejectionReason { code.String }
-  Explanation { text.String }
-  ErrorReport { message.String }
-  Query { text.String }
-  SubscriptionToken { value.Integer }
-  IntentSubscription { token.SubscriptionToken }
-  RecordIdentifier { value.String }
-  Removal { identifier.RecordIdentifier }
-  CertaintyChange { delta.Integer }
-  ImportanceBump { delta.Integer }
-  RecordChange { identifier.RecordIdentifier }
-  ReferentRegistration { name.String }
-  ReferentRegistrationReceipt { ok.Boolean }
-  RemovalCandidateCollection { selector.String }
-  RemovalCandidatesCollection { count.Integer }
-  ObserverFilter { selector.String }
-  ObserverSubscription { token.SubscriptionToken }
-  ObserverRetraction { token.SubscriptionToken }
+  Statement { String }
+  RecordRequest { String }
+  Proposal { String }
+  Entry { String }
+  Clarification { String }
+  Supersession { String }
+  Retirement { String }
+  SemaReceipt { RecordIdentifier DatabaseMarker }
+  ClarificationReceipt { Boolean }
+  SupersessionReceipt { Boolean }
+  RetirementReceipt { Boolean }
+  RemoveReceipt { Boolean }
+  RecordChangeReceipt { Boolean }
+  GuardianRejection { GuardianRejectionReason Explanation }
+  GuardianRejectionReason { String }
+  ReferentGuardianRejection { ReferentGuardianRejectionReason Explanation }
+  ReferentGuardianRejectionReason { String }
+  Explanation { String }
+  ErrorReport { String }
+  Query { String }
+  SubscriptionToken { Integer }
+  IntentSubscription { SubscriptionToken }
+  RecordIdentifier { String }
+  Removal { RecordIdentifier }
+  CertaintyChange { Integer }
+  ImportanceBump { Integer }
+  RecordChange { RecordIdentifier }
+  ReferentRegistration { String }
+  ReferentRegistrationReceipt { Boolean }
+  RemovalCandidateCollection { String }
+  RemovalCandidatesCollection { Integer }
+  ObserverFilter { String }
+  ObserverSubscription { SubscriptionToken }
+  ObserverRetraction { SubscriptionToken }
 
   SemaWriteSet [(Record) (Remove) (ChangeCertainty) (BumpImportance) (ChangeRecord) (RegisterReferent)]
   Record Entry
@@ -100,6 +97,6 @@
   ObserverTapOpened ObserverSubscription
   ObserverTapClosed ObserverRetraction
 
-  StashRequest { Records marker.DatabaseMarker }
-  StashResult { handle.StashHandle count.RecordCount marker.DatabaseMarker }
+  StashRequest { Records DatabaseMarker }
+  StashResult { StashHandle RecordCount DatabaseMarker }
 }

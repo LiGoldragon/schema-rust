@@ -1,5 +1,5 @@
 {
-  description = "schema-rust — Rust source emitter for assembled schemas";
+  description = "schema-rust — Rust source emitter for TrueSchema";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -158,8 +158,9 @@
             touch $out
           '';
           no-production-free-functions = pkgs.runCommand "schema-rust-no-production-free-functions" { } ''
-            if grep -R -n -E '^(pub(\([^)]*\))? )?fn ' ${src}/src; then
-              echo "production Rust must not use module-level free functions" >&2
+            if find ${src}/src -path ${src}/src/bin -prune -o -type f -name '*.rs' -print0 \
+              | xargs -0 grep -n -E '^(pub(\([^)]*\))? )?fn '; then
+              echo "production Rust must not use module-level free functions outside binary main entrypoints" >&2
               exit 1
             fi
             touch $out

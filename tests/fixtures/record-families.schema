@@ -5,7 +5,7 @@
   Description String
   RecordIdentifier Integer
   Entry { Topic Description }
-  Observation { note.Description }
+  Observation { Description }
   Query { Topic }
   RecordSet (Vector Entry)
   EntryFamily (Family { record.Entry table.entries key.Domain })

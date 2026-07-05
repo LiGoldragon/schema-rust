@@ -8,11 +8,11 @@ fn emit_standard_newtype_impls() -> String {
     // No flag: the standard payload-delegating impls are now DRIVEN by the
     // `{| … |}` catalog the fixture carries, not by an emission flag. The
     // catalog rides inside the lowered module, so even the infallible
-    // `emit_code_from_schema` path emits them.
+    // `emit_code_from_true_schema` path emits them.
     let schema = FixtureSchema::new("standard-newtype-impls.schema").lower("standard:impls");
     let options = RustEmissionOptions::binary_only();
     RustEmitter::new(options)
-        .emit_code_from_schema(&schema)
+        .emit_code_from_true_schema(&schema)
         .as_str()
         .to_owned()
 }

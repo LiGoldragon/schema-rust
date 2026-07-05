@@ -1,5 +1,4 @@
-{ DatabaseMarker marker-core:mail:DatabaseMarker
-  CommitSequence marker-core:mail:CommitSequence }
+{ DatabaseMarker marker-core:mail:DatabaseMarker CommitSequence marker-core:mail:CommitSequence }
 [(Record Entry)
  (Observe Query)
  (Mark DatabaseMarker)

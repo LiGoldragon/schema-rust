@@ -3,11 +3,9 @@ use quote::{ToTokens, quote};
 use schema::{
     Declaration, EnumDeclaration, EnumVariant, FamilyDeclaration, FamilyKey, FieldDeclaration,
     ImplFact, ImplReference, ImportResolver, MethodParameter, MethodSignature, Name,
-    NewtypeDeclaration, ReferencedImpl, RelationDeclaration, RelationValue, ResolvedImport,
-    RootApplication, RustSurface, Schema, SchemaEngine, SchemaError, SchemaIdentity, SchemaSource,
-    SpecifiedDeclaration, SpecifiedDeclarationBody, SpecifiedField, SpecifiedRoot,
-    SpecifiedRootApplication, SpecifiedRootEnum, SpecifiedSchema, SpecifiedVariant,
-    StreamDeclaration, StructDeclaration, TypeDeclaration, TypeReference, Visibility,
+    NewtypeDeclaration, ReferencedImpl, RelationDeclaration, RelationValue, ResolvedImport, Root,
+    RootApplication, RustSurface, SchemaEngine, SchemaError, SchemaIdentity, SchemaSource,
+    StreamDeclaration, StructDeclaration, TrueSchema, TypeDeclaration, TypeReference, Visibility,
 };
 
 pub mod build;
@@ -82,11 +80,7 @@ impl RustEmitter {
         }
     }
 
-    pub fn emit_file_from_schema(&self, schema: &Schema) -> GeneratedFile {
-        schema.lower_to_rust_file(self)
-    }
-
-    pub fn emit_file_from_specified_schema(&self, schema: &SpecifiedSchema) -> GeneratedFile {
+    pub fn emit_file_from_true_schema(&self, schema: &TrueSchema) -> GeneratedFile {
         schema.lower_to_rust_file(self)
     }
 
@@ -100,19 +94,11 @@ impl RustEmitter {
         source.lower_to_rust_file(identity, engine, resolver, self)
     }
 
-    pub fn emit_code_from_schema(&self, schema: &Schema) -> RustCode {
+    pub fn emit_code_from_true_schema(&self, schema: &TrueSchema) -> RustCode {
         schema.lower_to_rust_code(self)
     }
 
-    pub fn emit_code_from_specified_schema(&self, schema: &SpecifiedSchema) -> RustCode {
-        schema.lower_to_rust_code(self)
-    }
-
-    pub fn emit_module_from_schema(&self, schema: &Schema) -> RustModule {
-        schema.lower_to_rust_module(self)
-    }
-
-    pub fn emit_module_from_specified_schema(&self, schema: &SpecifiedSchema) -> RustModule {
+    pub fn emit_module_from_true_schema(&self, schema: &TrueSchema) -> RustModule {
         schema.lower_to_rust_module(self)
     }
 
@@ -127,27 +113,13 @@ impl RustEmitter {
     }
 }
 
-pub trait RustSchemaLowering {
+pub trait RustTrueSchemaLowering {
     fn lower_to_rust_file(&self, emitter: &RustEmitter) -> GeneratedFile;
     fn lower_to_rust_code(&self, emitter: &RustEmitter) -> RustCode;
     fn lower_to_rust_module(&self, emitter: &RustEmitter) -> RustModule;
 }
 
-impl RustSchemaLowering for Schema {
-    fn lower_to_rust_file(&self, emitter: &RustEmitter) -> GeneratedFile {
-        SpecifiedSchema::from(self).lower_to_rust_file(emitter)
-    }
-
-    fn lower_to_rust_code(&self, emitter: &RustEmitter) -> RustCode {
-        SpecifiedSchema::from(self).lower_to_rust_code(emitter)
-    }
-
-    fn lower_to_rust_module(&self, emitter: &RustEmitter) -> RustModule {
-        SpecifiedSchema::from(self).lower_to_rust_module(emitter)
-    }
-}
-
-impl RustSchemaLowering for SpecifiedSchema {
+impl RustTrueSchemaLowering for TrueSchema {
     fn lower_to_rust_file(&self, emitter: &RustEmitter) -> GeneratedFile {
         let module = self.lower_to_rust_module(emitter);
         GeneratedFile {
@@ -244,43 +216,43 @@ impl RustLoweringContext {
         self.options.clone()
     }
 
-    fn lower_specified_declaration(
+    fn lower_true_schema_declaration(
         &self,
-        schema: &SpecifiedSchema,
-        declaration: &SpecifiedDeclaration,
+        schema: &TrueSchema,
+        declaration: &Declaration,
     ) -> RustDeclaration {
-        if let Some(expanded) = self.expand_specified_newtype_frame_application(schema, declaration)
+        if let Some(expanded) =
+            self.expand_true_schema_newtype_frame_application(schema, declaration)
         {
             return expanded;
         }
         declaration.lower_to_rust(self)
     }
 
-    fn expand_specified_newtype_frame_application(
+    fn expand_true_schema_newtype_frame_application(
         &self,
-        schema: &SpecifiedSchema,
-        declaration: &SpecifiedDeclaration,
+        schema: &TrueSchema,
+        declaration: &Declaration,
     ) -> Option<RustDeclaration> {
         if !declaration.parameters().is_empty() {
             return None;
         }
-        let SpecifiedDeclarationBody::Newtype(reference) = declaration.body() else {
+        let TypeDeclaration::Newtype(newtype) = declaration.value() else {
             return None;
         };
-        let TypeReference::Application { head, arguments } = reference else {
+        let TypeReference::Application { head, arguments } = &newtype.reference else {
             return None;
         };
-        let variants = if let Some(frame) = schema.declaration_named(head.name().as_str()) {
-            let SpecifiedDeclarationBody::Enum(variants) = frame.body() else {
-                return None;
-            };
-            self.expand_specified_frame_variants(schema, frame.parameters(), arguments, variants)
+        let variants = if let Some((parameters, variants)) =
+            schema.declared_frame_body(head.name().as_str())
+        {
+            self.expand_true_schema_frame_variants(schema, parameters, arguments, variants)
         } else {
             let import = schema
                 .resolved_imports()
                 .iter()
                 .find(|import| import.local_name() == head.name())?;
-            self.expand_imported_frame_variants(
+            self.expand_true_schema_frame_variants(
                 schema,
                 import.parameters(),
                 arguments,
@@ -299,30 +271,9 @@ impl RustLoweringContext {
         })
     }
 
-    fn expand_specified_frame_variants(
+    fn expand_true_schema_frame_variants(
         &self,
-        schema: &SpecifiedSchema,
-        parameters: &[Name],
-        arguments: &[TypeReference],
-        variants: &[SpecifiedVariant],
-    ) -> Vec<RustEnumVariant> {
-        variants
-            .iter()
-            .map(|variant| RustEnumVariant {
-                name: variant.name().clone(),
-                payload: variant.payload().map(|payload| {
-                    self.reaim_sibling_application(
-                        schema,
-                        &self.substitute_frame_binder(parameters, arguments, payload.reference()),
-                    )
-                }),
-            })
-            .collect()
-    }
-
-    fn expand_imported_frame_variants(
-        &self,
-        schema: &SpecifiedSchema,
+        schema: &TrueSchema,
         parameters: &[Name],
         arguments: &[TypeReference],
         variants: &[EnumVariant],
@@ -360,12 +311,12 @@ impl RustLoweringContext {
 
     fn reaim_sibling_application(
         &self,
-        schema: &SpecifiedSchema,
+        schema: &TrueSchema,
         payload: &TypeReference,
     ) -> TypeReference {
-        for root in [schema.input(), schema.output()] {
-            if let SpecifiedRoot::Application(application) = root
-                && application.reference() == payload
+        for root in schema.input_and_output() {
+            if let Root::Application(application) = root
+                && TypeReference::from(application.as_ref()) == *payload
             {
                 return TypeReference::Plain(application.name().clone());
             }
@@ -396,16 +347,8 @@ pub struct RustModule {
 }
 
 impl RustModule {
-    pub fn from_schema(
-        schema: &Schema,
-        generator_name: impl Into<String>,
-        options: RustEmissionOptions,
-    ) -> Self {
-        Self::from_specified_schema(&SpecifiedSchema::from(schema), generator_name, options)
-    }
-
-    pub fn from_specified_schema(
-        schema: &SpecifiedSchema,
+    pub fn from_true_schema(
+        schema: &TrueSchema,
         generator_name: impl Into<String>,
         options: RustEmissionOptions,
     ) -> Self {
@@ -545,7 +488,7 @@ impl RustModule {
     /// trusted into the surface so the check does not reject the crate-provided
     /// impl. The full real-crate scan that would verify those too is a named
     /// follow-up, not silently claimed here.
-    pub fn verify_catalog(&self, schema: &Schema) -> Result<(), SchemaError> {
+    pub fn verify_catalog(&self, schema: &TrueSchema) -> Result<(), SchemaError> {
         EmittedRustSurface::for_schema(self, schema)
             .into_surface()
             .verify_catalog(schema)
@@ -681,28 +624,24 @@ impl RustModule {
     }
 }
 
-impl LowerToRust<RustModule> for Schema {
-    fn lower_to_rust(&self, context: &RustLoweringContext) -> RustModule {
-        SpecifiedSchema::from(self).lower_to_rust(context)
-    }
-}
-
-impl LowerToRust<RustModule> for SpecifiedSchema {
+impl LowerToRust<RustModule> for TrueSchema {
     fn lower_to_rust(&self, context: &RustLoweringContext) -> RustModule {
         let declarations = self
-            .declarations()
+            .namespace()
             .iter()
-            .map(|declaration| context.lower_specified_declaration(self, declaration))
+            .map(|declaration| context.lower_true_schema_declaration(self, declaration))
             .collect::<Vec<_>>();
         let mut root_enums = Vec::new();
         let mut applied_roots = Vec::new();
-        for root in [self.input(), self.output()] {
+        for root in self.input_and_output() {
             match root {
-                SpecifiedRoot::Enum(root) => root_enums.push(root.lower_to_rust(context)),
-                SpecifiedRoot::Application(application) => match application.expanded() {
-                    Some(expanded) => root_enums.push(expanded.lower_to_rust(context)),
-                    None => applied_roots.push(application.lower_to_rust(context)),
-                },
+                Root::Enum(root) => root_enums.push(root.lower_to_rust(context)),
+                Root::Application(application) => {
+                    match self.expand_application_root(application.as_ref()) {
+                        Some(expanded) => root_enums.push(expanded.lower_to_rust(context)),
+                        None => applied_roots.push(application.as_ref().lower_to_rust(context)),
+                    }
+                }
             }
         }
         RustModule {
@@ -727,7 +666,7 @@ impl LowerToRust<RustModule> for SpecifiedSchema {
                 self, context,
             ),
             support: <Self as LowerToRust<RustSupportModel>>::lower_to_rust(self, context),
-            referenced_impls: SpecifiedReferencedImpls::new(self).lower_to_rust(context),
+            referenced_impls: TrueSchemaReferencedImpls::new(self).lower_to_rust(context),
             options: context.options(),
         }
     }
@@ -1191,13 +1130,7 @@ impl RustVersionedStore {
     }
 }
 
-impl LowerToRust<RustVersionedStore> for Schema {
-    fn lower_to_rust(&self, _context: &RustLoweringContext) -> RustVersionedStore {
-        SpecifiedSchema::from(self).lower_to_rust(_context)
-    }
-}
-
-impl LowerToRust<RustVersionedStore> for SpecifiedSchema {
+impl LowerToRust<RustVersionedStore> for TrueSchema {
     fn lower_to_rust(&self, _context: &RustLoweringContext) -> RustVersionedStore {
         RustVersionedStore {
             store_name: self.identity().component().as_str().to_owned(),
@@ -1310,44 +1243,6 @@ impl LowerToRust<RustDeclaration> for Declaration {
     fn lower_to_rust(&self, context: &RustLoweringContext) -> RustDeclaration {
         let parameters = self.parameters().to_vec();
         let mut value = self.value().lower_to_rust(context);
-        if let RustTypeDeclaration::Enum(enumeration) = &mut value {
-            enumeration.set_parameters(parameters.clone());
-        }
-        RustDeclaration {
-            visibility: self.visibility(),
-            name: self.name().clone(),
-            parameters,
-            value,
-        }
-    }
-}
-
-impl LowerToRust<RustDeclaration> for SpecifiedDeclaration {
-    fn lower_to_rust(&self, context: &RustLoweringContext) -> RustDeclaration {
-        let parameters = self.parameters().to_vec();
-        let mut value = match self.body() {
-            SpecifiedDeclarationBody::Struct(fields) => RustTypeDeclaration::Struct(RustStruct {
-                name: self.name().clone(),
-                fields: fields
-                    .iter()
-                    .map(|field| field.lower_to_rust(context))
-                    .collect(),
-            }),
-            SpecifiedDeclarationBody::Enum(variants) => RustTypeDeclaration::Enum(RustEnum {
-                name: self.name().clone(),
-                parameters: Vec::new(),
-                variants: variants
-                    .iter()
-                    .map(|variant| variant.lower_to_rust(context))
-                    .collect(),
-            }),
-            SpecifiedDeclarationBody::Newtype(reference) => {
-                RustTypeDeclaration::Newtype(RustNewtype {
-                    name: self.name().clone(),
-                    reference: reference.clone(),
-                })
-            }
-        };
         if let RustTypeDeclaration::Enum(enumeration) = &mut value {
             enumeration.set_parameters(parameters.clone());
         }
@@ -1477,15 +1372,6 @@ impl LowerToRust<RustField> for FieldDeclaration {
     }
 }
 
-impl LowerToRust<RustField> for SpecifiedField {
-    fn lower_to_rust(&self, _context: &RustLoweringContext) -> RustField {
-        RustField {
-            name: self.name().clone(),
-            reference: self.reference().clone(),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RustEnum {
     name: Name,
@@ -1535,20 +1421,6 @@ impl LowerToRust<RustEnum> for EnumDeclaration {
     }
 }
 
-impl LowerToRust<RustEnum> for SpecifiedRootEnum {
-    fn lower_to_rust(&self, context: &RustLoweringContext) -> RustEnum {
-        RustEnum {
-            name: self.name().clone(),
-            parameters: Vec::new(),
-            variants: self
-                .variants()
-                .iter()
-                .map(|variant| variant.lower_to_rust(context))
-                .collect(),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RustEnumVariant {
     name: Name,
@@ -1574,15 +1446,6 @@ impl LowerToRust<RustEnumVariant> for EnumVariant {
         RustEnumVariant {
             name: self.name.clone(),
             payload: self.payload.clone(),
-        }
-    }
-}
-
-impl LowerToRust<RustEnumVariant> for SpecifiedVariant {
-    fn lower_to_rust(&self, _context: &RustLoweringContext) -> RustEnumVariant {
-        RustEnumVariant {
-            name: self.name().clone(),
-            payload: self.payload().map(|payload| payload.reference().clone()),
         }
     }
 }
@@ -1622,15 +1485,6 @@ impl LowerToRust<RustAppliedRoot> for RootApplication {
     }
 }
 
-impl LowerToRust<RustAppliedRoot> for SpecifiedRootApplication {
-    fn lower_to_rust(&self, _context: &RustLoweringContext) -> RustAppliedRoot {
-        RustAppliedRoot {
-            name: self.name().clone(),
-            applied: self.reference().clone(),
-        }
-    }
-}
-
 /// An owned mirror of one [`schema::ReferencedImpl`] — an entry from the
 /// schema-wide `{| … |}` impl catalog, paired with the type it targets. The
 /// borrowed `ReferencedImpl<'schema>` cannot cross into the owned
@@ -1662,34 +1516,21 @@ impl LowerToRust<RustImplReference> for ReferencedImpl<'_> {
     }
 }
 
-struct SpecifiedReferencedImpls<'schema> {
-    schema: &'schema SpecifiedSchema,
+struct TrueSchemaReferencedImpls<'schema> {
+    schema: &'schema TrueSchema,
 }
 
-impl<'schema> SpecifiedReferencedImpls<'schema> {
-    fn new(schema: &'schema SpecifiedSchema) -> Self {
+impl<'schema> TrueSchemaReferencedImpls<'schema> {
+    fn new(schema: &'schema TrueSchema) -> Self {
         Self { schema }
     }
 
     fn lower_to_rust(&self, context: &RustLoweringContext) -> Vec<RustImplReference> {
-        let mut references = Vec::new();
-        for declaration in self.schema.declarations() {
-            for entry in declaration.impls().entries() {
-                references.push(RustImplReference {
-                    target: declaration.name().clone(),
-                    entry: entry.lower_to_rust(context),
-                });
-            }
-        }
-        for block in self.schema.impl_blocks() {
-            for entry in block.catalog().entries() {
-                references.push(RustImplReference {
-                    target: block.target().clone(),
-                    entry: entry.lower_to_rust(context),
-                });
-            }
-        }
-        references
+        self.schema
+            .referenced_impls()
+            .into_iter()
+            .map(|reference| reference.lower_to_rust(context))
+            .collect()
     }
 }
 
@@ -1860,20 +1701,14 @@ impl RustSupportModel {
     }
 }
 
-impl LowerToRust<RustSupportModel> for Schema {
-    fn lower_to_rust(&self, _context: &RustLoweringContext) -> RustSupportModel {
-        SpecifiedSchema::from(self).lower_to_rust(_context)
-    }
-}
-
-impl LowerToRust<RustSupportModel> for SpecifiedSchema {
+impl LowerToRust<RustSupportModel> for TrueSchema {
     fn lower_to_rust(&self, _context: &RustLoweringContext) -> RustSupportModel {
         RustSupportModel {
             map_key_type_names: CollectionScan::new(self).map_key_type_names(),
             references_bytes: CollectionScan::new(self).references_bytes(),
             references_fixed_bytes: CollectionScan::new(self).references_fixed_bytes(),
             private_type_names: self
-                .declarations()
+                .namespace()
                 .iter()
                 .filter(|declaration| declaration.visibility() == Visibility::Private)
                 .map(|declaration| declaration.name().as_str().to_owned())
@@ -2863,8 +2698,9 @@ impl StandardImplRecipe {
 /// [`schema::RustSurface::verify_catalog`] meaningful on a GENERATED
 /// surface rather than the hand-built facts in schema's tests. The
 /// [`From<&RustModule>`] form carries only what the generator emits/derives;
-/// [`Self::for_schema`] additionally trusts the unrecognized references through,
-/// so the trust boundary verifies the recognized subset and passes the rest.
+/// the schema-aware verification form additionally trusts the unrecognized
+/// references through, so the trust boundary verifies the recognized subset
+/// and passes the rest.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct EmittedRustSurface {
     facts: Vec<ImplFact>,
@@ -2876,7 +2712,7 @@ impl EmittedRustSurface {
     /// reference the generator does not recognize (externally-provided). A
     /// recognized reference contributes a fact only when genuinely emitted, so a
     /// missing recognized body still fails verification.
-    fn for_schema(module: &RustModule, schema: &Schema) -> Self {
+    fn for_schema(module: &RustModule, schema: &TrueSchema) -> Self {
         let mut surface = Self::from(module);
         for reference in schema.referenced_impls() {
             if module.recognizes(reference.target(), reference.entry()) {
@@ -5125,14 +4961,14 @@ impl ToTokens for RecordFamilyEnumTokens<'_> {
     }
 }
 
-/// Decides which fully specified schema type names appear as map keys.
+/// Decides which true schema type names appear as map keys.
 #[derive(Clone, Copy, Debug)]
 struct CollectionScan<'schema> {
-    schema: &'schema SpecifiedSchema,
+    schema: &'schema TrueSchema,
 }
 
 impl<'schema> CollectionScan<'schema> {
-    fn new(schema: &'schema SpecifiedSchema) -> Self {
+    fn new(schema: &'schema TrueSchema) -> Self {
         Self { schema }
     }
 
@@ -5141,10 +4977,10 @@ impl<'schema> CollectionScan<'schema> {
     /// collection positions). These types need the ordering derives.
     fn map_key_type_names(&self) -> Vec<String> {
         let mut names = Vec::new();
-        for declaration in self.schema.declarations() {
-            Self::collect_declaration_map_keys(declaration.body(), &mut names);
+        for declaration in self.schema.namespace() {
+            Self::collect_declaration_map_keys(declaration.value(), &mut names);
         }
-        for root in [self.schema.input(), self.schema.output()] {
+        for root in self.schema.input_and_output() {
             Self::collect_root_map_keys(root, &mut names);
         }
         names
@@ -5152,17 +4988,17 @@ impl<'schema> CollectionScan<'schema> {
 
     /// Collect map-key type names from either root shape: an enum root walks
     /// its variant payloads; an application root walks its applied reference.
-    fn collect_root_map_keys(root: &SpecifiedRoot, names: &mut Vec<String>) {
+    fn collect_root_map_keys(root: &Root, names: &mut Vec<String>) {
         match root {
-            SpecifiedRoot::Enum(declaration) => {
-                for variant in declaration.variants() {
-                    if let Some(payload) = variant.payload() {
-                        Self::collect_map_keys(payload.reference(), names);
+            Root::Enum(declaration) => {
+                for variant in &declaration.variants {
+                    if let Some(payload) = &variant.payload {
+                        Self::collect_map_keys(payload, names);
                     }
                 }
             }
-            SpecifiedRoot::Application(application) => {
-                Self::collect_map_keys(application.reference(), names);
+            Root::Application(application) => {
+                Self::collect_map_keys(&TypeReference::from(application.as_ref()), names);
             }
         }
     }
@@ -5172,37 +5008,42 @@ impl<'schema> CollectionScan<'schema> {
     /// newtype-prelude + hex codec when a module actually uses it.
     fn references_bytes(&self) -> bool {
         self.schema
-            .declarations()
+            .namespace()
             .iter()
-            .any(|declaration| Self::declaration_uses_bytes(declaration.body()))
-            || [self.schema.input(), self.schema.output()]
+            .any(|declaration| Self::declaration_uses_bytes(declaration.value()))
+            || self
+                .schema
+                .input_and_output()
                 .into_iter()
                 .any(Self::root_uses_bytes)
     }
 
-    fn root_uses_bytes(root: &SpecifiedRoot) -> bool {
+    fn root_uses_bytes(root: &Root) -> bool {
         match root {
-            SpecifiedRoot::Enum(declaration) => declaration.variants().iter().any(|variant| {
+            Root::Enum(declaration) => declaration.variants.iter().any(|variant| {
                 variant
-                    .payload()
-                    .is_some_and(|payload| Self::reference_uses_bytes(payload.reference()))
+                    .payload
+                    .as_ref()
+                    .is_some_and(Self::reference_uses_bytes)
             }),
-            SpecifiedRoot::Application(application) => {
-                Self::reference_uses_bytes(application.reference())
+            Root::Application(application) => {
+                Self::reference_uses_bytes(&TypeReference::from(application.as_ref()))
             }
         }
     }
 
-    fn declaration_uses_bytes(declaration: &SpecifiedDeclarationBody) -> bool {
+    fn declaration_uses_bytes(declaration: &TypeDeclaration) -> bool {
         match declaration {
-            SpecifiedDeclarationBody::Struct(fields) => fields
+            TypeDeclaration::Struct(fields) => fields
+                .fields
                 .iter()
-                .any(|field| Self::reference_uses_bytes(field.reference())),
-            SpecifiedDeclarationBody::Newtype(reference) => Self::reference_uses_bytes(reference),
-            SpecifiedDeclarationBody::Enum(variants) => variants.iter().any(|variant| {
+                .any(|field| Self::reference_uses_bytes(&field.reference)),
+            TypeDeclaration::Newtype(newtype) => Self::reference_uses_bytes(&newtype.reference),
+            TypeDeclaration::Enum(enumeration) => enumeration.variants.iter().any(|variant| {
                 variant
-                    .payload()
-                    .is_some_and(|payload| Self::reference_uses_bytes(payload.reference()))
+                    .payload
+                    .as_ref()
+                    .is_some_and(Self::reference_uses_bytes)
             }),
         }
     }
@@ -5232,39 +5073,44 @@ impl<'schema> CollectionScan<'schema> {
     /// renderer only emits the generic `FixedBytes<N>` newtype-prelude when used.
     fn references_fixed_bytes(&self) -> bool {
         self.schema
-            .declarations()
+            .namespace()
             .iter()
-            .any(|declaration| Self::declaration_uses_fixed_bytes(declaration.body()))
-            || [self.schema.input(), self.schema.output()]
+            .any(|declaration| Self::declaration_uses_fixed_bytes(declaration.value()))
+            || self
+                .schema
+                .input_and_output()
                 .into_iter()
                 .any(Self::root_uses_fixed_bytes)
     }
 
-    fn root_uses_fixed_bytes(root: &SpecifiedRoot) -> bool {
+    fn root_uses_fixed_bytes(root: &Root) -> bool {
         match root {
-            SpecifiedRoot::Enum(declaration) => declaration.variants().iter().any(|variant| {
+            Root::Enum(declaration) => declaration.variants.iter().any(|variant| {
                 variant
-                    .payload()
-                    .is_some_and(|payload| Self::reference_uses_fixed_bytes(payload.reference()))
+                    .payload
+                    .as_ref()
+                    .is_some_and(Self::reference_uses_fixed_bytes)
             }),
-            SpecifiedRoot::Application(application) => {
-                Self::reference_uses_fixed_bytes(application.reference())
+            Root::Application(application) => {
+                Self::reference_uses_fixed_bytes(&TypeReference::from(application.as_ref()))
             }
         }
     }
 
-    fn declaration_uses_fixed_bytes(declaration: &SpecifiedDeclarationBody) -> bool {
+    fn declaration_uses_fixed_bytes(declaration: &TypeDeclaration) -> bool {
         match declaration {
-            SpecifiedDeclarationBody::Struct(fields) => fields
+            TypeDeclaration::Struct(fields) => fields
+                .fields
                 .iter()
-                .any(|field| Self::reference_uses_fixed_bytes(field.reference())),
-            SpecifiedDeclarationBody::Newtype(reference) => {
-                Self::reference_uses_fixed_bytes(reference)
+                .any(|field| Self::reference_uses_fixed_bytes(&field.reference)),
+            TypeDeclaration::Newtype(newtype) => {
+                Self::reference_uses_fixed_bytes(&newtype.reference)
             }
-            SpecifiedDeclarationBody::Enum(variants) => variants.iter().any(|variant| {
+            TypeDeclaration::Enum(enumeration) => enumeration.variants.iter().any(|variant| {
                 variant
-                    .payload()
-                    .is_some_and(|payload| Self::reference_uses_fixed_bytes(payload.reference()))
+                    .payload
+                    .as_ref()
+                    .is_some_and(Self::reference_uses_fixed_bytes)
             }),
         }
     }
@@ -5290,23 +5136,18 @@ impl<'schema> CollectionScan<'schema> {
         }
     }
 
-    fn collect_declaration_map_keys(
-        declaration: &SpecifiedDeclarationBody,
-        names: &mut Vec<String>,
-    ) {
+    fn collect_declaration_map_keys(declaration: &TypeDeclaration, names: &mut Vec<String>) {
         match declaration {
-            SpecifiedDeclarationBody::Struct(fields) => {
-                for field in fields {
-                    Self::collect_map_keys(field.reference(), names);
+            TypeDeclaration::Struct(fields) => {
+                for field in &fields.fields {
+                    Self::collect_map_keys(&field.reference, names);
                 }
             }
-            SpecifiedDeclarationBody::Newtype(reference) => {
-                Self::collect_map_keys(reference, names)
-            }
-            SpecifiedDeclarationBody::Enum(variants) => {
-                for variant in variants {
-                    if let Some(payload) = variant.payload() {
-                        Self::collect_map_keys(payload.reference(), names);
+            TypeDeclaration::Newtype(newtype) => Self::collect_map_keys(&newtype.reference, names),
+            TypeDeclaration::Enum(enumeration) => {
+                for variant in &enumeration.variants {
+                    if let Some(payload) = &variant.payload {
+                        Self::collect_map_keys(payload, names);
                     }
                 }
             }

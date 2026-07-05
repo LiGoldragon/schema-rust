@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use schema::{
-    Declaration, EnumDeclaration, ImportResolver, MacroContext, Schema, SchemaEngine,
-    SchemaIdentity, SchemaSourceArtifact, TypeDeclaration,
+    Declaration, EnumDeclaration, ImportResolver, MacroContext, SchemaEngine, SchemaIdentity,
+    SchemaSourceArtifact, TrueSchema, TypeDeclaration,
 };
 use schema_rust::RustEmitter;
 
@@ -57,7 +57,7 @@ impl<'fixture> BigRustFixture<'fixture> {
         }
     }
 
-    fn lower(&self) -> (Schema, MacroContext) {
+    fn lower(&self) -> (TrueSchema, MacroContext) {
         let source = std::fs::read_to_string(&self.source_path).expect("read schema fixture");
         let engine = SchemaEngine::default();
         let mut context = MacroContext::default();
@@ -84,7 +84,7 @@ impl<'fixture> BigRustFixture<'fixture> {
     fn generate_rust(&self) -> String {
         let (schema, _) = self.lower();
         RustEmitter::default()
-            .emit_code_from_schema(&schema)
+            .emit_code_from_true_schema(&schema)
             .as_str()
             .to_owned()
     }
@@ -125,7 +125,7 @@ impl<'fixture> BigRustFixture<'fixture> {
         self.assert_schema_data_shape(&schema);
     }
 
-    fn assert_schema_data_shape(&self, schema: &Schema) {
+    fn assert_schema_data_shape(&self, schema: &TrueSchema) {
         assert_eq!(schema.identity().component().as_str(), self.identity);
         assert_eq!(schema.identity().version(), "0.1.0");
         assert!(

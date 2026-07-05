@@ -1,11 +1,4 @@
-{
-  ContractInput driver-contract:lib:Input
-  ContractOutput driver-contract:lib:Output
-  SemaReadInput driver-runtime:sema:SemaReadInput
-  SemaReadOutput driver-runtime:sema:SemaReadOutput
-  SemaWriteInput driver-runtime:sema:SemaWriteInput
-  SemaWriteOutput driver-runtime:sema:SemaWriteOutput
-}
+{ ContractInput driver-contract:lib:Input ContractOutput driver-contract:lib:Output SemaReadInput driver-runtime:sema:SemaReadInput SemaReadOutput driver-runtime:sema:SemaReadOutput SemaWriteInput driver-runtime:sema:SemaWriteInput SemaWriteOutput driver-runtime:sema:SemaWriteOutput }
 [(SignalArrived ContractInput)]
 [
   (CommandSemaRead SemaReadInput)
@@ -23,5 +16,5 @@
     (CommandSemaWrite SemaWriteInput)
     (ReplyToSignal ContractOutput)
   ]
-  DecisionReceipt { integer.Integer }
+  DecisionReceipt { Integer }
 }

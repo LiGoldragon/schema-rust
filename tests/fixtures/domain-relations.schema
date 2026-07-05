@@ -1,9 +1,5 @@
 {}
 []
 []
-{
-  Domain [(Technology [(Hardware [Networking]) (Software [(Distributed [Networking])])])]
-  DomainScope (ScopeOf Domain)
-  ScopeSet (Vector DomainScope)
-}
+{ Domain [(Technology [(Hardware [Networking]) (Software [(Distributed [Networking])])])] DomainScope (ScopeOf Domain) ScopeSet (Vector DomainScope) }
 [(Equivalence [(Technology Hardware Networking) (Technology Software Distributed Networking)])]

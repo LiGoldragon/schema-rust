@@ -13,20 +13,21 @@ freshness-checked build artifacts.
 Its source-facing input is `schema::SchemaSource`, the schema-in-Rust value
 produced when authored `.schema` deserializes into Rust datatypes that fully
 define the schema and serialize through rkyv. Its semantic emission input is
-`schema::Schema`; there is no older assembled-schema artifact or path API
-beside that typed source/schema pipeline.
+`schema::TrueSchema`, the canonical decoded semantic layer; there is no older
+assembled-schema artifact or parallel semantic model beside that typed
+source/true-schema pipeline.
 
 ## Interfaces
 
 - `RustEmitter` is the code-generation engine.
-- `RustSchemaLowering` is the entry trait implemented for `schema::Schema`.
-  The deserialized semantic schema object owns the lowering call; the emitter
-  supplies policy such as target, NOTA surface, and generator name. The trait
-  lives in this repository rather than in `schema` because `schema` owns schema
-  semantics and must not depend on Rust emission.
+- `RustTrueSchemaLowering` is the entry trait implemented for
+  `schema::TrueSchema`. The deserialized semantic schema object owns the
+  lowering call; the emitter supplies policy such as target, NOTA surface, and
+  generator name. The trait lives in this repository rather than in `schema`
+  because `schema` owns schema semantics and must not depend on Rust emission.
 - `RustSchemaSourceLowering` is the trait implemented for
-  `schema::SchemaSource`. It lowers typed source through `SchemaEngine`
-  and then through `RustSchemaLowering`.
+  `schema::SchemaSource`. It lowers typed source through `SchemaEngine` into
+  `TrueSchema` and then through `RustTrueSchemaLowering`.
 - `LowerToRust<Target>` is the recursive projection trait implemented for the
   schema subobjects that own each piece of the Rust model: imports,
   declarations, type declarations, aliases, newtypes, structs, fields, enums,
@@ -132,7 +133,7 @@ beside that typed source/schema pipeline.
   to the ordinary socket and the configured meta mode to the meta socket, so
   security-sensitive chmod behavior stays in the shared daemon path.
 
-## Source Input And Semantic Schema
+## Source Input And True Schema
 
 The public source-facing contract is typed schema source data decoded through
 structural macro node codecs: authored `.schema` deserializes into
@@ -140,10 +141,11 @@ schema-defining Rust datatypes, those datatypes are rkyv-serializable, and this
 emitter lowers that schema-in-Rust value into Rust interface code.
 `RustEmitter::emit_file_from_schema_source` and
 `emit_module_from_schema_source` are the build-driver path. They ask
-`SchemaEngine` to lower source into `Schema`, then render `RustModule`.
-Callers that already hold the semantic value use `Schema`'s
-`RustSchemaLowering` trait methods (`lower_to_rust_file`,
-`lower_to_rust_code`, `lower_to_rust_module`). Those methods build a
+`SchemaEngine` to lower source into `TrueSchema`, then render `RustModule`.
+Callers that already hold the semantic value use `TrueSchema`'s
+`RustTrueSchemaLowering` trait methods (`lower_to_rust_file`,
+`lower_to_rust_code`, `lower_to_rust_module`) or the emitter's
+`emit_*_from_true_schema` methods. Those methods build a
 `RustLoweringContext` and recursively ask schema subobjects to lower
 themselves into Rust-model nouns. No generated component path reads or writes a
 separate assembled-schema text file.
@@ -167,7 +169,7 @@ inline operation payloads. This emitter sees the typed source/schema data from
 - No dependency on the old signal macro.
 - No `macro_rules!` or proc-macro surface in `src/`.
 - No authored-schema macro syntax is accepted as an emitter input. Tests lower
-  real `.schema` fixtures into typed `Schema` values before comparing
+  real `.schema` fixtures into typed `TrueSchema` values before comparing
   generated Rust; no assembled-schema text fixture is accepted.
 - Public schema declarations emit public Rust types and fields. Private schema
   declarations emit `pub(crate)` types and fields, preserving inline
@@ -177,8 +179,8 @@ inline operation payloads. This emitter sees the typed source/schema data from
   `Rejected SignalRejection` emit as Rust `type` aliases. A brace-body
   declaration with exactly one field emits as a tuple newtype.
   `TypeDeclaration::Struct` is the named-field map shape. A newtype in
-  the assembled schema is a single-element brace with just the wrapped
-  type — `(Public Topic { String })`, not a derived field name; the
+  `TrueSchema` is a single-element brace with just the wrapped type —
+  `(Public Topic { String })`, not a derived field name; the
   authoring surface for it is `Topic@String` / `Topic@{ String }`. The
   generated tuple newtype carries a NOTA-transparent shape so
   `Topic([foo])` and `topic.0` round-trip without a wrapper field name.
@@ -302,7 +304,7 @@ inline operation payloads. This emitter sees the typed source/schema data from
   `RustVersionedStore` (store name from the schema identity's component name,
   one `RustRecordFamily` per declaration) and computes each family's identity
   at generation time as the blake3 content hash of
-  `Schema::family_closure(record)`. Emission renders the `family_identity`
+  `TrueSchema::family_closure(record)`. Emission renders the `family_identity`
   module (one SCREAMING_SNAKE 32-byte constant per family, on the
   `short_header` module precedent), the typed `RecordFamilyError` enum, and
   the closed `RecordFamily` sum — one variant per family carrying the record
@@ -326,7 +328,7 @@ inline operation payloads. This emitter sees the typed source/schema data from
   contracts emit `Frame = signal_frame::ExchangeFrame<Input, Output>`.
   Stream-aware signal schemas instead emit
   `Frame = signal_frame::StreamingFrame<Input, Output, Event>` when semantic
-  `Schema::streams()` is non-empty and the stream event type is the payload of
+  `TrueSchema::streams()` is non-empty and the stream event type is the payload of
   `Output.Event`; only then does the event payload get
   `into_subscription_frame`. This path reads schema stream metadata; it
   does not infer streaming from names alone and it does not route through the
