@@ -17,10 +17,10 @@ nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", bran
 prettyplease = "0.2"
 proc-macro2 = "1"
 quote = "1"
-schema = { package = "schema", git = "https://github.com/LiGoldragon/schema.git", branch = "drop-next" }
+schema = { package = "schema", git = "https://github.com/LiGoldragon/schema.git", branch = "main" }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
-triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "drop-next" }
+triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
 
 [features]
 # Activates the `#[cfg(feature = "nota-text")]` blocks inside any
@@ -36,7 +36,7 @@ nota-text = []
 [dev-dependencies]
 rkyv = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 sema-engine = { git = "https://github.com/LiGoldragon/sema-engine.git", branch = "main" }
-signal-frame = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "drop-next" }
+signal-frame = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
 
 [lints.rust]
 unsafe_code = "forbid"
