@@ -170,7 +170,7 @@ fn generated_package_carries_source_and_rust_artifacts() {
     );
     assert_eq!(
         module.source_artifact().content(),
-        "{\n  ContractInput driver-contract:lib:Input\n  ContractOutput driver-contract:lib:Output\n  SemaReadInput driver-runtime:sema:SemaReadInput\n  SemaReadOutput driver-runtime:sema:SemaReadOutput\n  SemaWriteInput driver-runtime:sema:SemaWriteInput\n  SemaWriteOutput driver-runtime:sema:SemaWriteOutput\n}\n[(SignalArrived ContractInput)]\n[(CommandSemaRead SemaReadInput) (CommandSemaWrite SemaWriteInput) (ReplyToSignal ContractOutput)]\n{\n  NexusWork [(SignalArrived ContractInput) (SemaReadCompleted SemaReadOutput) (SemaWriteCompleted SemaWriteOutput)]\n  NexusAction [(CommandSemaRead SemaReadInput) (CommandSemaWrite SemaWriteInput) (ReplyToSignal ContractOutput)]\n  DecisionReceipt { integer.Integer }\n}"
+        "{\n  ContractInput driver-contract:lib:Input\n  ContractOutput driver-contract:lib:Output\n  SemaReadInput driver-runtime:sema:SemaReadInput\n  SemaReadOutput driver-runtime:sema:SemaReadOutput\n  SemaWriteInput driver-runtime:sema:SemaWriteInput\n  SemaWriteOutput driver-runtime:sema:SemaWriteOutput\n}\n[(SignalArrived ContractInput)]\n[(CommandSemaRead SemaReadInput) (CommandSemaWrite SemaWriteInput) (ReplyToSignal ContractOutput)]\n{\n  NexusWork [(SignalArrived ContractInput) (SemaReadCompleted SemaReadOutput) (SemaWriteCompleted SemaWriteOutput)]\n  NexusAction [(CommandSemaRead SemaReadInput) (CommandSemaWrite SemaWriteInput) (ReplyToSignal ContractOutput)]\n  DecisionReceipt { Integer }\n}"
     );
     assert_eq!(module.rust_file().path, "src/schema/nexus.rs");
     assert!(
@@ -236,7 +236,7 @@ fn generation_plan_derives_environment_manifest_from_selected_modules() {
 }
 
 #[test]
-fn driver_regenerates_rust_from_environment_specified_schemas() {
+fn driver_regenerates_rust_from_environment_true_schemas() {
     let fixture = DriverFixture::new();
     let driver = GenerationDriver::new(fixture.runtime_plan());
     let generated_from_environment = driver

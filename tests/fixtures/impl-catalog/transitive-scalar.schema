@@ -3,5 +3,5 @@
 []
 {
   StatementText String
-  Statement StatementText {| Display |}
+  Statement StatementText { | Display | }
 }

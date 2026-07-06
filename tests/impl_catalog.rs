@@ -1,6 +1,6 @@
 //! The `{| … |}` impl-reference catalog, consumed on the schema-rust side.
 //!
-//! Report 703.3: schema-rust reads `Schema::referenced_impls()`, DRIVES
+//! Report 703.3: schema-rust reads `TrueSchema::referenced_impls()`, DRIVES
 //! standard-impl emission from it (replacing the `scalar_like()` flag trigger),
 //! and verifies the recognized subset against the surface it actually emits.
 
@@ -11,12 +11,12 @@ mod support;
 
 use support::FixtureSchema;
 
-fn lower(fixture: &str) -> schema::Schema {
+fn lower(fixture: &str) -> schema::TrueSchema {
     FixtureSchema::new(format!("impl-catalog/{fixture}.schema")).lower("impl-catalog:lib")
 }
 
 fn module(fixture: &str) -> RustModule {
-    RustModule::from_schema(
+    RustModule::from_true_schema(
         &lower(fixture),
         "schema-rust",
         RustEmissionOptions::binary_only(),
@@ -25,7 +25,7 @@ fn module(fixture: &str) -> RustModule {
 
 fn emit(fixture: &str) -> String {
     RustEmitter::new(RustEmissionOptions::binary_only())
-        .emit_code_from_schema(&lower(fixture))
+        .emit_code_from_true_schema(&lower(fixture))
         .as_str()
         .to_owned()
 }
@@ -103,7 +103,7 @@ fn transitive_scalar_emits_display() {
 fn emitted_surface_verifies_recognized_subset() {
     let schema = lower("fused-markers");
     let module =
-        RustModule::from_schema(&schema, "schema-rust", RustEmissionOptions::binary_only());
+        RustModule::from_true_schema(&schema, "schema-rust", RustEmissionOptions::binary_only());
     module
         .verify_catalog(&schema)
         .expect("the recognized subset verifies against the generated surface");

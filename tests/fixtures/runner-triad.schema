@@ -20,7 +20,8 @@
   SemaReceipt { RecordIdentifier DatabaseMarker }
   ObservedRecords { RecordSet DatabaseMarker }
   StashHandle Integer
-  StashResult { StashHandle recordCount.Integer DatabaseMarker }
+  RecordCount Integer
+  StashResult { StashHandle RecordCount DatabaseMarker }
   StashRequest { RecordSet DatabaseMarker }
   ErrorReport { ErrorMessage DatabaseMarker }
   Entry { Topic Description }

@@ -156,8 +156,8 @@ pub struct Retirement(String);
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SemaReceipt {
-    pub identifier: RecordIdentifier,
-    pub marker: DatabaseMarker,
+    pub record_identifier: RecordIdentifier,
+    pub database_marker: DatabaseMarker,
 }
 
 #[rustfmt::skip]
@@ -207,7 +207,7 @@ pub struct RecordChangeReceipt(Boolean);
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct GuardianRejection {
-    pub reason: GuardianRejectionReason,
+    pub guardian_rejection_reason: GuardianRejectionReason,
     pub explanation: Explanation,
 }
 
@@ -226,7 +226,7 @@ pub struct GuardianRejectionReason(String);
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ReferentGuardianRejection {
-    pub reason: ReferentGuardianRejectionReason,
+    pub referent_guardian_rejection_reason: ReferentGuardianRejectionReason,
     pub explanation: Explanation,
 }
 
@@ -814,7 +814,7 @@ pub struct ObserverTapClosed(ObserverRetraction);
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct StashRequest {
     pub records: Records,
-    pub marker: DatabaseMarker,
+    pub database_marker: DatabaseMarker,
 }
 
 #[rustfmt::skip]
@@ -824,9 +824,9 @@ pub struct StashRequest {
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct StashResult {
-    pub handle: StashHandle,
-    pub count: RecordCount,
-    pub marker: DatabaseMarker,
+    pub stash_handle: StashHandle,
+    pub record_count: RecordCount,
+    pub database_marker: DatabaseMarker,
 }
 
 #[rustfmt::skip]

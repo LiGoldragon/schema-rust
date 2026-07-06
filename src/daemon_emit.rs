@@ -27,7 +27,7 @@
 
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote};
-use schema::Schema;
+use schema::TrueSchema;
 
 use crate::{GeneratedFile, RustCode, RustfmtSkippedItems};
 
@@ -300,7 +300,7 @@ pub struct DaemonModule {
 impl DaemonModule {
     pub fn new(
         shape: NexusDaemonShape,
-        schema: &Schema,
+        schema: &TrueSchema,
         generator_name: impl Into<String>,
     ) -> Self {
         let emits_stream = shape.working_streams() || !schema.streams().is_empty();

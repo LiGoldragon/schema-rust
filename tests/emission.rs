@@ -1,7 +1,7 @@
-use schema::{SchemaEngine, SchemaIdentity, SchemaSourceArtifact, SpecifiedSchema};
+use schema::{SchemaEngine, SchemaError, SchemaIdentity, SchemaSource, SchemaSourceArtifact};
 use schema_rust::{
     LowerToRust, NotaSurface, RustEmissionOptions, RustEmissionTarget, RustEmitter,
-    RustLoweringContext, RustSchemaLowering, RustTypeDeclaration,
+    RustLoweringContext, RustTrueSchemaLowering, RustTypeDeclaration,
 };
 use std::path::PathBuf;
 
@@ -105,7 +105,7 @@ mod runner_generated;
 #[test]
 fn emits_rust_source_as_a_separate_artifact() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated = RustEmitter::default().emit_file_from_schema(&schema);
+    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
 
     assert_eq!(generated.path, "src/schema/lib.rs");
     assert!(generated.code.as_str().contains("pub enum Input"));
@@ -179,7 +179,7 @@ fn emits_domain_scope_equivalence_expansion_from_relations() {
             SchemaIdentity::new("example:domain", "0.1.0"),
         )
         .expect("schema source lowers");
-    let generated = RustEmitter::default().emit_code_from_schema(&schema);
+    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
 
     assert_code_contains(generated.as_str(), "pub enum DomainScope");
     assert_code_contains(generated.as_str(), "pub enum TechnologyScope");
@@ -235,7 +235,7 @@ fn emits_terminal_value_domains_as_scope_all() {
             SchemaIdentity::new("example:domain", "0.1.0"),
         )
         .expect("schema source lowers");
-    let generated = RustEmitter::default().emit_code_from_schema(&schema);
+    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
 
     // Strict positional NOTA: the variant payload is required, so it carries
     // the leaf directly with no `Option` wrapper and no bespoke codec.
@@ -272,30 +272,63 @@ fn schema_object_lowers_itself_into_rust_through_emitter_policy() {
     let generated = schema.lower_to_rust_file(&emitter);
     let module = schema.lower_to_rust_module(&emitter);
 
-    assert_eq!(generated, emitter.emit_file_from_schema(&schema));
-    assert_eq!(module, emitter.emit_module_from_schema(&schema));
+    assert_eq!(generated, emitter.emit_file_from_true_schema(&schema));
+    assert_eq!(module, emitter.emit_module_from_true_schema(&schema));
     assert_eq!(generated.path, "src/schema/lib.rs");
     assert!(generated.code.as_str().contains("pub enum Input"));
 }
 
 #[test]
-fn rust_lowering_uses_specified_schema_as_the_canonical_entrypoint() {
+fn rust_lowering_uses_true_schema_as_the_canonical_entrypoint() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let specified = SpecifiedSchema::from(&schema);
     let emitter = RustEmitter::default();
 
     assert_eq!(
-        emitter.emit_code_from_schema(&schema),
-        emitter.emit_code_from_specified_schema(&specified)
+        emitter.emit_code_from_true_schema(&schema),
+        schema.lower_to_rust_code(&emitter)
     );
     assert_eq!(
-        emitter.emit_module_from_schema(&schema),
-        emitter.emit_module_from_specified_schema(&specified)
+        emitter.emit_module_from_true_schema(&schema),
+        schema.lower_to_rust_module(&emitter)
     );
     assert_eq!(
-        emitter.emit_file_from_schema(&schema),
-        emitter.emit_file_from_specified_schema(&specified)
+        emitter.emit_file_from_true_schema(&schema),
+        schema.lower_to_rust_file(&emitter)
     );
+}
+
+#[test]
+fn true_schema_product_component_identity_controls_rust_fields() {
+    let schema = SchemaEngine::default()
+        .lower_source(
+            "{}\n[]\n[]\n{\n  Time Integer\n  TimeRange { start.Time end.Time }\n}\n",
+            SchemaIdentity::new("example:range", "0.1.0"),
+        )
+        .expect("repeated component disambiguators lower into TrueSchema");
+
+    assert!(
+        schema
+            .to_schema_text()
+            .contains("TimeRange { start.Time end.Time }"),
+        "valid repeated-type disambiguators stay in canonical TrueSchema text"
+    );
+    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
+    assert!(generated.as_str().contains("pub start: Time,"));
+    assert!(generated.as_str().contains("pub end: Time,"));
+}
+
+#[test]
+fn explicit_unique_product_component_identity_is_rejected_before_rust_emission() {
+    let error = SchemaSource::from_schema_text(
+        "{}\n[]\n[]\n{\n  Topic String\n  Entry { label.Topic }\n}\n",
+    )
+    .expect_err("explicit identity on a unique product component is invalid");
+
+    let SchemaError::ExplicitFieldOnUniqueProductComponent { field, type_name } = error else {
+        panic!("expected product component identity error, got {error}");
+    };
+    assert_eq!(field, "label");
+    assert_eq!(type_name, "Topic");
 }
 
 #[test]
@@ -330,7 +363,7 @@ fn schema_subobjects_lower_themselves_into_rust_model_nouns() {
 fn emitter_builds_rust_module_data_before_rendering_text() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
     let emitter = RustEmitter::default();
-    let module = emitter.emit_module_from_schema(&schema);
+    let module = emitter.emit_module_from_true_schema(&schema);
 
     assert_eq!(module.file_path(), "src/schema/lib.rs");
     assert_eq!(module.root_enums().len(), 2);
@@ -363,13 +396,13 @@ fn emitter_builds_rust_module_data_before_rendering_text() {
     assert_eq!(entry_struct.fields()[0].name().as_str(), "topics");
     assert_eq!(entry_struct.fields()[1].name().as_str(), "kind");
 
-    assert_eq!(module.render(), emitter.emit_code_from_schema(&schema));
+    assert_eq!(module.render(), emitter.emit_code_from_true_schema(&schema));
 }
 
 #[test]
 fn generated_objects_expose_named_constructors_and_newtype_payload_accessors() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let code = RustEmitter::default().emit_code_from_schema(&schema);
+    let code = RustEmitter::default().emit_code_from_true_schema(&schema);
     let source = code.as_str();
 
     assert!(source.contains("pub struct Topic(String);"));
@@ -396,7 +429,7 @@ fn emission_can_disable_nota_surface_for_binary_only_consumers() {
         nota_surface: NotaSurface::Disabled,
         target: RustEmissionTarget::ComponentRuntime,
     })
-    .emit_code_from_schema(&schema);
+    .emit_code_from_true_schema(&schema);
     let code = generated.as_str();
 
     assert!(code.contains("rkyv::Archive"));
@@ -433,7 +466,7 @@ fn emission_can_gate_nota_surface_behind_text_client_feature() {
         },
         target: RustEmissionTarget::ComponentRuntime,
     })
-    .emit_code_from_schema(&schema);
+    .emit_code_from_true_schema(&schema);
     let code = generated.as_str();
 
     assert!(code.contains("derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)"));
@@ -447,7 +480,7 @@ fn emission_can_gate_nota_surface_behind_text_client_feature() {
     // construction — the checked-in `spirit_generated.rs` snapshot
     // is the binding form. Constructed-positional and default-
     // constructed emissions must stay byte-identical.
-    let default_generated = RustEmitter::default().emit_code_from_schema(&schema);
+    let default_generated = RustEmitter::default().emit_code_from_true_schema(&schema);
     assert_eq!(code, default_generated.as_str());
 }
 
@@ -470,7 +503,7 @@ fn rust_emission_options_default_is_feature_gated_nota_text() {
 #[test]
 fn emitted_path_mirrors_schema_module_identity() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit-next:signal:public");
-    let generated = RustEmitter::default().emit_file_from_schema(&schema);
+    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
 
     assert_eq!(generated.path, "src/schema/signal/public.rs");
 }
@@ -487,19 +520,19 @@ fn inline_private_schema_types_emit_crate_local_rust_boundary() {
     // public namespace struct that references `Receipt` by name, so both of
     // its fields downgrade to `pub(crate)` to keep the boundary closed.
     let schema = FixtureSchema::new("inline-private-type.schema").lower("example:inline");
-    let generated = RustEmitter::default().emit_file_from_schema(&schema);
+    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
     let code = generated.code.as_str();
 
     assert!(code.contains("pub(crate) struct Receipt"));
     assert!(code.contains("pub struct Entry"));
-    assert!(code.contains("pub(crate) receipt: Receipt"));
+    assert!(code.contains("pub(crate) selected: Receipt"));
     assert!(code.contains("pub(crate) later: Receipt"));
 }
 
 #[test]
 fn emits_schema_plane_engine_traits_for_declared_signal_nexus_and_sema_languages() {
     let schema = FixtureSchema::new("plane-triad.schema").lower("spirit:lib");
-    let generated = RustEmitter::default().emit_file_from_schema(&schema);
+    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
 
     assert!(generated.code.as_str().contains("pub trait SignalEngine"));
     assert!(
@@ -730,7 +763,7 @@ fn nexus_runner_shape_emits_total_projection_and_generated_adapter() {
     let generated = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::ComponentRuntime),
     )
-    .emit_file_from_schema(&schema);
+    .emit_file_from_true_schema(&schema);
     let code = generated.code.as_str();
 
     assert_generated_fixture("runner_generated.rs", code);
@@ -807,7 +840,7 @@ fn wire_contract_target_emits_wire_codecs_without_runtime_plane_support() {
     let generated = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::WireContract),
     )
-    .emit_file_from_schema(&schema);
+    .emit_file_from_true_schema(&schema);
     let code = generated.code.as_str();
 
     assert!(code.contains("pub enum Input"));
@@ -873,7 +906,7 @@ fn frame_codec_reaches_wire_contract_targets_but_not_internal_planes() {
     let wire_contract = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::WireContract),
     )
-    .emit_file_from_schema(&schema.lower("spirit:lib"));
+    .emit_file_from_true_schema(&schema.lower("spirit:lib"));
     let wire_code = wire_contract.code.as_str();
 
     // (1) The wire contract carries the basic frame codec + route enums.
@@ -903,7 +936,7 @@ fn frame_codec_reaches_wire_contract_targets_but_not_internal_planes() {
     let nexus_runtime = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::NexusRuntime),
     )
-    .emit_file_from_schema(&schema.lower("daemon:nexus"));
+    .emit_file_from_true_schema(&schema.lower("daemon:nexus"));
     let nexus_code = nexus_runtime.code.as_str();
 
     assert!(!nexus_code.contains("pub fn encode_signal_frame"));
@@ -921,7 +954,7 @@ fn signal_runtime_target_emits_signal_runtime_without_nexus_or_sema_support() {
         RustEmissionOptions::feature_gated_nota("nota-text")
             .with_target(RustEmissionTarget::SignalRuntime),
     )
-    .emit_file_from_schema(&schema);
+    .emit_file_from_true_schema(&schema);
     let code = generated.code.as_str();
 
     assert!(code.contains("pub enum Input"));
@@ -962,7 +995,7 @@ fn nexus_runtime_target_emits_only_nexus_runtime_support_even_when_other_plane_n
     let generated = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::NexusRuntime),
     )
-    .emit_file_from_schema(&schema);
+    .emit_file_from_true_schema(&schema);
     let code = generated.code.as_str();
 
     assert!(code.contains("pub enum NexusWork"));
@@ -999,7 +1032,7 @@ fn sema_runtime_target_emits_only_sema_runtime_support_even_when_other_plane_nam
     let generated = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::SemaRuntime),
     )
-    .emit_file_from_schema(&schema);
+    .emit_file_from_true_schema(&schema);
     let code = generated.code.as_str();
 
     assert!(code.contains("pub enum SemaWriteInput"));
@@ -1038,7 +1071,7 @@ fn sema_runtime_target_accepts_plane_local_root_names() {
     let generated = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::SemaRuntime),
     )
-    .emit_file_from_schema(&schema);
+    .emit_file_from_true_schema(&schema);
     let code = generated.code.as_str();
 
     assert!(code.contains("pub enum WriteInput"));
@@ -1074,7 +1107,7 @@ fn sema_runtime_target_accepts_plane_local_root_names() {
 #[test]
 fn runtime_target_emits_read_only_sema_engine_when_read_roots_exist() {
     let schema = FixtureSchema::new("sema-read-only.schema").lower("daemon:sema");
-    let generated = RustEmitter::default().emit_file_from_schema(&schema);
+    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
     let code = generated.code.as_str();
 
     assert!(code.contains("pub trait SemaEngine"));
@@ -1098,7 +1131,7 @@ fn runtime_target_emits_read_only_sema_engine_when_read_roots_exist() {
 #[test]
 fn runtime_target_emits_write_only_sema_engine_when_write_roots_exist() {
     let schema = FixtureSchema::new("sema-write-only.schema").lower("daemon:sema");
-    let generated = RustEmitter::default().emit_file_from_schema(&schema);
+    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
     let code = generated.code.as_str();
 
     assert!(code.contains("pub trait SemaEngine"));
@@ -1413,7 +1446,7 @@ fn generated_upgrade_trait_accepts_previous_schema_objects_observably() {
 #[test]
 fn emits_vec_map_and_option_collection_types_with_shared_codec_traits() {
     let schema = FixtureSchema::new("collections.schema").lower("collections:lib");
-    let generated = RustEmitter::default().emit_code_from_schema(&schema);
+    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
     let code = generated.as_str();
 
     // The generated code imports the shared NOTA codec instead of
@@ -1435,8 +1468,10 @@ fn emits_vec_map_and_option_collection_types_with_shared_codec_traits() {
         "pub node_config_by_node_name: std::collections::BTreeMap<NodeName, NodeConfig>,"
     ));
     assert!(code.contains("pub optional_node_config: Option<NodeConfig>,"));
-    assert!(code.contains("pub healthy: Boolean,"));
-    assert!(code.contains("pub config_path: Path,"));
+    assert!(code.contains("pub healthy: Healthy,"));
+    assert!(code.contains("pub config_path: ConfigPath,"));
+    assert!(code.contains("pub struct Healthy(Boolean);"));
+    assert!(code.contains("pub struct ConfigPath(Path);"));
     assert!(code.contains("pub type Path = std::string::String;"));
     // Collection payloads in a root output variant.
     assert!(code.contains("Projected(std::collections::BTreeMap<NodeName, NodeConfig>),"));
@@ -1454,7 +1489,7 @@ fn collection_free_schema_keeps_checked_generated_source_stable() {
     // emits exactly the checked-in fixture, proving the collection work
     // is purely additive.
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated = RustEmitter::default().emit_code_from_schema(&schema);
+    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
 
     assert_generated_fixture("spirit_generated.rs", generated.as_str());
 }
@@ -1481,8 +1516,8 @@ fn generated_collection_struct_round_trips_through_nota() {
             nodes
         },
         optional_node_config: Some(collections_generated::NodeConfig::new("warm")),
-        healthy: true,
-        config_path: "/tmp/cluster.nota".to_owned(),
+        healthy: collections_generated::Healthy::new(true),
+        config_path: collections_generated::ConfigPath::new("/tmp/cluster.nota"),
         digest: collections_generated::Digest::new(collections_generated::Bytes::new(vec![
             0xde, 0xad, 0xbe, 0xef,
         ])),
@@ -1502,8 +1537,8 @@ fn generated_collection_struct_round_trips_through_nota() {
         service_vector: Vec::new(),
         node_config_by_node_name: std::collections::BTreeMap::new(),
         optional_node_config: None,
-        healthy: false,
-        config_path: "/tmp/empty.nota".to_owned(),
+        healthy: collections_generated::Healthy::new(false),
+        config_path: collections_generated::ConfigPath::new("/tmp/empty.nota"),
         digest: collections_generated::Digest::new(collections_generated::Bytes::new(Vec::new())),
         fingerprint: collections_generated::Fingerprint::new(
             collections_generated::FixedBytes::new([0u8; 4]),

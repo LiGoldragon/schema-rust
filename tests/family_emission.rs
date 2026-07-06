@@ -1,4 +1,4 @@
-use schema::{SchemaEngine, SchemaIdentity, SpecifiedSchema};
+use schema::{SchemaEngine, SchemaIdentity};
 use schema_rust::{RustEmissionOptions, RustEmitter, RustModule};
 
 mod support;
@@ -41,14 +41,14 @@ fn assert_code_contains(code: &str, expected: &str) {
     );
 }
 
-fn family_schema() -> schema::Schema {
+fn family_schema() -> schema::TrueSchema {
     FixtureSchema::new("record-families.schema").lower("example:lib")
 }
 
 #[test]
 fn family_declarations_emit_the_version_control_surface() {
     let schema = family_schema();
-    let generated = RustEmitter::default().emit_code_from_schema(&schema);
+    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
 
     assert_code_contains(generated.as_str(), "pub mod family_identity");
     assert_code_contains(generated.as_str(), "pub const ENTRY_FAMILY: [u8; 32]");
@@ -79,31 +79,26 @@ fn family_declarations_emit_the_version_control_surface() {
 }
 
 #[test]
-fn family_identity_emission_uses_specified_schema_closure() {
+fn family_identity_emission_uses_true_schema_closure() {
     let schema = family_schema();
-    let specified = SpecifiedSchema::from(&schema);
     let schema_module =
-        RustModule::from_schema(&schema, "schema-rust", RustEmissionOptions::default());
-    let specified_module = RustModule::from_specified_schema(
-        &specified,
-        "schema-rust",
-        RustEmissionOptions::default(),
-    );
+        RustModule::from_true_schema(&schema, "schema-rust", RustEmissionOptions::default());
 
-    assert_eq!(
-        schema_module.versioned_store(),
-        specified_module.versioned_store()
-    );
-    assert_eq!(
-        RustEmitter::default().emit_code_from_schema(&schema),
-        RustEmitter::default().emit_code_from_specified_schema(&specified)
-    );
+    for family in schema_module.versioned_store().families() {
+        let expected_hash = *schema
+            .family_closure(family.record().as_str())
+            .expect("family closure builds from TrueSchema")
+            .content_hash()
+            .expect("family closure hashes")
+            .as_bytes();
+        assert_eq!(family.schema_hash(), &expected_hash);
+    }
 }
 
 #[test]
 fn schema_without_families_emits_no_family_surface() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated = RustEmitter::default().emit_code_from_schema(&schema);
+    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
 
     assert!(!generated.as_str().contains("RecordFamily"));
     assert!(!generated.as_str().contains("family_identity"));
@@ -114,17 +109,17 @@ fn schema_without_families_emits_no_family_surface() {
 fn schema_field_change_moves_the_emitted_family_constant() {
     let original = family_schema();
     let edited_source = FixtureSchema::new("record-families.schema").read().replace(
-        "Entry { Topic Description }",
-        "Entry { Topic Description revision.Integer }",
+        "RecordIdentifier Integer\n  Entry { Topic Description }",
+        "RecordIdentifier Integer\n  Revision Integer\n  Entry { Topic Description Revision }",
     );
     let edited = SchemaEngine::default()
         .lower_source(&edited_source, SchemaIdentity::new("example:lib", "0.1.0"))
         .expect("edited schema lowers");
 
     let original_module =
-        RustModule::from_schema(&original, "schema-rust", RustEmissionOptions::default());
+        RustModule::from_true_schema(&original, "schema-rust", RustEmissionOptions::default());
     let edited_module =
-        RustModule::from_schema(&edited, "schema-rust", RustEmissionOptions::default());
+        RustModule::from_true_schema(&edited, "schema-rust", RustEmissionOptions::default());
 
     let family = |module: &RustModule, name: &str| {
         module
@@ -158,13 +153,13 @@ fn schema_field_change_moves_the_emitted_family_constant() {
     };
     assert_code_contains(
         RustEmitter::default()
-            .emit_code_from_schema(&original)
+            .emit_code_from_true_schema(&original)
             .as_str(),
         &constant_text(family(&original_module, "EntryFamily")),
     );
     assert_code_contains(
         RustEmitter::default()
-            .emit_code_from_schema(&edited)
+            .emit_code_from_true_schema(&edited)
             .as_str(),
         &constant_text(family(&edited_module, "EntryFamily")),
     );

@@ -2,5 +2,5 @@
 []
 []
 {
-  RecordIdentifier String {| Display Ord |}
+  RecordIdentifier String { | Display Ord | }
 }

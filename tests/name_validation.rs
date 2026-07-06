@@ -3,17 +3,17 @@
 //! name reached `Ident::new` and PANICKED. The emission boundary now turns that
 //! into a typed `SchemaError::MalformedSchemaNode` via `RustModule::verify_names`.
 
-use schema::{Schema, SchemaEngine, SchemaError, SchemaIdentity};
+use schema::{SchemaEngine, SchemaError, SchemaIdentity, TrueSchema};
 use schema_rust::{RustEmissionOptions, RustModule};
 
-fn lower_source(source: &str) -> Schema {
+fn lower_source(source: &str) -> TrueSchema {
     SchemaEngine::default()
         .lower_source(source, SchemaIdentity::new("name-validation:lib", "0.1.0"))
         .expect("NOTA accepts the symbol atom as a schema name")
 }
 
 fn module(source: &str) -> RustModule {
-    RustModule::from_schema(
+    RustModule::from_true_schema(
         &lower_source(source),
         "schema-rust",
         RustEmissionOptions::binary_only(),

@@ -18,7 +18,7 @@ fn emit_reaction_frame() -> String {
     let options = RustEmissionOptions::feature_gated_nota("nota-text")
         .with_target(RustEmissionTarget::DeclarationModule);
     RustEmitter::new(options)
-        .emit_code_from_schema(&schema)
+        .emit_code_from_true_schema(&schema)
         .as_str()
         .to_owned()
 }

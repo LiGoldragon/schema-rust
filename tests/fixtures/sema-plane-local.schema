@@ -20,9 +20,10 @@
 
   Topic String
   RecordIdentifier Integer
+  Message String
   Entry { Topic }
   Query { Topic }
   RecordSet (Vector Entry)
   Receipt { RecordIdentifier }
-  ErrorReport { message.String }
+  ErrorReport { Message }
 }

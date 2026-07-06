@@ -4,7 +4,7 @@
   Topic String
   Query { Topic }
   Report { Topic }
-  SemaReceipt { integer.Integer }
+  SemaReceipt { Integer }
   SemaReadInput [Read]
   SemaReadOutput [ReadDone]
   SemaWriteInput [(Record Query)]

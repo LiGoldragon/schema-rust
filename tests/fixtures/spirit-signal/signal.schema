@@ -1,0 +1,260 @@
+{
+  Domain signal-spirit:domain:Domain
+  Health signal-spirit:domain:Health
+  Food signal-spirit:domain:Food
+  Home signal-spirit:domain:Home
+  Finance signal-spirit:domain:Finance
+  Work signal-spirit:domain:Work
+  Craft signal-spirit:domain:Craft
+  Knowledge signal-spirit:domain:Knowledge
+  Education signal-spirit:domain:Education
+  Language signal-spirit:domain:Language
+  Art signal-spirit:domain:Art
+  Kinship signal-spirit:domain:Kinship
+  Selfhood signal-spirit:domain:Selfhood
+  Spirituality signal-spirit:domain:Spirituality
+  Governance signal-spirit:domain:Governance
+  Law signal-spirit:domain:Law
+  Community signal-spirit:domain:Community
+  Nature signal-spirit:domain:Nature
+  Travel signal-spirit:domain:Travel
+  Commerce signal-spirit:domain:Commerce
+  Leisure signal-spirit:domain:Leisure
+  Appearance signal-spirit:domain:Appearance
+  Safety signal-spirit:domain:Safety
+  Information signal-spirit:domain:Information
+  Technology signal-spirit:domain:Technology
+  HardwareLeaf signal-spirit:domain:HardwareLeaf
+  Software signal-spirit:domain:Software
+  ProgrammingLeaf signal-spirit:domain:ProgrammingLeaf
+  SystemsLeaf signal-spirit:domain:SystemsLeaf
+  DistributedLeaf signal-spirit:domain:DistributedLeaf
+  DataLeaf signal-spirit:domain:DataLeaf
+  IntelligenceLeaf signal-spirit:domain:IntelligenceLeaf
+  SecurityLeaf signal-spirit:domain:SecurityLeaf
+  QualityLeaf signal-spirit:domain:QualityLeaf
+  OperationsLeaf signal-spirit:domain:OperationsLeaf
+  ObservabilityLeaf signal-spirit:domain:ObservabilityLeaf
+  SurfacesLeaf signal-spirit:domain:SurfacesLeaf
+  EngineeringLeaf signal-spirit:domain:EngineeringLeaf
+  DomainScope signal-spirit:domain:DomainScope
+  DomainScopes signal-spirit:domain:DomainScopes
+  ScopeSet signal-spirit:domain:ScopeSet
+}
+[State Record Propose Clarify Supersede Retire ResolveClarification Observe PublicTextSearch PublicRecords PrivateRecords Lookup Count ChangeCertainty BumpImportance ChangeRecord RegisterReferent LookupStash Tap Untap ApplyAuthorizedRecord (SubscribeIntent SubscribeIntent opens IntentEventStream) Version Marker]
+[RecordAccepted Proposed Clarified Superseded Retired ClarificationResolved GuardianRejected ReferentGuardianRejected RecordsObserved RecordsStashed RecordFound RecordsCounted CertaintyChanged ImportanceBumped RecordChanged ReferentRegistered ObservationTapped ObservationUntapped SubscriptionStarted VersionReported MarkerReported RecordApplied ApplyRefused (Event IntentEvent) Error Rejected]
+{
+  SourcePath String
+  LocalPath String
+  PublicPath String
+  Import { SourcePath LocalPath }
+  Export { LocalPath PublicPath }
+  SignalReuse { Import Export }
+
+  State Statement
+  Record RecordRequest
+  Propose Proposal
+  Clarify Clarification
+  Supersede Supersession
+  Retire Retirement
+  ResolveClarification ClarificationResolution
+  Observe Query
+  PublicTextSearch SearchText
+  PublicRecords RecordSelection
+  PrivateRecords RecordSelection
+  Lookup RecordIdentifier
+  Count Query
+  ChangeCertainty CertaintyChange
+  BumpImportance ImportanceBump
+  ChangeRecord RecordChange
+  RegisterReferent ReferentRegistration
+  LookupStash StashHandle
+  Tap ObserverFilter
+  Untap SubscriptionToken
+  ApplyAuthorizedRecord AuthorizedRecordApplication
+  SubscribeIntent Query
+
+  RecordAccepted RecordIdentifier
+  Proposed RecordIdentifier
+  Clarified ClarificationReceipt
+  Superseded SupersessionReceipt
+  Retired RetirementReceipt
+  ClarificationResolved ClarificationResolutionReceipt
+  GuardianRejected GuardianRejection
+  ReferentGuardianRejected ReferentGuardianRejection
+  RecordsObserved ObservedRecords
+  RecordsStashed StashedObservation
+  RecordFound FoundRecord
+  RecordsCounted CountedRecords
+  CertaintyChanged CertaintyChangeReceipt
+  ImportanceBumped ImportanceBumpReceipt
+  RecordChanged RecordChangeReceipt
+  ReferentRegistered ReferentRegistrationReceipt
+  ObservationTapped ObserverSubscription
+  ObservationUntapped ObserverRetraction
+  SubscriptionStarted IntentSubscription
+  MarkerReported DatabaseMarker
+  RecordApplied RecordApplicationReceipt
+  ApplyRefused ApplyRefusal
+  Error ErrorReport
+  Rejected SignalRejection
+
+  Domains (Vector Domain)
+  Referent String
+  Referents (Vector Referent)
+  Aliases Referents
+  Description String
+  Keyword String
+  Keywords (Vector Keyword)
+  SearchText String
+  StatementText String
+  ErrorMessage String
+  RecordIdentifier String
+  CommitSequence Integer
+  StateDigest Integer
+  RecordCount Integer
+  StashHandle Integer
+  SubscriptionToken Integer
+  VersionText String
+  Explanation String
+  ConfigurationPath String
+  SpiritGuardianProviderName String
+  SpiritGuardianModelName String
+  SpiritGuardianTimeoutMilliseconds Integer
+  SpiritGuardianMaximumOutputTokens Integer
+
+  DatabaseMarker { CommitSequence StateDigest }
+  SemaReceipt { RecordIdentifier DatabaseMarker }
+  VersionedEntryHex String
+  AuthorizedEvidenceHex String
+  AuthorizedRecordApplication { RecordIdentifier VersionedEntryHex AuthorizedEvidenceHex }
+  RecordApplicationReceipt { RecordIdentifier DatabaseMarker }
+  ApplyRefusalReason [MalformedRecord RehashMismatch AuthorizationDenied AuthorizationUnavailable]
+  ApplyRefusal { ApplyRefusalReason }
+  ObservedRecords { RecordSet }
+  ObservedRecord { RecordIdentifier Entry }
+  FoundRecord { RecordIdentifier Entry }
+  CountedRecords { RecordCount }
+  ErrorReport { ErrorMessage }
+  SignalRejection { ValidationError }
+  StashedObservation { StashHandle RecordCount ObservedRecords }
+  IntentSubscription { SubscriptionToken }
+  QuoteText String
+  Antecedent String
+  VerbatimQuote { QuoteText OptionalAntecedent.(Optional Antecedent) }
+  Testimony (Vector VerbatimQuote)
+  Reasoning String
+  Justification { Testimony Reasoning }
+  RecordRequest { Entry Justification }
+  Proposal { Entry Justification }
+  ReferentRegistration { Referent Aliases Justification }
+  ReferentRegistrationReceipt { Referent }
+  RegisteredReferent { Referent Aliases }
+  RegisteredReferents (Vector RegisteredReferent)
+  VersionReported VersionReport
+  VersionReport { VersionText }
+  IntentRecorded { Entry RecordIdentifier }
+  IntentClarified { RecordIdentifier Entry }
+  IntentSuperseded { RetiredIdentifiers Replacements RecordIdentifiers }
+  IntentRetired { RecordIdentifier }
+  IntentEvent [(IntentRecorded IntentRecorded belongs IntentEventStream) (IntentClarified IntentClarified belongs IntentEventStream) (IntentSuperseded IntentSuperseded belongs IntentEventStream) (IntentRetired IntentRetired belongs IntentEventStream)]
+  IntentEventStream (Stream { token.SubscriptionToken opened.SubscriptionStarted event.IntentEvent close.SubscriptionToken })
+  ValidationError [EmptyDomain EmptyDescription EmptyQueryDomain EmptyKeyword EmptySearchText EmptyQueryReferent StashHandleNotFound EmptyReferents]
+  SpiritGuardianAgentConfiguration {
+    AgentSocketPath.ConfigurationPath
+    ProviderName.(Optional SpiritGuardianProviderName)
+    ModelName.(Optional SpiritGuardianModelName)
+    TimeoutMilliseconds.SpiritGuardianTimeoutMilliseconds
+    MaximumOutputTokens.(Optional SpiritGuardianMaximumOutputTokens)
+  }
+  AuthorizationMode [Gating Observing]
+  SpiritDaemonConfiguration {
+    socket_path.ConfigurationPath
+    meta_socket_path.(Optional ConfigurationPath)
+    database_path.ConfigurationPath
+    trace_socket_path.(Optional ConfigurationPath)
+    AuthorizationMode
+    GuardianAgentConfiguration.(Optional SpiritGuardianAgentConfiguration)
+  }
+
+  DomainMatch [Any (Partial) (Full)]
+  Partial DomainScopes
+  Full DomainScopes
+  ReferentSelection [Any (AnyReferent) (AllReferents)]
+  AnyReferent Referents
+  AllReferents Referents
+  KeywordMatch [Any (AnyKeyword) (AllKeywords)]
+  AnyKeyword Keywords
+  AllKeywords Keywords
+  TextMatch [Any (ContainsText)]
+  ContainsText SearchText
+  Privacy Magnitude
+  Certainty Magnitude
+  Importance Magnitude
+  PrivacySelection [Any (Exact) (AtMost) (AtLeast)]
+  Exact Privacy
+  AtMost Privacy
+  AtLeast Privacy
+  CertaintySelection [Any (ExactCertainty) (AtMostCertainty) (AtLeastCertainty)]
+  ExactCertainty Certainty
+  AtMostCertainty Certainty
+  AtLeastCertainty Certainty
+  ImportanceSelection [Any (ExactImportance) (AtMostImportance) (AtLeastImportance)]
+  ExactImportance Importance
+  AtMostImportance Importance
+  AtLeastImportance Importance
+
+  RemovalCandidateCollection { RecordQuery Justification }
+  RecordQuery Query
+  RemovalArchiveRecord { RecordIdentifier Entry }
+  RemovalArchiveRecords (Vector RemovalArchiveRecord)
+  RemovedIdentifier RecordIdentifier
+  RemovedIdentifiers (Vector RemovedIdentifier)
+  RemovalCandidateSkipReason [ArchiveFailed RecordChanged RecordAlreadyRemoved NoLongerCandidate]
+  SkippedRemovalCandidate { RecordIdentifier RemovalCandidateSkipReason }
+  SkippedRemovalCandidates (Vector SkippedRemovalCandidate)
+  RemovalCandidatesCollection { RemovalArchiveRecords RemovedIdentifiers SkippedRemovalCandidates }
+
+  ObserverFilter [All OperationsOnly EffectsOnly]
+  ObserverSubscription { SubscriptionToken ObserverFilter ObservedOperations }
+  ObserverRetraction { SubscriptionToken ObservedOperations }
+  OperationKind [State Record Propose Clarify Supersede Retire ResolveClarification Observe PublicTextSearch PublicRecords PrivateRecords Lookup Count ChangeCertainty BumpImportance ChangeRecord RegisterReferent LookupStash Tap Untap ApplyAuthorizedRecord SubscribeIntent Version Marker]
+  ObservedOperation { OperationKind }
+  ObservedOperations (Vector ObservedOperation)
+
+  Entry { Domains Kind Description Certainty Importance Privacy Referents }
+  Statement { StatementText }
+  CertaintyChange { RecordIdentifier Certainty }
+  CertaintyChangeReceipt { RecordIdentifier Certainty }
+  ImportanceBump { RecordIdentifier }
+  ImportanceBumpReceipt { RecordIdentifier Importance }
+  RecordChange { RecordIdentifier Entry Justification }
+  RecordChangeReceipt { RecordIdentifier }
+  Clarification { RecordIdentifier Description Justification }
+  ClarificationReceipt { RecordIdentifier }
+  ClarificationRecordIdentifier RecordIdentifier
+  TargetClarification { RecordIdentifier Description }
+  TargetClarifications (Vector TargetClarification)
+  ClarificationResolution { ClarificationRecordIdentifier TargetClarifications Justification }
+  ClarificationResolutionReceipt { ClarificationRecordIdentifier RecordIdentifiers }
+  Replacements (Vector Entry)
+  RecordIdentifiers (Vector RecordIdentifier)
+  Supersession { RetiredIdentifiers Replacements Justification }
+  SupersessionReceipt { RetiredIdentifiers RecordIdentifiers }
+  Retirement { RecordIdentifier Justification }
+  RetirementReceipt { RecordIdentifier }
+  RetiredIdentifier RecordIdentifier
+  RetiredIdentifiers (Vector RetiredIdentifier)
+  GuardianRejectionReason [Duplicate Contradiction Compound NonIntent NegativeGuideline Matter UnclearPrivacy UnclearDomain ClarifyTramples ClarifyLosesMeaning SupersedeTargetMissing RetrievalInsufficient MissingTestimony TestimonyFabricated InsufficientWarrant Overstated ImportanceUnsupported HarnessUnavailable HarnessMalformed HarnessTimedOut]
+  GuardianRejection { GuardianRejectionReason RecordSet Explanation }
+  ReferentGuardianRejectionReason [Duplicate Ambiguous TooVague AliasCollision NonReferent UnclearJustification HarnessUnavailable HarnessMalformed HarnessTimedOut]
+  ReferentGuardianRejection { ReferentGuardianRejectionReason RegisteredReferents Explanation }
+  SelectedKind (Optional Kind)
+  RecordSelection { DomainMatch SelectedKind }
+  Query { DomainMatch KeywordMatch TextMatch ReferentSelection SelectedKind PrivacySelection CertaintySelection ImportanceSelection }
+  Records (Vector ObservedRecord)
+  RecordSet (Vector ObservedRecord)
+  Kind [Decision Principle Correction Clarification Constraint]
+  Magnitude [Zero Minimum VeryLow Low Medium High VeryHigh Maximum]
+
+}

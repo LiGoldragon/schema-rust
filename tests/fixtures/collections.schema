@@ -6,7 +6,9 @@
   Service String
   Query Topic
   Topic String
+  Healthy Boolean
+  ConfigPath Path
   Digest Bytes
   Fingerprint (Bytes 4)
-  Cluster { (Vector Service) (Map NodeName NodeConfig) (Optional NodeConfig) healthy.Boolean configPath.Path Digest Fingerprint }
+  Cluster { (Vector Service) (Map NodeName NodeConfig) (Optional NodeConfig) Healthy ConfigPath Digest Fingerprint }
 }
