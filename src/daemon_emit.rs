@@ -662,6 +662,97 @@ impl ToTokens for ComponentDaemonTraitTokens {
         } else {
             quote! {}
         };
+        let staged_lane_types = if self.component_decoded {
+            quote! {}
+        } else {
+            quote! {
+                /// The lane one decoded working `Input` runs on. `Immediate` is the
+                /// single-turn engine ask every component starts with; `Staged` runs
+                /// the three-phase staged turn — stage under the daemon's advance
+                /// gate, resolve on the connection task with no engine borrow, then
+                /// conclude in one more engine turn. Components without a staged
+                /// intake never return `Staged`.
+                #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+                pub enum WorkingInputLane {
+                    Immediate,
+                    Staged,
+                }
+
+                /// The component-facing stage verdict: the stage turn either
+                /// completed the input outright (a read, a refusal, a mode without
+                /// staging) or parked a staged advance awaiting external resolution.
+                pub enum StagedWorkingTurn<Daemon: ComponentDaemon> {
+                    Completed(Output),
+                    Awaiting(Box<dyn StagedAdvance<Daemon>>),
+                }
+
+                /// One staged advance crossing the daemon spine. `resolve` runs on
+                /// the connection task with NO engine borrow — the external wait
+                /// (for example a cluster authorization round) — storing its verdict
+                /// internally; `conclude` then runs as one fast engine turn and
+                /// produces the final `Output`.
+                pub trait StagedAdvance<Daemon: ComponentDaemon>: Send {
+                    fn resolve<'advance>(
+                        &'advance mut self,
+                    ) -> std::pin::Pin<
+                        Box<dyn std::future::Future<Output = ()> + Send + 'advance>,
+                    >;
+                    fn conclude<'engine>(
+                        self: Box<Self>,
+                        engine: &'engine mut Daemon::Engine,
+                    ) -> std::pin::Pin<
+                        Box<
+                            dyn std::future::Future<
+                                Output = Result<Output, Daemon::Error>,
+                            > + Send + 'engine,
+                        >,
+                    >;
+                }
+            }
+        };
+        let staged_lane_hooks = if self.component_decoded {
+            quote! {}
+        } else {
+            quote! {
+                /// The lane a decoded working `Input` runs on. The default keeps
+                /// every input on the single-turn `Immediate` ask, so components
+                /// without a staged intake are unaffected.
+                fn working_input_lane(input: &Input) -> WorkingInputLane {
+                    let _ = input;
+                    WorkingInputLane::Immediate
+                }
+
+                /// Stage one working `Input` — the fast first engine turn of the
+                /// staged lane. The default completes immediately through
+                /// `handle_working_input`, so a component that never returns
+                /// `WorkingInputLane::Staged` never stages.
+                fn stage_working_input<'connection>(
+                    engine: &'connection mut Self::Engine,
+                    input: Input,
+                    connection: &'connection triad_runtime::ConnectionContext,
+                ) -> impl std::future::Future<
+                    Output = Result<StagedWorkingTurn<Self>, Self::Error>,
+                > + Send + 'connection {
+                    async move {
+                        Ok(StagedWorkingTurn::Completed(
+                            Self::handle_working_input(engine, input, connection).await?,
+                        ))
+                    }
+                }
+
+                /// The component's shared advance gate, when it owns one: the
+                /// daemon's staged lane serializes staged turns first-in first-out
+                /// through this queue-fair lock, and a component can share the same
+                /// gate with its own background passes. `None` lets the runtime own
+                /// a private gate.
+                fn shared_advance_gate(
+                    engine: &Self::Engine,
+                ) -> Option<std::sync::Arc<tokio::sync::Mutex<()>>> {
+                    let _ = engine;
+                    None
+                }
+            }
+        };
         let working_hook = if self.component_decoded {
             quote! {
                 /// Run one accepted working connection. Use this only for a daemon
@@ -710,6 +801,8 @@ impl ToTokens for ComponentDaemonTraitTokens {
             quote! {}
         };
         quote! {
+            #staged_lane_types
+
             /// The component hook surface for the emitted daemon — the only daemon
             /// code the component hand-writes (record 1488 escape hatches).
             ///
@@ -756,6 +849,8 @@ impl ToTokens for ComponentDaemonTraitTokens {
                 }
 
                 #working_hook
+
+                #staged_lane_hooks
 
                 #tcp_working_hook
 
@@ -1725,6 +1820,93 @@ impl GeneratedDaemonRuntimeTokens {
                 Daemon::handle_working_input(&mut self.engine, message.input, &message.context).await
             }
         };
+        // The staged-lane actor messages: `StageWorkingInput` runs the fast first
+        // engine turn and either completes the input or hands back the staged
+        // advance; `ConcludeWorkingInput` runs the fast concluding turn after the
+        // connection task resolved the advance outside the mailbox.
+        let stage_completed_wrap = if emits_stream {
+            quote! {
+                StagedWorkingTurn::Completed(output) => {
+                    let event = Daemon::published_event(&self.engine, &output).await?;
+                    Ok(StagedWorkingReply::Completed(WorkingOutcome { output, event }))
+                }
+            }
+        } else {
+            quote! {
+                StagedWorkingTurn::Completed(output) => {
+                    Ok(StagedWorkingReply::Completed(output))
+                }
+            }
+        };
+        let conclude_handler_body = if emits_stream {
+            quote! {
+                let output = message.advance.conclude(&mut self.engine).await?;
+                let event = Daemon::published_event(&self.engine, &output).await?;
+                Ok(WorkingOutcome { output, event })
+            }
+        } else {
+            quote! {
+                message.advance.conclude(&mut self.engine).await
+            }
+        };
+        let staged_reply_ok = if emits_stream {
+            quote! { WorkingOutcome<Daemon> }
+        } else {
+            quote! { Output }
+        };
+        let staged_messages = quote! {
+            /// The engine actor's stage reply: `Completed` carries the finished
+            /// outcome; `Awaiting` carries the staged advance the connection task
+            /// resolves before the concluding engine turn.
+            pub enum StagedWorkingReply<Daemon: ComponentDaemon> {
+                Completed(#staged_reply_ok),
+                Awaiting(Box<dyn StagedAdvance<Daemon>>),
+            }
+
+            pub struct StageWorkingInput {
+                input: Input,
+                context: triad_runtime::ConnectionContext,
+            }
+
+            impl<Daemon: ComponentDaemon> Message<StageWorkingInput> for EngineActor<Daemon> {
+                type Reply = Result<StagedWorkingReply<Daemon>, Daemon::Error>;
+
+                async fn handle(
+                    &mut self,
+                    message: StageWorkingInput,
+                    _context: &mut Context<Self, Self::Reply>,
+                ) -> Self::Reply {
+                    match Daemon::stage_working_input(
+                            &mut self.engine,
+                            message.input,
+                            &message.context,
+                        )
+                        .await?
+                    {
+                        #stage_completed_wrap
+                        StagedWorkingTurn::Awaiting(advance) => {
+                            Ok(StagedWorkingReply::Awaiting(advance))
+                        }
+                    }
+                }
+            }
+
+            pub struct ConcludeWorkingInput<Daemon: ComponentDaemon> {
+                advance: Box<dyn StagedAdvance<Daemon>>,
+            }
+
+            impl<Daemon: ComponentDaemon> Message<ConcludeWorkingInput<Daemon>> for EngineActor<Daemon> {
+                type Reply = #working_input_reply;
+
+                async fn handle(
+                    &mut self,
+                    message: ConcludeWorkingInput<Daemon>,
+                    _context: &mut Context<Self, Self::Reply>,
+                ) -> Self::Reply {
+                    #conclude_handler_body
+                }
+            }
+        };
         // The runtime's working-connection spine. Both tiers decode the frame and
         // ask the engine actor; the stream tier additionally computes the
         // subscription filter BEFORE the ask, registers the writer half when the
@@ -1747,9 +1929,44 @@ impl GeneratedDaemonRuntimeTokens {
                     let (_route, input) = Input::decode_signal_frame(&frame)?;
                     let filter = Daemon::subscription_filter(&input);
                     let context = *transport.context();
-                    let outcome = match self.engine.ask(WorkingInput { input, context }).await {
-                        Ok(outcome) => outcome,
-                        Err(error) => return Err(Self::engine_send_error(error)),
+                    let outcome = match Daemon::working_input_lane(&input) {
+                        WorkingInputLane::Immediate => {
+                            match self.engine.ask(WorkingInput { input, context }).await {
+                                Ok(outcome) => outcome,
+                                Err(error) => return Err(Self::engine_send_error(error)),
+                            }
+                        }
+                        WorkingInputLane::Staged => {
+                            // Staged turns serialize first-in first-out through the
+                            // advance gate across all three phases; the wait between
+                            // the two engine turns runs HERE, holding no engine
+                            // borrow, so the mailbox keeps serving other requests.
+                            let _advance_turn = self.advance_gate.lock().await;
+                            let staged = match self
+                                .engine
+                                .ask(StageWorkingInput { input, context })
+                                .await
+                            {
+                                Ok(staged) => staged,
+                                Err(error) => return Err(Self::engine_send_error(error)),
+                            };
+                            match staged {
+                                StagedWorkingReply::Completed(outcome) => outcome,
+                                StagedWorkingReply::Awaiting(mut advance) => {
+                                    advance.resolve().await;
+                                    match self
+                                        .engine
+                                        .ask(ConcludeWorkingInput { advance })
+                                        .await
+                                    {
+                                        Ok(outcome) => outcome,
+                                        Err(error) => {
+                                            return Err(Self::engine_send_error(error));
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     };
                     transport.write_frame(outcome.output.encode_signal_frame()?).await?;
                     if let (Some(filter), Some(token)) = (
@@ -1779,13 +1996,47 @@ impl GeneratedDaemonRuntimeTokens {
                     let frame = transport.read_frame().await?;
                     let (_route, input) = Input::decode_signal_frame(&frame)?;
                     let context = *transport.context();
-                    match self.engine.ask(WorkingInput { input, context }).await {
-                        Ok(output) => {
-                            transport.write_frame(output.encode_signal_frame()?).await?;
-                            Ok(())
+                    let output = match Daemon::working_input_lane(&input) {
+                        WorkingInputLane::Immediate => {
+                            match self.engine.ask(WorkingInput { input, context }).await {
+                                Ok(output) => output,
+                                Err(error) => return Err(Self::engine_send_error(error)),
+                            }
                         }
-                        Err(error) => Err(Self::engine_send_error(error)),
-                    }
+                        WorkingInputLane::Staged => {
+                            // Staged turns serialize first-in first-out through the
+                            // advance gate across all three phases; the wait between
+                            // the two engine turns runs HERE, holding no engine
+                            // borrow, so the mailbox keeps serving other requests.
+                            let _advance_turn = self.advance_gate.lock().await;
+                            let staged = match self
+                                .engine
+                                .ask(StageWorkingInput { input, context })
+                                .await
+                            {
+                                Ok(staged) => staged,
+                                Err(error) => return Err(Self::engine_send_error(error)),
+                            };
+                            match staged {
+                                StagedWorkingReply::Completed(output) => output,
+                                StagedWorkingReply::Awaiting(mut advance) => {
+                                    advance.resolve().await;
+                                    match self
+                                        .engine
+                                        .ask(ConcludeWorkingInput { advance })
+                                        .await
+                                    {
+                                        Ok(output) => output,
+                                        Err(error) => {
+                                            return Err(Self::engine_send_error(error));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    transport.write_frame(output.encode_signal_frame()?).await?;
+                    Ok(())
                 }
             }
         };
@@ -1896,6 +2147,7 @@ impl GeneratedDaemonRuntimeTokens {
                     fn clone(&self) -> Self {
                         Self {
                             engine: self.engine.clone(),
+                            advance_gate: self.advance_gate.clone(),
                             subscriptions: self.subscriptions.clone(),
                         }
                     }
@@ -1907,6 +2159,7 @@ impl GeneratedDaemonRuntimeTokens {
                     fn clone(&self) -> Self {
                         Self {
                             engine: self.engine.clone(),
+                            advance_gate: self.advance_gate.clone(),
                         }
                     }
                 }
@@ -1961,30 +2214,37 @@ impl GeneratedDaemonRuntimeTokens {
                 }
             }
 
+            #staged_messages
+
             #meta_message
 
             #upgrade_message
 
             /// The generated runtime struct holds an `ActorRef` to the engine
             /// actor. Its `handle_connection` IS the async decode -> ask -> encode
-            /// spine; the engine state lives behind the actor mailbox.
+            /// spine; the engine state lives behind the actor mailbox. The advance
+            /// gate serializes staged working turns first-in first-out across
+            /// their stage, resolve, and conclude phases.
             pub struct GeneratedDaemonRuntime<Daemon: ComponentDaemon> {
                 engine: ActorRef<EngineActor<Daemon>>,
+                advance_gate: std::sync::Arc<tokio::sync::Mutex<()>>,
                 #subscriptions_field
             }
 
             impl<Daemon: ComponentDaemon> GeneratedDaemonRuntime<Daemon> {
                 fn new(engine: Daemon::Engine) -> Self {
+                    let advance_gate = Daemon::shared_advance_gate(&engine).unwrap_or_default();
                     Self {
                         engine: EngineActor::<Daemon>::spawn(EngineActor { engine }),
+                        advance_gate,
                         #subscriptions_init
                     }
                 }
 
                 /// Translate a kameo `SendError` from an engine `ask` into the
                 /// component's typed `Error` via `EngineRequestError`.
-                fn engine_send_error(
-                    error: SendError<WorkingInput, Daemon::Error>,
+                fn engine_send_error<Request>(
+                    error: SendError<Request, Daemon::Error>,
                 ) -> Daemon::Error {
                     match error {
                         SendError::HandlerError(error) => error,

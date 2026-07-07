@@ -370,7 +370,11 @@ fn declared_stream_emits_async_subscription_support() {
     assert_code_contains(code, "let filter = Daemon::subscription_filter(&input);");
     assert_code_contains(
         code,
-        "let outcome = match self.engine.ask(WorkingInput { input, context }).await",
+        "let outcome = match Daemon::working_input_lane(&input)",
+    );
+    assert_code_contains(
+        code,
+        "WorkingInputLane::Immediate => { match self.engine.ask(WorkingInput { input, context }).await",
     );
     assert_code_contains(
         code,
@@ -386,6 +390,68 @@ fn declared_stream_emits_async_subscription_support() {
     // mailbox, not a direct `Daemon::stop` on a shared engine.
     assert_code_contains(code, "self.engine.stop_gracefully().await");
     assert_code_contains(code, "self.engine.wait_for_shutdown().await");
+}
+
+#[test]
+fn actor_tier_emits_the_staged_working_lane() {
+    // Both actor tiers (stream and non-stream) carry the staged three-phase
+    // working turn: a defaulted lane classifier, the staged-advance object
+    // crossing the spine, the two extra engine messages, and the first-in
+    // first-out advance gate on the runtime. Components that never return
+    // `WorkingInputLane::Staged` keep today's single-turn behavior — every
+    // new hook has a default.
+    for (schema_fixture, lower_target) in [
+        ("daemon-stream.schema", "test:signal"),
+        ("spirit-min.schema", "spirit:lib"),
+    ] {
+        let schema = FixtureSchema::new(schema_fixture).lower(lower_target);
+        let generated =
+            DaemonModule::new(single_listener_shape(), &schema, "schema-rust").to_generated_file();
+        let code = generated.code.as_str();
+
+        assert_code_contains(code, "pub enum WorkingInputLane");
+        assert_code_contains(
+            code,
+            "fn working_input_lane(input: &Input) -> WorkingInputLane { let _ = input; WorkingInputLane::Immediate }",
+        );
+        assert_code_contains(code, "pub enum StagedWorkingTurn<Daemon: ComponentDaemon>");
+        assert_code_contains(
+            code,
+            "pub trait StagedAdvance<Daemon: ComponentDaemon>: Send",
+        );
+        assert_code_contains(code, "fn stage_working_input<'connection>(");
+        assert_code_contains(
+            code,
+            "fn shared_advance_gate(engine: &Self::Engine) -> Option<std::sync::Arc<tokio::sync::Mutex<()>>>",
+        );
+        assert_code_contains(code, "pub enum StagedWorkingReply<Daemon: ComponentDaemon>");
+        assert_code_contains(code, "pub struct StageWorkingInput");
+        assert_code_contains(
+            code,
+            "pub struct ConcludeWorkingInput<Daemon: ComponentDaemon>",
+        );
+        assert_code_contains(code, "advance_gate: std::sync::Arc<tokio::sync::Mutex<()>>");
+        assert_code_contains(
+            code,
+            "let advance_gate = Daemon::shared_advance_gate(&engine).unwrap_or_default();",
+        );
+        assert_code_contains(code, "let _advance_turn = self.advance_gate.lock().await;");
+        assert_code_contains(code, "advance.resolve().await;");
+        assert_code_contains(code, "self.engine.ask(ConcludeWorkingInput { advance })");
+        assert_code_contains(code, "message.advance.conclude(&mut self.engine).await");
+    }
+}
+
+#[test]
+fn component_decoded_tier_emits_no_staged_lane() {
+    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
+    let generated =
+        DaemonModule::new(component_decoded_shape(), &schema, "schema-rust").to_generated_file();
+    let code = generated.code.as_str();
+
+    assert_code_excludes(code, "WorkingInputLane");
+    assert_code_excludes(code, "StagedAdvance");
+    assert_code_excludes(code, "advance_gate");
 }
 
 #[test]
