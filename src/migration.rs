@@ -1,6 +1,6 @@
 //! Designer 481 — migration code emission from `UpgradeObject`.
 //!
-//! Given an `UpgradeObject` from `schema`, the emitter produces a
+//! Given an `UpgradeObject` from `schema-language`, the emitter produces a
 //! Rust module containing:
 //!
 //!  - `mod historical` — the previous-version field shape needed to read
@@ -28,7 +28,7 @@
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
-use schema::{
+use schema_language::{
     AddField, AddVariant, ChangeFieldType, DefaultValue, FieldMigration, Name, SchemaEdit,
     TypeReference, UpgradeObject,
 };

@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use schema::{
+use schema_language::{
     ImportResolver, Name, SchemaEngine, SchemaEnvironmentManifest, SchemaEnvironmentModule,
     SchemaEnvironmentResult, SchemaError, SchemaPackage, SchemaSourceArtifact,
 };

@@ -27,7 +27,7 @@
 
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote};
-use schema::TrueSchema;
+use schema_language::TrueSchema;
 
 use crate::{GeneratedFile, RustCode, RustfmtSkippedItems};
 

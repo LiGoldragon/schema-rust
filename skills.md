@@ -10,7 +10,7 @@ Read the workspace Rust and schema skills before editing this repo:
 - `skills/abstractions.md`
 - `skills/actor-systems.md`
 
-This repo emits Rust nouns from `schema::TrueSchema` data. Generated Signal,
+This repo emits Rust nouns from `schema_language::TrueSchema` data. Generated Signal,
 Nexus, and SEMA traits are the runtime method surface; component crates supply
 non-default algorithms by implementing those traits on data-bearing runtime
 objects. Do not add parser-side shortcuts or hand-written helper APIs beside

@@ -1,18 +1,18 @@
 # schema-rust
 
-`schema-rust` emits source-visible Rust interface code from `schema`'s typed
+`schema-rust` emits source-visible Rust interface code from `schema-language`'s typed
 schema data.
 
 This repository is deliberately not a Rust macro crate. The active path is:
-authored `.schema` source deserializes into `schema::SchemaSource`, lowers into
-semantic `schema::TrueSchema`, then emits Rust source under `src/schema/`.
+authored `.schema` source deserializes into `schema_language::SchemaSource`, lowers into
+semantic `schema_language::TrueSchema`, then emits Rust source under `src/schema/`.
 `TrueSchema` is the canonical decoded semantic layer; generated Rust is only a
 projection from it.
 
 The shared build driver is the public orchestration surface. Component
 `build.rs` files use `schema_rust::build::GenerationDriver`,
 `GenerationPlan`, and `ModuleEmission` to load selected schema modules through
-`schema::SchemaEnvironment`, generate Rust from the environment-carried
+`schema_language::SchemaEnvironment`, generate Rust from the environment-carried
 `TrueSchema`, and freshness-check the checked-in Rust files.
 
 Emission is still two-step inside the crate: true schema data lowers into a

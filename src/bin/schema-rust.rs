@@ -5,7 +5,7 @@ use std::{
 };
 
 use nota::{NotaDecode, NotaDecodeError, NotaEncode, NotaSource};
-use schema::{ImportResolver, SchemaEnvironment, SchemaEnvironmentResult};
+use schema_language::{ImportResolver, SchemaEnvironment, SchemaEnvironmentResult};
 use schema_rust::{
     RustEmissionOptions, RustEmissionTarget,
     build::{

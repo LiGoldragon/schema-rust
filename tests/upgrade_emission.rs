@@ -16,7 +16,7 @@
 
 use std::{fs, path::PathBuf};
 
-use schema::{
+use schema_language::{
     DefaultValue, FieldMigration, Name, SchemaEdit, SchemaIdentity, TypeReference, UpgradeObject,
 };
 use schema_rust::MigrationEmitter;

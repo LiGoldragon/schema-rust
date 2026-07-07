@@ -3,7 +3,7 @@
 //! name reached `Ident::new` and PANICKED. The emission boundary now turns that
 //! into a typed `SchemaError::MalformedSchemaNode` via `RustModule::verify_names`.
 
-use schema::{SchemaEngine, SchemaError, SchemaIdentity, TrueSchema};
+use schema_language::{SchemaEngine, SchemaError, SchemaIdentity, TrueSchema};
 use schema_rust::{RustEmissionOptions, RustModule};
 
 fn lower_source(source: &str) -> TrueSchema {
@@ -64,7 +64,7 @@ fn well_formed_names_pass_validation() {
 /// all the way through `emit_module_from_schema_source`.
 #[test]
 fn source_emission_path_returns_err_for_malformed_name() {
-    use schema::{ImportResolver, SchemaSource};
+    use schema_language::{ImportResolver, SchemaSource};
     use schema_rust::RustEmitter;
 
     let engine = SchemaEngine::default();

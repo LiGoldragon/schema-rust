@@ -16,7 +16,7 @@
 //! concrete `Input`/`Output` enums round-trip through rkyv and NOTA — including
 //! the recursive `Continue(Input)` leg — through the EMITTED constructors.
 
-use schema::{ImportResolver, MacroContext, SchemaEngine, SchemaIdentity};
+use schema_language::{ImportResolver, MacroContext, SchemaEngine, SchemaIdentity};
 use schema_rust::{RustEmissionOptions, RustEmissionTarget, RustEmitter};
 
 mod support;

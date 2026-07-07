@@ -1,4 +1,4 @@
-use schema::{SchemaEngine, SchemaIdentity};
+use schema_language::{SchemaEngine, SchemaIdentity};
 use schema_rust::{RustEmissionOptions, RustEmitter, RustModule};
 
 mod support;
@@ -41,7 +41,7 @@ fn assert_code_contains(code: &str, expected: &str) {
     );
 }
 
-fn family_schema() -> schema::TrueSchema {
+fn family_schema() -> schema_language::TrueSchema {
     FixtureSchema::new("record-families.schema").lower("example:lib")
 }
 

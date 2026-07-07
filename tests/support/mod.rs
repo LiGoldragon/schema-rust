@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use schema::{ImportResolver, MacroContext, SchemaEngine, SchemaIdentity, TrueSchema};
+use schema_language::{ImportResolver, MacroContext, SchemaEngine, SchemaIdentity, TrueSchema};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FixtureSchema {

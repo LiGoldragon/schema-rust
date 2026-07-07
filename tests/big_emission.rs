@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use schema::{
+use schema_language::{
     Declaration, EnumDeclaration, ImportResolver, MacroContext, SchemaEngine, SchemaIdentity,
     SchemaSourceArtifact, TrueSchema, TypeDeclaration,
 };
@@ -188,7 +188,7 @@ impl<'fixture> BigRustFixture<'fixture> {
         assert!(found, "missing namespace type {name}");
     }
 
-    fn root_enum(root: &schema::Root) -> &EnumDeclaration {
+    fn root_enum(root: &schema_language::Root) -> &EnumDeclaration {
         root.as_enum().expect("root lowers to an enum body")
     }
 

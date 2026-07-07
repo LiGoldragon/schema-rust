@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::{ToTokens, quote};
-use schema::{
+use schema_language::{
     Declaration, EnumDeclaration, EnumVariant, FamilyDeclaration, FamilyKey, FieldDeclaration,
     ImplFact, ImplReference, ImportResolver, MethodParameter, MethodSignature, Name,
     NewtypeDeclaration, ReferencedImpl, RelationDeclaration, RelationValue, ResolvedImport, Root,
@@ -473,7 +473,7 @@ impl RustModule {
 
     /// Verify the `{| … |}` catalog against the Rust surface this module
     /// ACTUALLY emits. This is the half that turns
-    /// [`schema::RustSurface::verify_catalog`] from a test-only check into
+    /// [`schema_language::RustSurface::verify_catalog`] from a test-only check into
     /// a build invariant: the facts come from [`EmittedRustSurface::from`]
     /// walking `self` (the standard impls Move 3 emitted, the intrinsic newtype
     /// inherents, and the ordering-class derives), not a hand-built test vector.
@@ -1485,7 +1485,7 @@ impl LowerToRust<RustAppliedRoot> for RootApplication {
     }
 }
 
-/// An owned mirror of one [`schema::ReferencedImpl`] — an entry from the
+/// An owned mirror of one [`schema_language::ReferencedImpl`] — an entry from the
 /// schema-wide `{| … |}` impl catalog, paired with the type it targets. The
 /// borrowed `ReferencedImpl<'schema>` cannot cross into the owned
 /// [`RustModule`], so lowering clones it into this noun. The catalog carries
@@ -1534,7 +1534,7 @@ impl<'schema> TrueSchemaReferencedImpls<'schema> {
     }
 }
 
-/// The owned lowering of one [`schema::ImplReference`]: a bare trait
+/// The owned lowering of one [`schema_language::ImplReference`]: a bare trait
 /// marker, a body-bearing trait impl with its required method signatures, or a
 /// single inherent method signature. Mirrors the schema enum shape so the
 /// module owns its catalog without borrowing the source schema.
@@ -1556,7 +1556,7 @@ impl RustImplEntry {
 
     /// The method signatures this entry references — none for a marker, the
     /// required methods for a trait impl, exactly itself for an inherent
-    /// method. Mirrors [`schema::ImplReference::methods`].
+    /// method. Mirrors [`schema_language::ImplReference::methods`].
     pub fn methods(&self) -> &[RustMethodSignature] {
         match self {
             Self::Marker(_) => &[],
@@ -1584,7 +1584,7 @@ impl LowerToRust<RustImplEntry> for ImplReference {
     }
 }
 
-/// The owned lowering of one [`schema::MethodSignature`]: a method name,
+/// The owned lowering of one [`schema_language::MethodSignature`]: a method name,
 /// its parameters, and its return type reference. It re-derives the canonical
 /// rendering schema uses for duplicate detection and unverified-reference
 /// errors so an emitted [`ImplFact`] and the source catalog entry match
@@ -1625,7 +1625,7 @@ impl LowerToRust<RustMethodSignature> for MethodSignature {
 }
 
 /// The schema [`MethodSignature`] this owned signature corresponds to —
-/// the bridge back into a [`schema::ImplFact`] for the emitted surface.
+/// the bridge back into a [`schema_language::ImplFact`] for the emitted surface.
 /// Reconstructs the source-side parameter and return types so the surface fact
 /// renders the exact canonical signature `RustSurface::verify_catalog` matches.
 impl From<&RustMethodSignature> for MethodSignature {
@@ -1642,7 +1642,7 @@ impl From<&RustMethodSignature> for MethodSignature {
     }
 }
 
-/// The owned lowering of one [`schema::MethodParameter`]: a parameter name
+/// The owned lowering of one [`schema_language::MethodParameter`]: a parameter name
 /// and its resolved type reference.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RustMethodParameter {
@@ -2694,8 +2694,8 @@ impl StandardImplRecipe {
 }
 
 /// The Rust impl surface a [`RustModule`] genuinely emits, expressed as a
-/// [`schema::ImplFact`] set — the producer that makes
-/// [`schema::RustSurface::verify_catalog`] meaningful on a GENERATED
+/// [`schema_language::ImplFact`] set — the producer that makes
+/// [`schema_language::RustSurface::verify_catalog`] meaningful on a GENERATED
 /// surface rather than the hand-built facts in schema's tests. The
 /// [`From<&RustModule>`] form carries only what the generator emits/derives;
 /// the schema-aware verification form additionally trusts the unrecognized

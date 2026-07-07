@@ -491,21 +491,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
-name = "schema"
+name = "schema-language"
 version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/schema.git?rev=92bed64ad644ce4caa2827398ada5b7b79221165#92bed64ad644ce4caa2827398ada5b7b79221165"
+source = "git+https://github.com/LiGoldragon/schema-language.git?rev=6aae825d668e3f607a2754afa6b7d94e9f246c41#6aae825d668e3f607a2754afa6b7d94e9f246c41"
 dependencies = [
  "blake3",
  "nota",
  "rkyv",
- "schema-cc",
+ "schema-language-cc",
  "thiserror",
 ]
 
 [[package]]
-name = "schema-cc"
+name = "schema-language-cc"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/schema.git?rev=92bed64ad644ce4caa2827398ada5b7b79221165#92bed64ad644ce4caa2827398ada5b7b79221165"
+source = "git+https://github.com/LiGoldragon/schema-language.git?rev=6aae825d668e3f607a2754afa6b7d94e9f246c41#6aae825d668e3f607a2754afa6b7d94e9f246c41"
 dependencies = [
  "nota",
  "prettyplease",
@@ -524,7 +524,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rkyv",
- "schema",
+ "schema-language",
  "sema-engine",
  "signal-frame 0.3.0 (git+https://github.com/LiGoldragon/signal-frame.git?branch=main)",
  "syn",

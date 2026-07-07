@@ -1,4 +1,4 @@
-use schema::{ImportResolver, SchemaEnvironment};
+use schema_language::{ImportResolver, SchemaEnvironment};
 use schema_rust::build::{
     ContractCrateBuild, DependencySchema, GenerationDriver, GenerationPlan, ModuleEmission,
 };
@@ -48,7 +48,7 @@ impl DriverFixture {
             .expect("driver emits runtime package")
     }
 
-    fn environment(&self) -> schema::SchemaEnvironmentResult {
+    fn environment(&self) -> schema_language::SchemaEnvironmentResult {
         let plan = self.runtime_plan();
         let resolver =
             ImportResolver::new().with_dependency("driver-contract", self.contract.path(), "0.1.0");

@@ -1,5 +1,5 @@
 use nota::{Document, NotaDecode, NotaEncode};
-use schema::{ImportResolver, SchemaEngine, SchemaIdentity, SchemaSource, TrueSchema};
+use schema_language::{ImportResolver, SchemaEngine, SchemaIdentity, SchemaSource, TrueSchema};
 use schema_rust::{RustEmissionOptions, RustEmissionTarget, RustEmitter};
 
 mod support;

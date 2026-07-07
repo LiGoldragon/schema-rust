@@ -3,17 +3,17 @@
 `schema-rust` emits Rust interface source from typed schema data and owns the
 shared build-driver orchestrator for generated schema modules. This repository
 owns the Rust code-generation step and that orchestrator; it does not define
-schema semantics, which belong to `schema`. Rust emission is a separate step
+schema semantics, which now come from the build-time `schema-language` crate. Rust emission is a separate step
 from Rust macros: schema generates Rust code first, and macros are a later or
 separate consumption surface. Generated Rust is emitted into the consumer crate
 source tree under `src/schema/`, not hidden in `OUT_DIR`, so source-visible
 generated interfaces stay reviewable and can become committed or
 freshness-checked build artifacts.
 
-Its source-facing input is `schema::SchemaSource`, the schema-in-Rust value
+Its source-facing input is `schema_language::SchemaSource`, the schema-in-Rust value
 produced when authored `.schema` deserializes into Rust datatypes that fully
 define the schema and serialize through rkyv. Its semantic emission input is
-`schema::TrueSchema`, the canonical decoded semantic layer; there is no older
+`schema_language::TrueSchema`, the canonical decoded semantic layer; there is no older
 assembled-schema artifact or parallel semantic model beside that typed
 source/true-schema pipeline.
 
@@ -21,12 +21,12 @@ source/true-schema pipeline.
 
 - `RustEmitter` is the code-generation engine.
 - `RustTrueSchemaLowering` is the entry trait implemented for
-  `schema::TrueSchema`. The deserialized semantic schema object owns the
+  `schema_language::TrueSchema`. The deserialized semantic schema object owns the
   lowering call; the emitter supplies policy such as target, NOTA surface, and
   generator name. The trait lives in this repository rather than in `schema`
   because `schema` owns schema semantics and must not depend on Rust emission.
 - `RustSchemaSourceLowering` is the trait implemented for
-  `schema::SchemaSource`. It lowers typed source through `SchemaEngine` into
+  `schema_language::SchemaSource`. It lowers typed source through `SchemaEngine` into
   `TrueSchema` and then through `RustTrueSchemaLowering`.
 - `LowerToRust<Target>` is the recursive projection trait implemented for the
   schema subobjects that own each piece of the Rust model: imports,
@@ -162,7 +162,7 @@ same-named data-carrying variants use self-tagged records such as `(Record)`,
 and explicit `(Variant PayloadType)` records are reserved for intentionally
 different names. Root headers should prefer exported operation names or shallow
 inline operation payloads. This emitter sees the typed source/schema data from
-`schema` and must not grow a second parser for the authored form.
+`schema-language` and must not grow a second parser for the authored form.
 
 ## Constraints
 
@@ -289,7 +289,7 @@ inline operation payloads. This emitter sees the typed source/schema data from
   schema path `spirit-next:nexus:Mail` becomes a module/type path under
   `src/schema/` without inventing a second naming system.
 - Cross-crate schema imports are emitted as Rust aliases, not local
-  re-declarations. If `schema` resolves `DatabaseMarker` from
+  re-declarations. If `schema-language` resolves `DatabaseMarker` from
   `marker-core:mail:DatabaseMarker`, this emitter writes a `pub use
   marker_core::schema::mail::DatabaseMarker as DatabaseMarker;` line and local
   fields or variants reference that alias. The dependency crate owns the
@@ -430,7 +430,7 @@ inline operation payloads. This emitter sees the typed source/schema data from
   symbols, with generated defaults for symbols that have no explicit
   description. Generated help actions or client help output render that typed
   description data at the client edge; they are not hand-written CLI string
-  tables. The model is hybrid: `schema` owns the rkyv-encodable help
+  tables. The model is hybrid: `schema-language` owns the rkyv-encodable help
   catalog as schema data, this emitter emits that catalog alongside the
   generated contract with type-attached help accessors so a local text
   client resolves Help without daemon transport, and `schema-daemon`
@@ -500,7 +500,7 @@ inline operation payloads. This emitter sees the typed source/schema data from
   `FixtureNota`. Inline Rust strings remain for short expected generated-code
   fragments; the actual schema/NOTA input surfaces stay visible as files.
 - `MigrationEmitter` in `src/migration.rs` derives upgrade/compatibility code
-  from a `schema::UpgradeObject`. It emits a Rust module containing `mod
+  from a `schema_language::UpgradeObject`. It emits a Rust module containing `mod
   historical` (the previous-version field shapes needed to read archived records)
   and `mod current` (the next-version field shapes) and `impl From<historical::T>
   for current::T` per changed type, materializing the `FieldMigration` directive.

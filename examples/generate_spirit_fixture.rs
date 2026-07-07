@@ -1,4 +1,4 @@
-use schema::{SchemaEngine, SchemaIdentity};
+use schema_language::{SchemaEngine, SchemaIdentity};
 use schema_rust::RustEmitter;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

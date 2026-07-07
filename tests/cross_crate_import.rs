@@ -1,4 +1,4 @@
-use schema::{ImportResolver, MacroContext, SchemaEngine, SchemaIdentity};
+use schema_language::{ImportResolver, MacroContext, SchemaEngine, SchemaIdentity};
 use schema_rust::RustEmitter;
 
 mod support;

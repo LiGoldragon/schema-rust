@@ -1,4 +1,6 @@
-use schema::{SchemaEngine, SchemaError, SchemaIdentity, SchemaSource, SchemaSourceArtifact};
+use schema_language::{
+    SchemaEngine, SchemaError, SchemaIdentity, SchemaSource, SchemaSourceArtifact,
+};
 use schema_rust::{
     LowerToRust, NotaSurface, RustEmissionOptions, RustEmissionTarget, RustEmitter,
     RustLoweringContext, RustTrueSchemaLowering, RustTypeDeclaration,
@@ -352,7 +354,7 @@ fn schema_subobjects_lower_themselves_into_rust_model_nouns() {
         .input_and_output()
         .into_iter()
         .find(|root| root.name().as_str() == "Input")
-        .and_then(schema::Root::as_enum)
+        .and_then(schema_language::Root::as_enum)
         .expect("schema input root enum");
     let rust_input = input.lower_to_rust(&context);
     assert_eq!(rust_input.name().as_str(), "Input");

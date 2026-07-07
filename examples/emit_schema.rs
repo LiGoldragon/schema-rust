@@ -1,6 +1,6 @@
 use std::{env, fs};
 
-use schema::{ImportResolver, MacroContext, SchemaEngine, SchemaIdentity};
+use schema_language::{ImportResolver, MacroContext, SchemaEngine, SchemaIdentity};
 use schema_rust::RustEmitter;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

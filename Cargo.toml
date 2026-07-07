@@ -17,7 +17,7 @@ nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", bran
 prettyplease = "0.2"
 proc-macro2 = "1"
 quote = "1"
-schema = { package = "schema", git = "https://github.com/LiGoldragon/schema.git", rev = "92bed64ad644ce4caa2827398ada5b7b79221165" }
+schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "6aae825d668e3f607a2754afa6b7d94e9f246c41" }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
 triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }

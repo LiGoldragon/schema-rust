@@ -4,14 +4,14 @@
 //! standard-impl emission from it (replacing the `scalar_like()` flag trigger),
 //! and verifies the recognized subset against the surface it actually emits.
 
-use schema::{ImplFact, Name, RustSurface};
+use schema_language::{ImplFact, Name, RustSurface};
 use schema_rust::{RustEmissionOptions, RustEmitter, RustModule};
 
 mod support;
 
 use support::FixtureSchema;
 
-fn lower(fixture: &str) -> schema::TrueSchema {
+fn lower(fixture: &str) -> schema_language::TrueSchema {
     FixtureSchema::new(format!("impl-catalog/{fixture}.schema")).lower("impl-catalog:lib")
 }
 
@@ -125,7 +125,7 @@ fn absent_recognized_impl_fails_verification() {
     let error = surface
         .verify_catalog(&schema)
         .expect_err("a missing recognized impl must fail verification");
-    let schema::SchemaError::UnverifiedImplReference {
+    let schema_language::SchemaError::UnverifiedImplReference {
         target, signature, ..
     } = &error
     else {
