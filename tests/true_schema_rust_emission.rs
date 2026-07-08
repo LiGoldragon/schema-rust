@@ -59,7 +59,7 @@ impl SpiritSignalSchemaFixture {
         );
         assert!(
             rendered.contains(
-                "(SubscribeIntent (Some (Plain SubscribeIntent)) (Some (Opens IntentEventStream)))"
+                "(SubscribeIntent (Some (Plain Query)) (Some (Opens IntentEventStream)))"
             ),
             "structured TrueSchema NOTA should preserve the Spirit stream-opening root variant"
         );
@@ -185,7 +185,7 @@ fn spirit_signal_rust_emission_uses_true_schema_projection() {
         "real Spirit signal input root should be emitted"
     );
     assert!(
-        generated.contains("SubscribeIntent(SubscribeIntent)"),
+        generated.contains("SubscribeIntent(Query)"),
         "real Spirit stream-opening operation should be emitted"
     );
     assert!(

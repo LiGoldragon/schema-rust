@@ -356,7 +356,7 @@ fn compiled_reactive_generated_rust_builds_signal_frame_streaming_events() {
         signal_frame::ExchangeLane::Acceptor,
         signal_frame::LaneSequence::first(),
     );
-    let event = triad_large_generated::RuntimeEvent::MessageCommitted(
+    let event = triad_large_generated::RuntimeEvent::MessageCommittedEvent(
         triad_large_generated::MessageCommitted::new(triad_large_generated::CommitSequence::new(9)),
     );
 

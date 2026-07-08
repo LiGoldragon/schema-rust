@@ -144,7 +144,15 @@
               exit 1
             fi
             if grep -R -n -E '\[\[[A-Z]|\((records|kinds|services|Listed) \[[A-Z]|\((byTopic|Projected|nodes) \{[A-Z]' ${src}/tests/fixtures; then
-              echo "schema-rust examples must use typed NOTA composite references: (Vec T), (Map (K V)), (Optional T)" >&2
+              echo "schema-rust examples must use dotted generic references: Vector.T, Map.(K V), Optional.T" >&2
+              exit 1
+            fi
+            if grep -R -n -E --include='*.schema' '\((Vector|Optional|ScopeOf|Map|Bytes|FixedBytes|Vec|Option|KeyValue)[[:space:]]' ${src}/tests/fixtures; then
+              echo "schema-rust examples must not reintroduce parenthesized generic application" >&2
+              exit 1
+            fi
+            if grep -R -n -E --include='*.schema' 'Map\.[A-Za-z][A-Za-z0-9_]*\.[A-Za-z]' ${src}/tests/fixtures; then
+              echo "schema-rust multi-argument generics must stay structural after the dot" >&2
               exit 1
             fi
             if grep -R -n -E '\((Vec|Option|KeyValue|Map) \[' ${src}/tests; then

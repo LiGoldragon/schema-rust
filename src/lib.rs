@@ -2,10 +2,11 @@ use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::{ToTokens, quote};
 use schema_language::{
     Declaration, EnumDeclaration, EnumVariant, FamilyDeclaration, FamilyKey, FieldDeclaration,
-    ImplFact, ImplReference, ImportResolver, MethodParameter, MethodSignature, Name,
-    NewtypeDeclaration, ReferencedImpl, RelationDeclaration, RelationValue, ResolvedImport, Root,
-    RootApplication, RustSurface, SchemaEngine, SchemaError, SchemaIdentity, SchemaSource,
-    StreamDeclaration, StructDeclaration, TrueSchema, TypeDeclaration, TypeReference, Visibility,
+    GenericBuiltin, GenericDefinition, ImplFact, ImplReference, ImportResolver, MethodParameter,
+    MethodSignature, Name, NewtypeDeclaration, ReferencedImpl, RelationDeclaration, RelationValue,
+    ResolvedImport, Root, RootApplication, RustSurface, SchemaEngine, SchemaError, SchemaIdentity,
+    SchemaSource, StreamDeclaration, StructDeclaration, TrueSchema, TypeDeclaration, TypeReference,
+    Visibility,
 };
 
 pub mod build;
@@ -627,9 +628,14 @@ impl RustModule {
 impl LowerToRust<RustModule> for TrueSchema {
     fn lower_to_rust(&self, context: &RustLoweringContext) -> RustModule {
         let declarations = self
-            .namespace()
+            .generics()
             .iter()
-            .map(|declaration| context.lower_true_schema_declaration(self, declaration))
+            .filter_map(|definition| definition.lower_to_rust(context))
+            .chain(
+                self.namespace()
+                    .iter()
+                    .map(|declaration| context.lower_true_schema_declaration(self, declaration)),
+            )
             .collect::<Vec<_>>();
         let mut root_enums = Vec::new();
         let mut applied_roots = Vec::new();
@@ -1206,6 +1212,28 @@ impl RustRecordFamily {
             FamilyKey::Domain => quote! { sema_engine::TableDescriptor<#record> },
             FamilyKey::Identified => quote! { sema_engine::IdentifiedTableDescriptor<#record> },
         }
+    }
+}
+
+impl LowerToRust<Option<RustDeclaration>> for GenericDefinition {
+    fn lower_to_rust(&self, context: &RustLoweringContext) -> Option<RustDeclaration> {
+        let GenericBuiltin::Frame(frame) = self.builtin() else {
+            return None;
+        };
+        Some(RustDeclaration {
+            visibility: Visibility::Public,
+            name: self.name().clone(),
+            parameters: frame.parameters().to_vec(),
+            value: RustTypeDeclaration::Enum(RustEnum {
+                name: self.name().clone(),
+                parameters: frame.parameters().to_vec(),
+                variants: frame
+                    .variants()
+                    .iter()
+                    .map(|variant| variant.lower_to_rust(context))
+                    .collect(),
+            }),
+        })
     }
 }
 

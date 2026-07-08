@@ -1,6 +1,13 @@
 {}
-[WriteInput ReadInput]
-[WriteOutput ReadOutput]
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
+[(Write WriteInput) (Read ReadInput)]
+[(WriteDone WriteOutput) (ReadDone ReadOutput)]
 {
   WriteInput [Record Remove]
   Record Entry
@@ -23,7 +30,7 @@
   Message String
   Entry { Topic }
   Query { Topic }
-  RecordSet (Vector Entry)
+  RecordSet Vector.Entry
   Receipt { RecordIdentifier }
   ErrorReport { Message }
 }

@@ -1,3 +1,10 @@
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
 [(Record Entry) (Observe Query) (Lookup RecordIdentifier) (Count Query)]
 [(RecordAccepted SemaReceipt) (RecordsObserved ObservedRecords) (RecordFound FoundRecord) (RecordsCounted CountedRecords) (Error ErrorReport)]
 {
@@ -22,7 +29,7 @@
   ErrorReport { ErrorMessage DatabaseMarker }
   Entry { Topic Kind Description Magnitude }
   Query { Topic Kind }
-  RecordSet (Vector Entry)
+  RecordSet Vector.Entry
   Kind [Decision Principle Correction Clarification Constraint]
   Magnitude [Minimum VeryLow Low Medium High VeryHigh Maximum]
 }

@@ -493,7 +493,7 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 [[package]]
 name = "schema-language"
 version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/schema-language.git?rev=354125b01c26bd479bf460d8f93517f907b5e00c#354125b01c26bd479bf460d8f93517f907b5e00c"
+source = "git+https://github.com/LiGoldragon/schema-language.git?rev=0ee452a42b0c41c00455411a55d45afecbef910a#0ee452a42b0c41c00455411a55d45afecbef910a"
 dependencies = [
  "blake3",
  "nota",
@@ -505,7 +505,7 @@ dependencies = [
 [[package]]
 name = "schema-language-cc"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/schema-language.git?rev=354125b01c26bd479bf460d8f93517f907b5e00c#354125b01c26bd479bf460d8f93517f907b5e00c"
+source = "git+https://github.com/LiGoldragon/schema-language.git?rev=0ee452a42b0c41c00455411a55d45afecbef910a#0ee452a42b0c41c00455411a55d45afecbef910a"
 dependencies = [
  "nota",
  "prettyplease",

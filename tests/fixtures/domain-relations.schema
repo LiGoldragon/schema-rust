@@ -1,5 +1,20 @@
 {}
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
 []
 []
-{ Domain [(Technology [(Hardware [Networking]) (Software [(Distributed [Networking])])])] DomainScope (ScopeOf Domain) ScopeSet (Vector DomainScope) }
+{
+  Domain [(Technology TechnologyDomain)]
+  TechnologyDomain [(Hardware HardwareDomain) (Software SoftwareDomain)]
+  HardwareDomain [Networking]
+  SoftwareDomain [(Distributed DistributedDomain)]
+  DistributedDomain [Networking]
+  DomainScope ScopeOf.Domain
+  ScopeSet Vector.DomainScope
+}
 [(Equivalence [(Technology Hardware Networking) (Technology Software Distributed Networking)])]

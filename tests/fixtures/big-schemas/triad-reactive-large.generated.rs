@@ -52,9 +52,9 @@ pub struct SocketPath(String);
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum SignalRequest {
-    RecordIntent(RecordIntent),
-    ObserveIntent(ObserveIntent),
-    SubscribeIntent(SubscribeIntent),
+    Record(RecordIntent),
+    Observe(ObserveIntent),
+    Subscribe(SubscribeIntent),
 }
 
 #[rustfmt::skip]
@@ -64,9 +64,9 @@ pub enum SignalRequest {
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum SignalReply {
-    RecordAccepted(RecordAccepted),
-    ObservationReturned(ObservationReturned),
-    SubscriptionStarted(SubscriptionStarted),
+    Accepted(RecordAccepted),
+    Observed(ObservationReturned),
+    Subscribed(SubscriptionStarted),
 }
 
 #[rustfmt::skip]
@@ -76,8 +76,8 @@ pub enum SignalReply {
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum NexusRequest {
-    PushSignal(PushSignal),
-    PushSemaResult(PushSemaResult),
+    SignalPushed(PushSignal),
+    SemaResultPushed(PushSemaResult),
     ResolveMail,
     ExpireMail,
 }
@@ -89,8 +89,8 @@ pub enum NexusRequest {
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum NexusReply {
-    PushedToSema(PushedToSema),
-    MailResolved(MailResolved),
+    Pushed(PushedToSema),
+    Resolved(MailResolved),
     MailExpired,
 }
 
@@ -101,10 +101,10 @@ pub enum NexusReply {
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum SemaRequest {
-    WriteEntry(WriteEntry),
-    ReadEntries(ReadEntries),
-    OpenSubscription(OpenSubscription),
-    CloseSubscription(CloseSubscription),
+    Write(WriteEntry),
+    Read(ReadEntries),
+    Open(OpenSubscription),
+    Close(CloseSubscription),
 }
 
 #[rustfmt::skip]
@@ -114,10 +114,10 @@ pub enum SemaRequest {
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum SemaReply {
-    EntryWritten(EntryWritten),
-    EntriesRead(EntriesRead),
-    SubscriptionOpened(SubscriptionOpened),
-    SubscriptionClosed(SubscriptionClosed),
+    Written(EntryWritten),
+    EntriesReturned(EntriesRead),
+    Opened(SubscriptionOpened),
+    Closed(SubscriptionClosed),
 }
 
 #[rustfmt::skip]
@@ -130,7 +130,7 @@ pub enum AdminRequest {
     Drain,
     Pause,
     Resume,
-    Snapshot(Snapshot),
+    TakeSnapshot(Snapshot),
 }
 
 #[rustfmt::skip]
@@ -143,7 +143,7 @@ pub enum AdminReply {
     Drained,
     Paused,
     Resumed,
-    SnapshotReady(SnapshotReady),
+    SnapshotAvailable(SnapshotReady),
 }
 
 #[rustfmt::skip]
@@ -153,19 +153,11 @@ pub enum AdminReply {
 )]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum RuntimeEvent {
-    MailSent(MailSent),
-    MessageAccepted(MessageAccepted),
-    MessageCommitted(MessageCommitted),
-    MessageFailed(MessageFailed),
+    MailSentEvent(MailSent),
+    MessageAcceptedEvent(MessageAccepted),
+    MessageCommittedEvent(MessageCommitted),
+    MessageFailedEvent(MessageFailed),
 }
-
-#[rustfmt::skip]
-#[cfg_attr(
-    feature = "nota-text",
-    derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)
-)]
-#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct Rejected(RejectionReason);
 
 #[rustfmt::skip]
 #[cfg_attr(
@@ -601,7 +593,7 @@ pub enum Output {
     SemaOut(SemaReply),
     AdminOut(AdminReply),
     Event(RuntimeEvent),
-    Rejected(Rejected),
+    Rejected(RejectionReason),
 }
 
 #[rustfmt::skip]
@@ -676,25 +668,6 @@ impl SocketPath {
 #[rustfmt::skip]
 impl From<String> for SocketPath {
     fn from(payload: String) -> Self {
-        Self::new(payload)
-    }
-}
-
-#[rustfmt::skip]
-impl Rejected {
-    pub fn new(payload: RejectionReason) -> Self {
-        Self(payload)
-    }
-    pub fn payload(&self) -> &RejectionReason {
-        &self.0
-    }
-    pub fn into_payload(self) -> RejectionReason {
-        self.0
-    }
-}
-#[rustfmt::skip]
-impl From<RejectionReason> for Rejected {
-    fn from(payload: RejectionReason) -> Self {
         Self::new(payload)
     }
 }
@@ -1195,109 +1168,109 @@ impl From<std::collections::BTreeMap<Topic, RecordIdentifier>> for ByTopic {
 
 #[rustfmt::skip]
 impl SignalRequest {
-    pub fn record_intent(payload: RecordIntent) -> Self {
-        Self::RecordIntent(payload)
+    pub fn record(payload: RecordIntent) -> Self {
+        Self::Record(payload)
     }
-    pub fn observe_intent(payload: Query) -> Self {
-        Self::ObserveIntent(ObserveIntent::new(payload))
+    pub fn observe(payload: Query) -> Self {
+        Self::Observe(ObserveIntent::new(payload))
     }
-    pub fn subscribe_intent(payload: Query) -> Self {
-        Self::SubscribeIntent(SubscribeIntent::new(payload))
+    pub fn subscribe(payload: Query) -> Self {
+        Self::Subscribe(SubscribeIntent::new(payload))
     }
 }
 
 #[rustfmt::skip]
 impl SignalReply {
-    pub fn record_accepted(payload: RecordAccepted) -> Self {
-        Self::RecordAccepted(payload)
+    pub fn accepted(payload: RecordAccepted) -> Self {
+        Self::Accepted(payload)
     }
-    pub fn observation_returned(payload: RecordSet) -> Self {
-        Self::ObservationReturned(ObservationReturned::new(payload))
+    pub fn observed(payload: RecordSet) -> Self {
+        Self::Observed(ObservationReturned::new(payload))
     }
-    pub fn subscription_started(payload: SubscriptionToken) -> Self {
-        Self::SubscriptionStarted(SubscriptionStarted::new(payload))
+    pub fn subscribed(payload: SubscriptionToken) -> Self {
+        Self::Subscribed(SubscriptionStarted::new(payload))
     }
 }
 
 #[rustfmt::skip]
 impl NexusRequest {
-    pub fn push_signal(payload: SignalRequest) -> Self {
-        Self::PushSignal(PushSignal::new(payload))
+    pub fn signal_pushed(payload: SignalRequest) -> Self {
+        Self::SignalPushed(PushSignal::new(payload))
     }
-    pub fn push_sema_result(payload: SemaReply) -> Self {
-        Self::PushSemaResult(PushSemaResult::new(payload))
+    pub fn sema_result_pushed(payload: SemaReply) -> Self {
+        Self::SemaResultPushed(PushSemaResult::new(payload))
     }
 }
 
 #[rustfmt::skip]
 impl NexusReply {
-    pub fn pushed_to_sema(payload: SemaRequest) -> Self {
-        Self::PushedToSema(PushedToSema::new(payload))
+    pub fn pushed(payload: SemaRequest) -> Self {
+        Self::Pushed(PushedToSema::new(payload))
     }
-    pub fn mail_resolved(payload: SignalReply) -> Self {
-        Self::MailResolved(MailResolved::new(payload))
+    pub fn resolved(payload: SignalReply) -> Self {
+        Self::Resolved(MailResolved::new(payload))
     }
 }
 
 #[rustfmt::skip]
 impl SemaRequest {
-    pub fn write_entry(payload: Entry) -> Self {
-        Self::WriteEntry(WriteEntry::new(payload))
+    pub fn write(payload: Entry) -> Self {
+        Self::Write(WriteEntry::new(payload))
     }
-    pub fn read_entries(payload: Query) -> Self {
-        Self::ReadEntries(ReadEntries::new(payload))
+    pub fn read(payload: Query) -> Self {
+        Self::Read(ReadEntries::new(payload))
     }
-    pub fn open_subscription(payload: Query) -> Self {
-        Self::OpenSubscription(OpenSubscription::new(payload))
+    pub fn open(payload: Query) -> Self {
+        Self::Open(OpenSubscription::new(payload))
     }
-    pub fn close_subscription(payload: SubscriptionToken) -> Self {
-        Self::CloseSubscription(CloseSubscription::new(payload))
+    pub fn close(payload: SubscriptionToken) -> Self {
+        Self::Close(CloseSubscription::new(payload))
     }
 }
 
 #[rustfmt::skip]
 impl SemaReply {
-    pub fn entry_written(payload: EntryWritten) -> Self {
-        Self::EntryWritten(payload)
+    pub fn written(payload: EntryWritten) -> Self {
+        Self::Written(payload)
     }
-    pub fn entries_read(payload: EntriesRead) -> Self {
-        Self::EntriesRead(payload)
+    pub fn entries_returned(payload: EntriesRead) -> Self {
+        Self::EntriesReturned(payload)
     }
-    pub fn subscription_opened(payload: SubscriptionOpened) -> Self {
-        Self::SubscriptionOpened(payload)
+    pub fn opened(payload: SubscriptionOpened) -> Self {
+        Self::Opened(payload)
     }
-    pub fn subscription_closed(payload: SubscriptionClosed) -> Self {
-        Self::SubscriptionClosed(payload)
+    pub fn closed(payload: SubscriptionClosed) -> Self {
+        Self::Closed(payload)
     }
 }
 
 #[rustfmt::skip]
 impl AdminRequest {
-    pub fn snapshot(payload: SocketPath) -> Self {
-        Self::Snapshot(Snapshot::new(payload))
+    pub fn take_snapshot(payload: SocketPath) -> Self {
+        Self::TakeSnapshot(Snapshot::new(payload))
     }
 }
 
 #[rustfmt::skip]
 impl AdminReply {
-    pub fn snapshot_ready(payload: SnapshotReady) -> Self {
-        Self::SnapshotReady(payload)
+    pub fn snapshot_available(payload: SnapshotReady) -> Self {
+        Self::SnapshotAvailable(payload)
     }
 }
 
 #[rustfmt::skip]
 impl RuntimeEvent {
-    pub fn mail_sent(payload: SignalRequest) -> Self {
-        Self::MailSent(MailSent::new(payload))
+    pub fn mail_sent_event(payload: SignalRequest) -> Self {
+        Self::MailSentEvent(MailSent::new(payload))
     }
-    pub fn message_accepted(payload: SignalRequest) -> Self {
-        Self::MessageAccepted(MessageAccepted::new(payload))
+    pub fn message_accepted_event(payload: SignalRequest) -> Self {
+        Self::MessageAcceptedEvent(MessageAccepted::new(payload))
     }
-    pub fn message_committed(payload: CommitSequence) -> Self {
-        Self::MessageCommitted(MessageCommitted::new(payload))
+    pub fn message_committed_event(payload: CommitSequence) -> Self {
+        Self::MessageCommittedEvent(MessageCommitted::new(payload))
     }
-    pub fn message_failed(payload: RejectionReason) -> Self {
-        Self::MessageFailed(MessageFailed::new(payload))
+    pub fn message_failed_event(payload: RejectionReason) -> Self {
+        Self::MessageFailedEvent(MessageFailed::new(payload))
     }
 }
 
@@ -1335,175 +1308,175 @@ impl Output {
         Self::Event(payload)
     }
     pub fn rejected(payload: RejectionReason) -> Self {
-        Self::Rejected(Rejected::new(payload))
+        Self::Rejected(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<RecordIntent> for SignalRequest {
     fn from(payload: RecordIntent) -> Self {
-        Self::RecordIntent(payload)
+        Self::Record(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<ObserveIntent> for SignalRequest {
     fn from(payload: ObserveIntent) -> Self {
-        Self::ObserveIntent(payload)
+        Self::Observe(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<SubscribeIntent> for SignalRequest {
     fn from(payload: SubscribeIntent) -> Self {
-        Self::SubscribeIntent(payload)
+        Self::Subscribe(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<RecordAccepted> for SignalReply {
     fn from(payload: RecordAccepted) -> Self {
-        Self::RecordAccepted(payload)
+        Self::Accepted(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<ObservationReturned> for SignalReply {
     fn from(payload: ObservationReturned) -> Self {
-        Self::ObservationReturned(payload)
+        Self::Observed(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<SubscriptionStarted> for SignalReply {
     fn from(payload: SubscriptionStarted) -> Self {
-        Self::SubscriptionStarted(payload)
+        Self::Subscribed(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<PushSignal> for NexusRequest {
     fn from(payload: PushSignal) -> Self {
-        Self::PushSignal(payload)
+        Self::SignalPushed(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<PushSemaResult> for NexusRequest {
     fn from(payload: PushSemaResult) -> Self {
-        Self::PushSemaResult(payload)
+        Self::SemaResultPushed(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<PushedToSema> for NexusReply {
     fn from(payload: PushedToSema) -> Self {
-        Self::PushedToSema(payload)
+        Self::Pushed(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<MailResolved> for NexusReply {
     fn from(payload: MailResolved) -> Self {
-        Self::MailResolved(payload)
+        Self::Resolved(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<WriteEntry> for SemaRequest {
     fn from(payload: WriteEntry) -> Self {
-        Self::WriteEntry(payload)
+        Self::Write(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<ReadEntries> for SemaRequest {
     fn from(payload: ReadEntries) -> Self {
-        Self::ReadEntries(payload)
+        Self::Read(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<OpenSubscription> for SemaRequest {
     fn from(payload: OpenSubscription) -> Self {
-        Self::OpenSubscription(payload)
+        Self::Open(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<CloseSubscription> for SemaRequest {
     fn from(payload: CloseSubscription) -> Self {
-        Self::CloseSubscription(payload)
+        Self::Close(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<EntryWritten> for SemaReply {
     fn from(payload: EntryWritten) -> Self {
-        Self::EntryWritten(payload)
+        Self::Written(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<EntriesRead> for SemaReply {
     fn from(payload: EntriesRead) -> Self {
-        Self::EntriesRead(payload)
+        Self::EntriesReturned(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<SubscriptionOpened> for SemaReply {
     fn from(payload: SubscriptionOpened) -> Self {
-        Self::SubscriptionOpened(payload)
+        Self::Opened(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<SubscriptionClosed> for SemaReply {
     fn from(payload: SubscriptionClosed) -> Self {
-        Self::SubscriptionClosed(payload)
+        Self::Closed(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<Snapshot> for AdminRequest {
     fn from(payload: Snapshot) -> Self {
-        Self::Snapshot(payload)
+        Self::TakeSnapshot(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<SnapshotReady> for AdminReply {
     fn from(payload: SnapshotReady) -> Self {
-        Self::SnapshotReady(payload)
+        Self::SnapshotAvailable(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<MailSent> for RuntimeEvent {
     fn from(payload: MailSent) -> Self {
-        Self::MailSent(payload)
+        Self::MailSentEvent(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<MessageAccepted> for RuntimeEvent {
     fn from(payload: MessageAccepted) -> Self {
-        Self::MessageAccepted(payload)
+        Self::MessageAcceptedEvent(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<MessageCommitted> for RuntimeEvent {
     fn from(payload: MessageCommitted) -> Self {
-        Self::MessageCommitted(payload)
+        Self::MessageCommittedEvent(payload)
     }
 }
 
 #[rustfmt::skip]
 impl From<MessageFailed> for RuntimeEvent {
     fn from(payload: MessageFailed) -> Self {
-        Self::MessageFailed(payload)
+        Self::MessageFailedEvent(payload)
     }
 }
 
@@ -1571,8 +1544,8 @@ impl From<RuntimeEvent> for Output {
 }
 
 #[rustfmt::skip]
-impl From<Rejected> for Output {
-    fn from(payload: Rejected) -> Self {
+impl From<RejectionReason> for Output {
+    fn from(payload: RejectionReason) -> Self {
         Self::Rejected(payload)
     }
 }

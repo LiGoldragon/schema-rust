@@ -1,4 +1,11 @@
 { DatabaseMarker marker-core:mail:DatabaseMarker }
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
 [(Observe Query)]
 [(Marked DatabaseMarker)]
-{ Topic String Query (Vector Topic) }
+{ Topic String Query Vector.Topic }

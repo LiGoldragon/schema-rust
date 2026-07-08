@@ -452,16 +452,16 @@ inline operation payloads. This emitter sees the typed source/schema data from
   `Plain(Name)` no longer carries scalar special cases; it names an emitted or
   imported schema type.
 - Collection references emit standard Rust collections. Authored schemas use
-  Schema type-reference vocabulary such as `(Vec Topic)`, `(Map (Topic
-  RecordIdentifier))`, and `(Optional Topic)`. Authored datatype declarations
-  are strict namespace key/value entries: `Topic String`,
+  dotted generic type-reference vocabulary such as `Vector.Topic`,
+  `Map.(Topic RecordIdentifier)`, and `Optional.Topic`; multi-argument
+  generics keep their structural payload after the dot. Authored datatype
+  declarations are strict namespace key/value entries: `Topic String`,
   `Entry { topic Topic }`, and `Kind [Decision Correction]`. Square brackets
-  declare enum bodies at enum positions; they are not the `Vec` reference
-  syntax. The emitter's
-  Rust type projection recurses a `TypeReference`: `Vector` → `Vec<inner>`,
-  `Map` → `std::collections::BTreeMap<key, value>` (fully qualified, so no
-  `use` and a deterministic key order for rkyv + NOTA), `Optional` →
-  `Option<inner>`.
+  declare enum bodies at enum positions; they are not the `Vector` reference
+  syntax. The emitter's Rust type projection recurses a `TypeReference`:
+  `Vector` → `Vec<inner>`, `Map` →
+  `std::collections::BTreeMap<key, value>` (fully qualified, so no `use` and a
+  deterministic key order for rkyv + NOTA), `Optional` → `Option<inner>`.
 - Generated code can import `nota`'s shared codec surface and derive
   `nota::NotaDecode` / `nota::NotaEncode` for generated nouns, but
   that surface is selected by `RustEmissionOptions`: always enabled,

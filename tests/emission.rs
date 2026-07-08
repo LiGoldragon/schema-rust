@@ -184,15 +184,15 @@ fn emits_domain_scope_equivalence_expansion_from_relations() {
     let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
 
     assert_code_contains(generated.as_str(), "pub enum DomainScope");
-    assert_code_contains(generated.as_str(), "pub enum TechnologyScope");
-    assert_code_contains(generated.as_str(), "pub enum HardwareScope");
-    assert_code_contains(generated.as_str(), "pub enum SoftwareScope");
+    assert_code_contains(generated.as_str(), "pub enum TechnologyDomainScope");
+    assert_code_contains(generated.as_str(), "pub enum HardwareDomainScope");
+    assert_code_contains(generated.as_str(), "pub enum SoftwareDomainScope");
     assert_code_contains(generated.as_str(), "impl DomainScope");
     assert_code_contains(generated.as_str(), "impl From<Domain> for DomainScope");
     assert_code_contains(generated.as_str(), "All");
     assert_code_contains(
         generated.as_str(),
-        "impl From<Technology> for TechnologyScope",
+        "impl From<TechnologyDomain> for TechnologyDomainScope",
     );
     assert_code_contains(
         generated.as_str(),
@@ -218,11 +218,11 @@ fn emits_domain_scope_equivalence_expansion_from_relations() {
     );
     assert_code_contains(
         generated.as_str(),
-        "DomainScope::Technology(TechnologyScope::Hardware(HardwareScope::Networking))",
+        "DomainScope::Technology(TechnologyDomainScope::Hardware(HardwareDomainScope::Networking))",
     );
     assert_code_contains(
         generated.as_str(),
-        "DomainScope::Technology(TechnologyScope::Software(SoftwareScope::Distributed(DistributedScope::Networking)))",
+        "DomainScope::Technology(TechnologyDomainScope::Software(SoftwareDomainScope::Distributed(DistributedDomainScope::Networking)))",
     );
 }
 
@@ -256,7 +256,7 @@ fn emits_terminal_value_domains_as_scope_all() {
     );
     assert_code_contains(
         generated.as_str(),
-        "Software::Programming(payload) => Self::Programming(payload.into())",
+        "SoftwareDomain::Programming(payload) => Self::Programming(payload.into())",
     );
     // The leaf's `All` member collapses into the scope catch-all.
     assert_code_contains(generated.as_str(), "ProgrammingLeaf::All => Self::All");
@@ -511,24 +511,29 @@ fn emitted_path_mirrors_schema_module_identity() {
 }
 
 #[test]
-fn inline_private_schema_types_emit_crate_local_rust_boundary() {
-    // A crate-private nested type emits a `pub(crate)` Rust boundary, and a
-    // public type whose fields reference it borrows that boundary onto each
-    // field. The crate-private declaration is `Receipt`, minted as a
-    // `PrivateHelper` inline declaration inside a nested root-enum variant
-    // payload (`Select [(Receipt { … })]`) — the currently-supported
-    // private-declaration spelling now that the strict-positional grammar no
-    // longer parses a Type-followed-by-brace as a struct field. `Entry` is a
-    // public namespace struct that references `Receipt` by name, so both of
-    // its fields downgrade to `pub(crate)` to keep the boundary closed.
-    let schema = FixtureSchema::new("inline-private-type.schema").lower("example:inline");
-    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
-    let code = generated.code.as_str();
+fn same_named_inline_private_variant_is_rejected_before_rust_emission() {
+    // The generic-section schema-language slice rejects direct enum payloads
+    // whose type local-part equals the variant name. The old inline private
+    // helper spelling `Select [(Receipt { ... })]` therefore fails at the
+    // schema boundary instead of reaching Rust emission.
+    let source = FixtureSchema::new("inline-private-type.schema").read();
+    let artifact = SchemaSourceArtifact::from_schema_text(&source).expect("schema source decodes");
+    let error = artifact
+        .source()
+        .lower(
+            &SchemaEngine::default(),
+            SchemaIdentity::new("example:inline", "0.1.0"),
+        )
+        .expect_err("same-named inline variant payload must be rejected");
 
-    assert!(code.contains("pub(crate) struct Receipt"));
-    assert!(code.contains("pub struct Entry"));
-    assert!(code.contains("pub(crate) selected: Receipt"));
-    assert!(code.contains("pub(crate) later: Receipt"));
+    assert!(
+        matches!(
+            &error,
+            SchemaError::SameNamedVariantPayload { enum_name, variant_name, payload_type }
+                if enum_name == "Select" && variant_name == "Receipt" && payload_type == "Receipt"
+        ),
+        "unexpected error: {error:?}"
+    );
 }
 
 #[test]

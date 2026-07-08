@@ -1,5 +1,12 @@
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
 [(Register Cluster) (Observe Query)]
-[(Projected (Map NodeName NodeConfig)) (Listed (Vector NodeName))]
+[(Projected Map.(NodeName NodeConfig)) (Listed Vector.NodeName)]
 {
   NodeName String
   NodeConfig String
@@ -9,6 +16,6 @@
   Healthy Boolean
   ConfigPath Path
   Digest Bytes
-  Fingerprint (Bytes 4)
-  Cluster { (Vector Service) (Map NodeName NodeConfig) (Optional NodeConfig) Healthy ConfigPath Digest Fingerprint }
+  Fingerprint Bytes.4
+  Cluster { Vector.Service Map.(NodeName NodeConfig) Optional.NodeConfig Healthy ConfigPath Digest Fingerprint }
 }

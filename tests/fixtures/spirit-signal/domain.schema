@@ -1,39 +1,69 @@
 {}
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
 []
 []
 {
   Domain [
-    (Health [Body Mind Nutrition Exercise Sleep Medicine Disease Medication Therapy Reproduction Sexuality Aging Disability Addiction Dentistry Senses Pain Prevention FirstAid Rehabilitation])
-    (Food [Cooking Diet Recipe Baking Preservation Fermentation Beverage Entertaining Foraging Fasting Dining])
-    (Home [Housing Maintenance Renovation Furnishing Cleaning Tidying Relocation Realty Property Utilities Locksmithing Appliances])
-    (Finance [Budgeting Saving Spending Debt Credit Investing Retirement Tax Insurance Income Banking Charity Planning Accounting])
-    (Work [Career JobSearch Workplace Vocation Leadership Entrepreneurship Employment Compensation Scheduling Unemployment Freelancing Teamwork Productivity Project])
-    (Craft [Electronics Construction Carpentry Metalworking Sewing Manufacturing Repair Engineering Handicraft Invention])
-    (Knowledge [Mathematics Logic Physics Chemistry Biology Astronomy Geology Computing Physiology Statistics Research History Linguistics Philosophy Economics Cognition Taxonomy])
-    (Education [Studying Teaching Schooling Skill Reading Memorization Pedagogy Mentoring Autodidacticism Credential])
-    (Language [Writing Rhetoric Translation Grammar Conversation Correspondence Listening Oratory Editing Terminology Notation])
-    (Art [Fiction Poetry Music Painting Photography Film Theater Dance Design Sculpture Creativity Storytelling Publishing])
-    (Kinship [Friendship Romance Marriage Family Parenting Relatives Reconciliation Boundaries Intimacy Rapport Caregiving Grief Belonging])
-    (Selfhood [Growth Introspection Discipline Emotion Virtue Motivation Confidence Identity Purpose Decision Temperament Wellbeing Composure])
-    (Spirituality [Worship Prayer Meditation Ritual Faith Theology Contemplation Pilgrimage Scripture Ethics Mortality Transcendence Asceticism Wisdom])
-    (Governance [Politics Government Administration Citizenship Elections Activism Policy Diplomacy Movements Organizing Services Naturalization War])
-    (Law [Rights Contract Title Crime Litigation Compliance Custody Liability Procedure Justice Policing Arbitration])
-    (Community [Neighborliness Volunteering Solidarity Membership Gatherings Reputation Service Hospitality Institutions])
-    (Nature [Agriculture Gardening Horticulture Husbandry Pets Forestry Fishing Hunting Conservation Weather Wilderness Sustainability Resources Stewardship])
-    (Travel [Itinerary Destination Transportation Driving Navigation Commuting Logistics Migration Tourism Transit Cycling])
-    (Commerce [Selling Buying Marketing Retail Sourcing Trade Support Pricing Negotiation Assets Market])
-    (Leisure [Recreation Sport Games Hobby Entertainment Collecting Outdoors Play Relaxation Celebration Fandom])
-    (Appearance [Clothing Grooming Style Cosmetics Etiquette Comportment])
-    (Safety [Protection Preparedness Risk Cybersecurity Privacy Disaster Military Deterrence])
-    (Information [Curation RecordKeeping Documentation News Broadcasting Archives Database Retrieval Classification])
-    (Technology)
+    (Health HealthLeaf)
+    (Food FoodLeaf)
+    (Home HomeLeaf)
+    (Finance FinanceLeaf)
+    (Work WorkLeaf)
+    (Craft CraftLeaf)
+    (Knowledge KnowledgeLeaf)
+    (Education EducationLeaf)
+    (Language LanguageLeaf)
+    (Art ArtLeaf)
+    (Kinship KinshipLeaf)
+    (Selfhood SelfhoodLeaf)
+    (Spirituality SpiritualityLeaf)
+    (Governance GovernanceLeaf)
+    (Law LawLeaf)
+    (Community CommunityLeaf)
+    (Nature NatureLeaf)
+    (Travel TravelLeaf)
+    (Commerce CommerceLeaf)
+    (Leisure LeisureLeaf)
+    (Appearance AppearanceLeaf)
+    (Safety SafetyLeaf)
+    (Information InformationLeaf)
+    (Technology TechnologyBranch)
   ]
-  Technology [
+  HealthLeaf [Body Mind Nutrition Exercise Sleep Medicine Disease Medication Therapy Reproduction Sexuality Aging Disability Addiction Dentistry Senses Pain Prevention FirstAid Rehabilitation]
+  FoodLeaf [Cooking Diet Recipe Baking Preservation Fermentation Beverage Entertaining Foraging Fasting Dining]
+  HomeLeaf [Housing Maintenance Renovation Furnishing Cleaning Tidying Relocation Realty Property Utilities Locksmithing Appliances]
+  FinanceLeaf [Budgeting Saving Spending Debt Credit Investing Retirement Tax Insurance Income Banking Charity Planning Accounting]
+  WorkLeaf [Career JobSearch Workplace Vocation Leadership Entrepreneurship Employment Compensation Scheduling Unemployment Freelancing Teamwork Productivity Project]
+  CraftLeaf [Electronics Construction Carpentry Metalworking Sewing Manufacturing Repair Engineering Handicraft Invention]
+  KnowledgeLeaf [Mathematics Logic Physics Chemistry Biology Astronomy Geology Computing Physiology Statistics Research History Linguistics Philosophy Economics Cognition Taxonomy]
+  EducationLeaf [Studying Teaching Schooling Skill Reading Memorization Pedagogy Mentoring Autodidacticism Credential]
+  LanguageLeaf [Writing Rhetoric Translation Grammar Conversation Correspondence Listening Oratory Editing Terminology Notation]
+  ArtLeaf [Fiction Poetry Music Painting Photography Film Theater Dance Design Sculpture Creativity Storytelling Publishing]
+  KinshipLeaf [Friendship Romance Marriage Family Parenting Relatives Reconciliation Boundaries Intimacy Rapport Caregiving Grief Belonging]
+  SelfhoodLeaf [Growth Introspection Discipline Emotion Virtue Motivation Confidence Identity Purpose Decision Temperament Wellbeing Composure]
+  SpiritualityLeaf [Worship Prayer Meditation Ritual Faith Theology Contemplation Pilgrimage Scripture Ethics Mortality Transcendence Asceticism Wisdom]
+  GovernanceLeaf [Politics Government Administration Citizenship Elections Activism Policy Diplomacy Movements Organizing Services Naturalization War]
+  LawLeaf [Rights Contract Title Crime Litigation Compliance Custody Liability Procedure Justice Policing Arbitration]
+  CommunityLeaf [Neighborliness Volunteering Solidarity Membership Gatherings Reputation Service Hospitality Institutions]
+  NatureLeaf [Agriculture Gardening Horticulture Husbandry Pets Forestry Fishing Hunting Conservation Weather Wilderness Sustainability Resources Stewardship]
+  TravelLeaf [Itinerary Destination Transportation Driving Navigation Commuting Logistics Migration Tourism Transit Cycling]
+  CommerceLeaf [Selling Buying Marketing Retail Sourcing Trade Support Pricing Negotiation Assets Market]
+  LeisureLeaf [Recreation Sport Games Hobby Entertainment Collecting Outdoors Play Relaxation Celebration Fandom]
+  AppearanceLeaf [Clothing Grooming Style Cosmetics Etiquette Comportment]
+  SafetyLeaf [Protection Preparedness Risk Cybersecurity Privacy Disaster Military Deterrence]
+  InformationLeaf [Curation RecordKeeping Documentation News Broadcasting Archives Database Retrieval Classification]
+  TechnologyBranch [
     (Hardware HardwareLeaf)
-    (Software)
+    (Software SoftwareBranch)
   ]
   HardwareLeaf [All Networking]
-  Software [
+  SoftwareBranch [
     (Programming ProgrammingLeaf)
     Theory
     (Systems SystemsLeaf)
@@ -58,9 +88,9 @@
   ObservabilityLeaf [All Tracing]
   SurfacesLeaf [All Visualization CommandLineInterfaces]
   EngineeringLeaf [All Architecture Design ApplicationProgrammingInterfaces Documentation VersionControl DevelopmentProcess Management Modularity]
-  DomainScope (ScopeOf Domain)
-  DomainScopes (Vector DomainScope)
-  ScopeSet (Vector DomainScope)
+  DomainScope ScopeOf.Domain
+  DomainScopes Vector.DomainScope
+  ScopeSet Vector.DomainScope
 }
 [
   (Equivalence [(Information Database) (Technology Software Data All)])

@@ -35,11 +35,12 @@ Public schema declarations emit `pub` Rust nouns; private schema declarations
 emit `pub(crate)` module-local nouns so inline PascalCase schema sugar does not
 become an exported API by accident.
 
-Composite type references come from typed NOTA datatype objects in the
-authored schema: `(Vector Topic)`, `(Map Topic RecordIdentifier)`, and
-`(Optional Topic)`. Product components are positional and typed. A unique
-component normally uses the bare type name; explicit `field.Type` syntax is
-reserved for repeated same-type components that need stable disambiguation.
+Composite type references use dotted generic application in the authored
+schema: `Vector.Topic`, `Map.(Topic RecordIdentifier)`, and `Optional.Topic`.
+Multi-argument generics keep a structural payload after the dot. Product
+components are positional and typed. A unique component normally uses the bare
+type name; explicit `field.Type` syntax is reserved for repeated same-type
+components that need stable disambiguation.
 
 Tests keep meaningful schema and NOTA examples in fixture files under
 `tests/fixtures/`. Rust tests load those fixtures through the support helpers

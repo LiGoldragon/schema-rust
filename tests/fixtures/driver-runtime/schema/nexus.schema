@@ -1,4 +1,11 @@
 { ContractInput driver-contract:lib:Input ContractOutput driver-contract:lib:Output SemaReadInput driver-runtime:sema:SemaReadInput SemaReadOutput driver-runtime:sema:SemaReadOutput SemaWriteInput driver-runtime:sema:SemaWriteInput SemaWriteOutput driver-runtime:sema:SemaWriteOutput }
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
 [(SignalArrived ContractInput)]
 [
   (CommandSemaRead SemaReadInput)
