@@ -1,0 +1,28 @@
+{
+  Vector Vector
+  List Vector
+  Optional Optional
+  Maybe Optional
+  Map Map
+  Dictionary Map
+}
+[Submit]
+[Reported]
+{
+  Topic String
+  RecordIdentifier String
+  AliasBundle {
+    primary_list.List.Topic
+    backup_list.List.Topic
+    primary_vector.Vector.Topic
+    backup_vector.Vector.Topic
+    maybe_primary.Maybe.Topic
+    maybe_backup.Maybe.Topic
+    optional_primary.Optional.Topic
+    optional_backup.Optional.Topic
+    primary_dictionary.Dictionary.(Topic RecordIdentifier)
+    backup_dictionary.Dictionary.(Topic RecordIdentifier)
+    primary_map.Map.(Topic RecordIdentifier)
+    backup_map.Map.(Topic RecordIdentifier)
+  }
+}

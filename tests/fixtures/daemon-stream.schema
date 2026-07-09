@@ -1,23 +1,26 @@
 {}
-[Record (SubscribeIntent SubscribeIntent opens IntentEventStream)]
-[RecordAccepted SubscriptionStarted (Event IntentEvent)]
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
+[(Record Entry) (Subscribe SubscribeIntent opens IntentEventStream)]
+[(RecordAccepted RecordIdentifier) (SubscriptionStarted IntentSubscription) (Event IntentEvent)]
 {
   Topic String
-  Topics (Vector Topic)
+  Topics Vector.Topic
   Description String
   RecordIdentifier Integer
   SubscriptionToken Integer
 
-  Record Entry
   SubscribeIntent Query
-
-  RecordAccepted RecordIdentifier
-  SubscriptionStarted IntentSubscription
 
   Entry { Topics Description }
   Query { Topics }
   IntentSubscription { SubscriptionToken }
   IntentRecorded { Entry RecordIdentifier }
-  IntentEvent [(IntentRecorded IntentRecorded belongs IntentEventStream)]
+  IntentEvent [(Recorded IntentRecorded belongs IntentEventStream)]
   IntentEventStream (Stream { token.SubscriptionToken opened.SubscriptionStarted event.IntentEvent close.SubscriptionToken })
 }

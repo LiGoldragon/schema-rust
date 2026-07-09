@@ -455,20 +455,26 @@ form.
   codec derives are an optional text-client surface.
   `Plain(Name)` no longer carries scalar special cases; it names an emitted or
   imported schema type.
-- Collection references emit standard Rust collections. Authored schemas use
-  dotted positional application: `Vector.Topic`, `Map.(Topic RecordIdentifier)`,
-  and `Optional.Topic`. Authored datatype declarations are strict positional
+- Collection references emit standard Rust collections when the semantic generic
+  definition kind calls for a Rust collection. Authored schemas use dotted
+  positional application of generic definitions, for example `List.Topic`,
+  `Maybe.Topic`, and grouped multi-argument applications such as
+  `Dictionary.(Topic RecordIdentifier)`. The old parenthesized forms
+  `(Vector Topic)`, `(Map ...)`, and `(Optional Topic)` are not a schema-rust
+  compatibility surface. Authored datatype declarations are strict positional
   dotted namespace entries: `Topic.String`, `Entry { topic.Topic }`, and
   `Kind.[Decision Correction]`. Square brackets declare enum bodies at enum
-  positions; they are not application syntax. The emitter's Rust type projection
-  recurses a `TypeReference` by generic kind, never by string name:
-  `Vector` → `Vec<inner>`, `Map` →
+  positions; they are not application syntax. The target `TypeReference` will
+  mirror the closed set of generic kinds (single-type, multi-type, const,
+  template) rather than one uniform application variant or a per-name variant
+  set, so lowering dispatches on kind (see `schema-language`'s
+  `ARCHITECTURE.md`). The current pinned producer branch still exposes
+  collection definitions through `TypeReference::Vector`, `Map`, `Optional`,
+  and `ScopeOf`; schema-rust confines that staging API to compatibility
+  projection shims and emits `Vec<inner>`,
   `std::collections::BTreeMap<key, value>` (fully qualified, so no `use` and a
-  deterministic key order for rkyv + NOTA), `Optional` → `Option<inner>`. The
-  target `TypeReference` mirrors the closed set of generic kinds (single-type,
-  multi-type, const, template) rather than one uniform application variant or a
-  per-name variant set, so lowering dispatches on kind (see `schema-language`'s
-  `ARCHITECTURE.md`).
+  deterministic key order for rkyv + NOTA), `Option<inner>`, and scope enums
+  from the projection kind it receives.
 - Generated code can import `nota`'s shared codec surface and derive
   `nota::NotaDecode` / `nota::NotaEncode` for generated nouns, but
   that surface is selected by `RustEmissionOptions`: always enabled,

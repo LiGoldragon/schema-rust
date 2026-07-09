@@ -1,3 +1,10 @@
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
 [(Record Entry) (Observe Query)]
 [(RecordAccepted RecordIdentifier) (RecordsObserved RecordSet)]
 {
@@ -7,7 +14,7 @@
   Entry { Topic Description }
   Observation { Description }
   Query { Topic }
-  RecordSet (Vector Entry)
+  RecordSet Vector.Entry
   EntryFamily (Family { record.Entry table.entries key.Domain })
   ObservationFamily (Family { record.Observation table.observations key.Identified })
 }

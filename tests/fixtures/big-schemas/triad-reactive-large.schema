@@ -1,3 +1,10 @@
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
 [(SignalIn SignalRequest)
  (NexusIn NexusRequest)
  (SemaIn SemaRequest)
@@ -8,23 +15,22 @@
  (SemaOut SemaReply)
  (AdminOut AdminReply)
  (Event RuntimeEvent)
- (Rejected)]
+ (Rejected RejectionReason)]
 {
   CommitSequence Integer
   DatabaseDigest Integer
   ActorIdentifier String
   SocketPath String
-  SignalRequest [(RecordIntent) (ObserveIntent) (SubscribeIntent SubscribeIntent opens RuntimeEventStream)]
-  SignalReply [(RecordAccepted) (ObservationReturned) (SubscriptionStarted)]
-  NexusRequest [(PushSignal) (PushSemaResult) ResolveMail ExpireMail]
-  NexusReply [(PushedToSema) (MailResolved) MailExpired]
-  SemaRequest [(WriteEntry) (ReadEntries) (OpenSubscription) (CloseSubscription)]
-  SemaReply [(EntryWritten) (EntriesRead) (SubscriptionOpened) (SubscriptionClosed)]
-  AdminRequest [Drain Pause Resume (Snapshot)]
-  AdminReply [Drained Paused Resumed (SnapshotReady)]
-  RuntimeEvent [(MailSent MailSent belongs RuntimeEventStream) (MessageAccepted MessageAccepted belongs RuntimeEventStream) (MessageCommitted MessageCommitted belongs RuntimeEventStream) (MessageFailed MessageFailed belongs RuntimeEventStream)]
+  SignalRequest [(Record RecordIntent) (Observe ObserveIntent) (Subscribe SubscribeIntent opens RuntimeEventStream)]
+  SignalReply [(Accepted RecordAccepted) (Observed ObservationReturned) (Subscribed SubscriptionStarted)]
+  NexusRequest [(SignalPushed PushSignal) (SemaResultPushed PushSemaResult) ResolveMail ExpireMail]
+  NexusReply [(Pushed PushedToSema) (Resolved MailResolved) MailExpired]
+  SemaRequest [(Write WriteEntry) (Read ReadEntries) (Open OpenSubscription) (Close CloseSubscription)]
+  SemaReply [(Written EntryWritten) (EntriesReturned EntriesRead) (Opened SubscriptionOpened) (Closed SubscriptionClosed)]
+  AdminRequest [Drain Pause Resume (TakeSnapshot Snapshot)]
+  AdminReply [Drained Paused Resumed (SnapshotAvailable SnapshotReady)]
+  RuntimeEvent [(MailSentEvent MailSent belongs RuntimeEventStream) (MessageAcceptedEvent MessageAccepted belongs RuntimeEventStream) (MessageCommittedEvent MessageCommitted belongs RuntimeEventStream) (MessageFailedEvent MessageFailed belongs RuntimeEventStream)]
   RuntimeEventStream (Stream { token.SubscriptionToken opened.SubscriptionStarted event.RuntimeEvent close.SubscriptionToken })
-  Rejected RejectionReason
   RejectionReason [Malformed Unauthorized Conflict Unsupported StaleVersion InternalError]
   RecordIntent { ActorIdentifier Entry }
   ObserveIntent Query
@@ -52,16 +58,16 @@
   MessageFailed RejectionReason
   Entry { Topics Kind Description Magnitude ActorIdentifier }
   Topic String
-  Topics (Vector Topic)
+  Topics Vector.Topic
   Description String
   Kind [Decision Principle Correction Clarification Constraint Observation Question]
   Magnitude [Minimum VeryLow Low Medium High VeryHigh Maximum]
-  Kinds (Vector Kind)
-  Limit (Optional Integer)
+  Kinds Vector.Kind
+  Limit Optional.Integer
   Query { Topics Kinds Limit }
   RecordIdentifier Integer
   SubscriptionToken Integer
-  Entries (Vector Entry)
-  ByTopic (Map Topic RecordIdentifier)
+  Entries Vector.Entry
+  ByTopic Map.(Topic RecordIdentifier)
   RecordSet { Entries ByTopic }
 }

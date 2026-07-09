@@ -1,3 +1,10 @@
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
 [(Observe Query)]
 [(Observed Result)]
 {

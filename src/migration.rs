@@ -33,7 +33,7 @@ use schema_language::{
     TypeReference, UpgradeObject,
 };
 
-use crate::RustfmtSkippedItems;
+use crate::{RustReferenceKind, RustReferenceShape, RustfmtSkippedItems};
 
 /// The emitter for upgrade/compatibility code derived from an
 /// `UpgradeObject`. The data-bearing noun holds the upgrade object the
@@ -464,40 +464,40 @@ impl<'reference> TypeRenderer<'reference> {
 
 impl ToTokens for TypeRenderer<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self.reference {
-            TypeReference::String => quote! { String }.to_tokens(tokens),
-            TypeReference::Integer => quote! { i64 }.to_tokens(tokens),
-            TypeReference::Boolean => quote! { bool }.to_tokens(tokens),
-            TypeReference::Path => quote! { String }.to_tokens(tokens),
-            TypeReference::Bytes => quote! { Bytes }.to_tokens(tokens),
-            TypeReference::FixedBytes(width) => {
-                let width = proc_macro2::Literal::u64_unsuffixed(*width);
+        match RustReferenceShape::new(self.reference).kind() {
+            RustReferenceKind::String => quote! { String }.to_tokens(tokens),
+            RustReferenceKind::Integer => quote! { i64 }.to_tokens(tokens),
+            RustReferenceKind::Boolean => quote! { bool }.to_tokens(tokens),
+            RustReferenceKind::Path => quote! { String }.to_tokens(tokens),
+            RustReferenceKind::Bytes => quote! { Bytes }.to_tokens(tokens),
+            RustReferenceKind::FixedBytes(width) => {
+                let width = proc_macro2::Literal::u64_unsuffixed(width);
                 quote! { FixedBytes<#width> }.to_tokens(tokens);
             }
-            TypeReference::Plain(name) => {
+            RustReferenceKind::Plain(name) => {
                 Ident::new(name.as_str(), Span::call_site()).to_tokens(tokens)
             }
-            TypeReference::Vector(inner) => {
+            RustReferenceKind::Sequence(inner) => {
                 let inner = TypeRenderer::new(inner);
                 quote! { Vec<#inner> }.to_tokens(tokens);
             }
-            TypeReference::Optional(inner) => {
+            RustReferenceKind::Optional(inner) => {
                 let inner = TypeRenderer::new(inner);
                 quote! { Option<#inner> }.to_tokens(tokens);
             }
-            TypeReference::ScopeOf(inner) => match inner.plain_name() {
+            RustReferenceKind::Scope(inner) => match inner.plain_name() {
                 Some(name) => {
                     let name = Ident::new(&format!("{name}Scope"), Span::call_site());
                     quote! { #name }.to_tokens(tokens);
                 }
                 None => TypeRenderer::new(inner).to_tokens(tokens),
             },
-            TypeReference::Map(key, value) => {
+            RustReferenceKind::Mapping(key, value) => {
                 let key = TypeRenderer::new(key);
                 let value = TypeRenderer::new(value);
                 quote! { std::collections::HashMap<#key, #value> }.to_tokens(tokens);
             }
-            TypeReference::Application { head, arguments } => {
+            RustReferenceKind::Application { head, arguments } => {
                 let head = Ident::new(head.name().as_str(), Span::call_site());
                 let arguments = arguments.iter().map(TypeRenderer::new);
                 quote! { #head<#(#arguments),*> }.to_tokens(tokens);

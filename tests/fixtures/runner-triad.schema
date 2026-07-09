@@ -1,4 +1,11 @@
 {}
+{
+  Vector Vector
+  Optional Optional
+  ScopeOf ScopeOf
+  Map Map
+  Bytes FixedBytes
+}
 [(Record Entry) (Observe Query)]
 [(RecordAccepted SemaReceipt) (RecordsStashed StashResult) (Error ErrorReport)]
 {
@@ -26,5 +33,5 @@
   ErrorReport { ErrorMessage DatabaseMarker }
   Entry { Topic Description }
   Query { Topic }
-  RecordSet (Vector Entry)
+  RecordSet Vector.Entry
 }

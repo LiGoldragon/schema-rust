@@ -1,11 +1,12 @@
 use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::{ToTokens, quote};
 use schema_language::{
-    Declaration, EnumDeclaration, EnumVariant, FamilyDeclaration, FamilyKey, FieldDeclaration,
-    ImplFact, ImplReference, ImportResolver, MethodParameter, MethodSignature, Name,
-    NewtypeDeclaration, ReferencedImpl, RelationDeclaration, RelationValue, ResolvedImport, Root,
-    RootApplication, RustSurface, SchemaEngine, SchemaError, SchemaIdentity, SchemaSource,
-    StreamDeclaration, StructDeclaration, TrueSchema, TypeDeclaration, TypeReference, Visibility,
+    ApplicationHead, Declaration, EnumDeclaration, EnumVariant, FamilyDeclaration, FamilyKey,
+    FieldDeclaration, GenericBuiltin, GenericDefinition, ImplFact, ImplReference, ImportResolver,
+    MethodParameter, MethodSignature, Name, NewtypeDeclaration, ReferencedImpl,
+    RelationDeclaration, RelationValue, ResolvedImport, Root, RootApplication, RustSurface,
+    SchemaEngine, SchemaError, SchemaIdentity, SchemaSource, StreamDeclaration, StructDeclaration,
+    TrueSchema, TypeDeclaration, TypeReference, Visibility,
 };
 
 pub mod build;
@@ -627,9 +628,14 @@ impl RustModule {
 impl LowerToRust<RustModule> for TrueSchema {
     fn lower_to_rust(&self, context: &RustLoweringContext) -> RustModule {
         let declarations = self
-            .namespace()
+            .generics()
             .iter()
-            .map(|declaration| context.lower_true_schema_declaration(self, declaration))
+            .filter_map(|definition| definition.lower_to_rust(context))
+            .chain(
+                self.namespace()
+                    .iter()
+                    .map(|declaration| context.lower_true_schema_declaration(self, declaration)),
+            )
             .collect::<Vec<_>>();
         let mut root_enums = Vec::new();
         let mut applied_roots = Vec::new();
@@ -1206,6 +1212,34 @@ impl RustRecordFamily {
             FamilyKey::Domain => quote! { sema_engine::TableDescriptor<#record> },
             FamilyKey::Identified => quote! { sema_engine::IdentifiedTableDescriptor<#record> },
         }
+    }
+}
+
+impl LowerToRust<Option<RustDeclaration>> for GenericDefinition {
+    fn lower_to_rust(&self, context: &RustLoweringContext) -> Option<RustDeclaration> {
+        // TODO(schema-language/schema-vision-core-syntax-redesign): lower
+        // generic definitions from kind metadata when the producer exposes
+        // non-frame Rust projection and field-name pattern data. The current
+        // API only gives schema-rust an emitted declaration for frame bodies;
+        // collection aliases are erased into TypeReference compatibility
+        // variants before this boundary.
+        let GenericBuiltin::Frame(frame) = self.builtin() else {
+            return None;
+        };
+        Some(RustDeclaration {
+            visibility: Visibility::Public,
+            name: self.name().clone(),
+            parameters: frame.parameters().to_vec(),
+            value: RustTypeDeclaration::Enum(RustEnum {
+                name: self.name().clone(),
+                parameters: frame.parameters().to_vec(),
+                variants: frame
+                    .variants()
+                    .iter()
+                    .map(|variant| variant.lower_to_rust(context))
+                    .collect(),
+            }),
+        })
     }
 }
 
@@ -1932,6 +1966,58 @@ impl ToTokens for RustIdentifier<'_> {
     }
 }
 
+pub(crate) struct RustReferenceShape<'reference> {
+    reference: &'reference TypeReference,
+}
+
+impl<'reference> RustReferenceShape<'reference> {
+    pub(crate) fn new(reference: &'reference TypeReference) -> Self {
+        Self { reference }
+    }
+
+    pub(crate) fn kind(&self) -> RustReferenceKind<'reference> {
+        // TODO(schema-language/schema-vision-core-syntax-redesign): replace
+        // these per-builtin compatibility arms when TrueSchema exposes applied
+        // generic definition kind, alias name, and field-name projection data.
+        // The current dotted-generic producer branch still erases aliases such
+        // as List/Maybe into Vector/Optional before schema-rust sees them.
+        match self.reference {
+            TypeReference::String => RustReferenceKind::String,
+            TypeReference::Integer => RustReferenceKind::Integer,
+            TypeReference::Boolean => RustReferenceKind::Boolean,
+            TypeReference::Path => RustReferenceKind::Path,
+            TypeReference::Bytes => RustReferenceKind::Bytes,
+            TypeReference::FixedBytes(width) => RustReferenceKind::FixedBytes(*width),
+            TypeReference::Plain(name) => RustReferenceKind::Plain(name),
+            TypeReference::Vector(inner) => RustReferenceKind::Sequence(inner),
+            TypeReference::Map(key, value) => RustReferenceKind::Mapping(key, value),
+            TypeReference::Optional(inner) => RustReferenceKind::Optional(inner),
+            TypeReference::ScopeOf(inner) => RustReferenceKind::Scope(inner),
+            TypeReference::Application { head, arguments } => {
+                RustReferenceKind::Application { head, arguments }
+            }
+        }
+    }
+}
+
+pub(crate) enum RustReferenceKind<'reference> {
+    String,
+    Integer,
+    Boolean,
+    Path,
+    Bytes,
+    FixedBytes(u64),
+    Plain(&'reference Name),
+    Sequence(&'reference TypeReference),
+    Mapping(&'reference TypeReference, &'reference TypeReference),
+    Optional(&'reference TypeReference),
+    Scope(&'reference TypeReference),
+    Application {
+        head: &'reference ApplicationHead,
+        arguments: &'reference [TypeReference],
+    },
+}
+
 struct RustTypeReferenceTokens<'reference> {
     reference: &'reference TypeReference,
 }
@@ -1944,31 +2030,31 @@ impl<'reference> RustTypeReferenceTokens<'reference> {
 
 impl ToTokens for RustTypeReferenceTokens<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self.reference {
-            TypeReference::String => quote! { String }.to_tokens(tokens),
-            TypeReference::Integer => quote! { Integer }.to_tokens(tokens),
-            TypeReference::Boolean => quote! { Boolean }.to_tokens(tokens),
-            TypeReference::Path => quote! { Path }.to_tokens(tokens),
-            TypeReference::Bytes => quote! { Bytes }.to_tokens(tokens),
-            TypeReference::FixedBytes(width) => {
-                let width = proc_macro2::Literal::u64_unsuffixed(*width);
+        match RustReferenceShape::new(self.reference).kind() {
+            RustReferenceKind::String => quote! { String }.to_tokens(tokens),
+            RustReferenceKind::Integer => quote! { Integer }.to_tokens(tokens),
+            RustReferenceKind::Boolean => quote! { Boolean }.to_tokens(tokens),
+            RustReferenceKind::Path => quote! { Path }.to_tokens(tokens),
+            RustReferenceKind::Bytes => quote! { Bytes }.to_tokens(tokens),
+            RustReferenceKind::FixedBytes(width) => {
+                let width = proc_macro2::Literal::u64_unsuffixed(width);
                 quote! { FixedBytes<#width> }.to_tokens(tokens);
             }
-            TypeReference::Plain(name) => RustIdentifier::new(name.as_str()).to_tokens(tokens),
-            TypeReference::Vector(inner) => {
+            RustReferenceKind::Plain(name) => RustIdentifier::new(name.as_str()).to_tokens(tokens),
+            RustReferenceKind::Sequence(inner) => {
                 let inner = Self::new(inner);
                 quote! { Vec<#inner> }.to_tokens(tokens);
             }
-            TypeReference::Map(key, value) => {
+            RustReferenceKind::Mapping(key, value) => {
                 let key = Self::new(key);
                 let value = Self::new(value);
                 quote! { std::collections::BTreeMap<#key, #value> }.to_tokens(tokens);
             }
-            TypeReference::Optional(inner) => {
+            RustReferenceKind::Optional(inner) => {
                 let inner = Self::new(inner);
                 quote! { Option<#inner> }.to_tokens(tokens);
             }
-            TypeReference::ScopeOf(inner) => match inner.plain_name() {
+            RustReferenceKind::Scope(inner) => match inner.plain_name() {
                 Some(name) => {
                     let scope_name = format!("{}Scope", name);
                     let name = RustIdentifier::new(&scope_name);
@@ -1979,7 +2065,7 @@ impl ToTokens for RustTypeReferenceTokens<'_> {
                     quote! { #inner }.to_tokens(tokens);
                 }
             },
-            TypeReference::Application { head, arguments } => {
+            RustReferenceKind::Application { head, arguments } => {
                 let head = RustIdentifier::new(head.name().as_str());
                 let arguments = arguments.iter().map(Self::new);
                 quote! { #head<#(#arguments),*> }.to_tokens(tokens);
@@ -7359,33 +7445,33 @@ impl RustModuleRenderer {
     /// The Rust type for a reference.
     ///
     /// Scalar leaves map to emitted scalar aliases. A plain declared-name
-    /// leaf maps to its local or imported type name. The
-    /// collection variants recurse: `Vector` → `Vec<inner>`, `Map` →
-    /// `BTreeMap<key, value>` (the `KeyValue` keyword), `Optional` →
-    /// `Option<inner>`. `BTreeMap` is written fully-qualified so no
-    /// `use` is emitted and the ordering is deterministic (rkyv + NOTA
-    /// round-trips need a stable key order).
+    /// leaf maps to its local or imported type name. Collection projection
+    /// goes through `RustReferenceShape` so the current schema-language
+    /// per-builtin variants stay confined to one compatibility boundary.
+    /// `BTreeMap` is written fully-qualified so no `use` is emitted and the
+    /// ordering is deterministic (rkyv + NOTA round-trips need a stable key
+    /// order).
     fn rust_type(&self, reference: &TypeReference) -> String {
-        match reference {
-            TypeReference::String => "String".to_owned(),
-            TypeReference::Integer => "Integer".to_owned(),
-            TypeReference::Boolean => "Boolean".to_owned(),
-            TypeReference::Path => "Path".to_owned(),
-            TypeReference::Bytes => "Bytes".to_owned(),
-            TypeReference::FixedBytes(width) => format!("FixedBytes<{width}>"),
-            TypeReference::Plain(name) => name.as_str().to_owned(),
-            TypeReference::Vector(inner) => format!("Vec<{}>", self.rust_type(inner)),
-            TypeReference::Map(key, value) => format!(
+        match RustReferenceShape::new(reference).kind() {
+            RustReferenceKind::String => "String".to_owned(),
+            RustReferenceKind::Integer => "Integer".to_owned(),
+            RustReferenceKind::Boolean => "Boolean".to_owned(),
+            RustReferenceKind::Path => "Path".to_owned(),
+            RustReferenceKind::Bytes => "Bytes".to_owned(),
+            RustReferenceKind::FixedBytes(width) => format!("FixedBytes<{width}>"),
+            RustReferenceKind::Plain(name) => name.as_str().to_owned(),
+            RustReferenceKind::Sequence(inner) => format!("Vec<{}>", self.rust_type(inner)),
+            RustReferenceKind::Mapping(key, value) => format!(
                 "std::collections::BTreeMap<{}, {}>",
                 self.rust_type(key),
                 self.rust_type(value)
             ),
-            TypeReference::Optional(inner) => format!("Option<{}>", self.rust_type(inner)),
-            TypeReference::ScopeOf(inner) => match inner.plain_name() {
+            RustReferenceKind::Optional(inner) => format!("Option<{}>", self.rust_type(inner)),
+            RustReferenceKind::Scope(inner) => match inner.plain_name() {
                 Some(name) => format!("{name}Scope"),
                 None => self.rust_type(inner),
             },
-            TypeReference::Application { head, arguments } => {
+            RustReferenceKind::Application { head, arguments } => {
                 let arguments = arguments
                     .iter()
                     .map(|argument| self.rust_type(argument))
