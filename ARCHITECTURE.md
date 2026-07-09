@@ -156,13 +156,17 @@ visibility-tagged declarations: `(Public Name Value)` or `(Private Name
 Value)`. The emitter must project that boundary into Rust instead of
 flattening every type into the same public surface.
 
-The active fixtures should use the compact schema signature shape: square
-brackets contain one vector element type, so unit variants are bare symbols,
-same-named data-carrying variants use self-tagged records such as `(Record)`,
-and explicit `(Variant PayloadType)` records are reserved for intentionally
-different names. Root headers should prefer exported operation names or shallow
-inline operation payloads. This emitter sees the typed source/schema data from
-`schema-language` and must not grow a second parser for the authored form.
+The active fixtures use the strict positional dotted schema shape: an enum body
+is a square-bracket vector of variants, unit variants are bare capitalized
+symbols, and data-carrying variants are dotted `Variant.Payload`. There is no
+same-named self-tag shortcut: a variant whose payload type shares its name is
+written explicitly (`Record.Record`). The legacy same-named `(Record)` self-tag
+and the parenthesized `(Variant PayloadType)` form are retired from the source
+language (see `schema-language`'s `ARCHITECTURE.md`); any fixture still carrying
+them is pending migration. Root headers should prefer exported operation names
+or shallow inline operation payloads. This emitter sees the typed source/schema
+data from `schema-language` and must not grow a second parser for the authored
+form.
 
 ## Constraints
 
@@ -175,8 +179,8 @@ inline operation payloads. This emitter sees the typed source/schema data from
   declarations emit `pub(crate)` types and fields, preserving inline
   PascalCase schema declarations as module-local implementation nouns.
 - `TypeDeclaration::Alias` and `TypeDeclaration::Newtype` are distinct.
-  Bare source bindings such as `Topic String`, `Topics (Vec Topic)`, or
-  `Rejected SignalRejection` emit as Rust `type` aliases. A brace-body
+  Bare source bindings such as `Topic.String`, `Topics.Vector.Topic`, or
+  `Rejected.SignalRejection` emit as Rust `type` aliases. A brace-body
   declaration with exactly one field emits as a tuple newtype.
   `TypeDeclaration::Struct` is the named-field map shape. A newtype in
   `TrueSchema` is a single-element brace with just the wrapped type —
@@ -452,16 +456,19 @@ inline operation payloads. This emitter sees the typed source/schema data from
   `Plain(Name)` no longer carries scalar special cases; it names an emitted or
   imported schema type.
 - Collection references emit standard Rust collections. Authored schemas use
-  Schema type-reference vocabulary such as `(Vec Topic)`, `(Map (Topic
-  RecordIdentifier))`, and `(Optional Topic)`. Authored datatype declarations
-  are strict namespace key/value entries: `Topic String`,
-  `Entry { topic Topic }`, and `Kind [Decision Correction]`. Square brackets
-  declare enum bodies at enum positions; they are not the `Vec` reference
-  syntax. The emitter's
-  Rust type projection recurses a `TypeReference`: `Vector` → `Vec<inner>`,
-  `Map` → `std::collections::BTreeMap<key, value>` (fully qualified, so no
-  `use` and a deterministic key order for rkyv + NOTA), `Optional` →
-  `Option<inner>`.
+  dotted positional application: `Vector.Topic`, `Map.(Topic RecordIdentifier)`,
+  and `Optional.Topic`. Authored datatype declarations are strict positional
+  dotted namespace entries: `Topic.String`, `Entry { topic.Topic }`, and
+  `Kind.[Decision Correction]`. Square brackets declare enum bodies at enum
+  positions; they are not application syntax. The emitter's Rust type projection
+  recurses a `TypeReference` by generic kind, never by string name:
+  `Vector` → `Vec<inner>`, `Map` →
+  `std::collections::BTreeMap<key, value>` (fully qualified, so no `use` and a
+  deterministic key order for rkyv + NOTA), `Optional` → `Option<inner>`. The
+  target `TypeReference` mirrors the closed set of generic kinds (single-type,
+  multi-type, const, template) rather than one uniform application variant or a
+  per-name variant set, so lowering dispatches on kind (see `schema-language`'s
+  `ARCHITECTURE.md`).
 - Generated code can import `nota`'s shared codec surface and derive
   `nota::NotaDecode` / `nota::NotaEncode` for generated nouns, but
   that surface is selected by `RustEmissionOptions`: always enabled,
@@ -505,4 +512,7 @@ inline operation payloads. This emitter sees the typed source/schema data from
   and `mod current` (the next-version field shapes) and `impl From<historical::T>
   for current::T` per changed type, materializing the `FieldMigration` directive.
   Correctness is proved by a Layer-2 rustc-subprocess witness that compiles the
-  emitted code, not by a grep test.
+  emitted code, not by a grep test. In the target evolution model, structural
+  edits (`AddField`, `ChangeFieldType`, `AddVariant`) change core-schema bytes
+  and emit these historical-to-current `From` implementations, while a `Rename`
+  edit touches only the `NameTable` and emits no migration code.
