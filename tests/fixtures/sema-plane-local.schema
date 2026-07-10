@@ -1,29 +1,19 @@
 {}
-[WriteInput ReadInput]
-[WriteOutput ReadOutput]
+[Write.WriteInput Read.ReadInput]
+[WriteReply.WriteOutput ReadReply.ReadOutput]
 {
-  WriteInput [Record Remove]
-  Record Entry
-  Remove RecordIdentifier
-
-  ReadInput [Observe Lookup]
-  Observe Query
-  Lookup RecordIdentifier
-
-  WriteOutput [Recorded Missed]
-  Recorded Receipt
-  Missed ErrorReport
-
-  ReadOutput [Observed Found Missed]
-  Observed RecordSet
-  Found Entry
-
-  Topic String
-  RecordIdentifier Integer
-  Message String
-  Entry { Topic }
-  Query { Topic }
-  RecordSet (Vector Entry)
-  Receipt { RecordIdentifier }
-  ErrorReport { Message }
+  WriteInput.[Record.Entry Remove.RecordIdentifier]
+  ReadInput.[Observe.Query Lookup.RecordIdentifier]
+  WriteOutput.[Recorded.Receipt Missed.ErrorReport]
+  ReadOutput.[Observed.RecordSet Found.Entry Missed.ErrorReport]
+  Topic.String
+  RecordIdentifier.Integer
+  Message.String
+  Entry.{ Topic }
+  Query.{ Topic }
+  RecordSet.Vector.Entry
+  Receipt.{ RecordIdentifier }
+  ErrorReport.{ Message }
 }
+{}
+{}

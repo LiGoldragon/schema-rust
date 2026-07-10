@@ -3,10 +3,6 @@ use schema_rust::{
     UpgradeListenerTier, WorkingListenerTier,
 };
 
-mod support;
-
-use support::FixtureSchema;
-
 const OWNER_ONLY_SOCKET_MODE: u32 = 0o600;
 
 fn assert_code_contains(code: &str, expected: &str) {
@@ -75,9 +71,7 @@ fn meta_plus_tcp_shape() -> NexusDaemonShape {
 
 #[test]
 fn daemon_module_emits_the_component_daemon_hook_trait() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated =
-        DaemonModule::new(single_listener_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(single_listener_shape(), "schema-rust").to_generated_file();
 
     assert_eq!(generated.path, "src/schema/daemon.rs");
     let code = generated.code.as_str();
@@ -105,9 +99,7 @@ fn daemon_module_emits_the_component_daemon_hook_trait() {
 
 #[test]
 fn daemon_module_emits_the_command_and_exit_entry() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated =
-        DaemonModule::new(single_listener_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(single_listener_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
     assert_code_contains(code, "pub struct DaemonCommand<Daemon: ComponentDaemon>");
@@ -122,9 +114,7 @@ fn daemon_module_emits_the_command_and_exit_entry() {
 
 #[test]
 fn single_listener_daemon_emits_the_async_single_listener_spine() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated =
-        DaemonModule::new(single_listener_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(single_listener_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
     assert_code_contains(code, "AsyncSingleListenerDaemon::new(");
@@ -173,9 +163,7 @@ fn single_listener_daemon_emits_the_async_single_listener_spine() {
 
 #[test]
 fn meta_listener_tier_emits_the_async_multi_listener_spine() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated =
-        DaemonModule::new(multi_listener_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(multi_listener_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
     assert_code_contains(code, "pub enum ListenerTier");
@@ -228,8 +216,7 @@ fn meta_listener_tier_emits_the_async_multi_listener_spine() {
 
 #[test]
 fn tcp_listener_tier_emits_a_sibling_tcp_working_ingress() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated = DaemonModule::new(tcp_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(tcp_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
     assert_code_contains(code, "use triad_runtime::TcpListenerDaemon");
@@ -248,9 +235,7 @@ fn tcp_listener_tier_emits_a_sibling_tcp_working_ingress() {
 
 #[test]
 fn tcp_listener_tier_composes_with_meta_and_keeps_meta_socket_mode() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated =
-        DaemonModule::new(meta_plus_tcp_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(meta_plus_tcp_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
     assert_code_contains(code, "GeneratedMultiAndTcpDaemon<Self>");
@@ -264,9 +249,7 @@ fn tcp_listener_tier_composes_with_meta_and_keeps_meta_socket_mode() {
 
 #[test]
 fn component_decoded_working_tier_delegates_frame_decode_to_component() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated =
-        DaemonModule::new(component_decoded_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(component_decoded_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
     assert_code_contains(code, "pub enum ListenerTier");
@@ -294,159 +277,50 @@ fn component_decoded_working_tier_delegates_frame_decode_to_component() {
 }
 
 #[test]
-fn declared_stream_emits_async_subscription_support() {
-    let schema = FixtureSchema::new("daemon-stream.schema").lower("test:signal");
-    let generated =
-        DaemonModule::new(single_listener_shape(), &schema, "schema-rust").to_generated_file();
+fn actor_tier_emits_the_staged_working_lane() {
+    // The actor tier carries the staged three-phase working turn: a defaulted
+    // lane classifier, the staged-advance object crossing the spine, the two
+    // extra engine messages, and the first-in first-out advance gate on the
+    // runtime. Components that never return `WorkingInputLane::Staged` keep
+    // today's single-turn behavior — every new hook has a default.
+    let generated = DaemonModule::new(single_listener_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
-    assert_code_contains(code, "type SubscriptionToken:");
-    assert_code_contains(code, "type SubscriptionFilter:");
-    assert_code_contains(code, "type StreamEvent:");
-    assert_code_contains(code, "fn subscription_filter(input: &Input)");
-    assert_code_contains(code, "fn subscription_token(output: &Output)");
+    assert_code_contains(code, "pub enum WorkingInputLane");
     assert_code_contains(
         code,
-        "fn published_event<'event>(engine: &'event Self::Engine, output: &'event Output)",
+        "fn working_input_lane(input: &Input) -> WorkingInputLane { let _ = input; WorkingInputLane::Immediate }",
     );
-    assert_code_contains(code, "fn event_matches_filter(");
-    assert_code_contains(code, "fn subscription_event_short_header() -> u64");
+    assert_code_contains(code, "pub enum StagedWorkingTurn<Daemon: ComponentDaemon>");
     assert_code_contains(
         code,
-        "pub struct EmittedSubscriptions<Daemon: ComponentDaemon>",
+        "pub trait StagedAdvance<Daemon: ComponentDaemon>: Send",
     );
-    assert_code_contains(code, "tokio::sync::Mutex");
-    assert_code_contains(code, "SubscriptionEventPublisher::acceptor(");
-    assert_code_contains(code, "let (stream, context) = connection.into_parts();");
-    assert_code_contains(code, "let (reader, writer) = tokio::io::split(stream);");
+    assert_code_contains(code, "fn stage_working_input<'connection>(");
     assert_code_contains(
         code,
-        "type SubscriptionWriter = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;",
+        "fn shared_advance_gate(engine: &Self::Engine) -> Option<std::sync::Arc<tokio::sync::Mutex<()>>>",
     );
-    assert_code_contains(code, "transport.into_writer()");
-    assert_code_contains(code, "frame.encode()?");
-    assert_code_contains(code, "write_body_async(writer, &FrameBody::new(bytes))");
-    assert_code_excludes(code, "compile_error!");
-    assert_code_excludes(code, "std::sync::Mutex");
-    assert_code_excludes(code, "try_clone_stream");
-    assert_code_excludes(code, "OwnedWriteHalf");
-    assert_code_excludes(code, "UnixStream");
-
-    // The stream tier now also routes the engine through the kameo `EngineActor`.
-    // The engine hook becomes `&mut Self::Engine` (the actor handler's exclusive
-    // borrow), and the `WorkingInput` handler computes both the output and the
-    // published event together, returning them as a `WorkingOutcome`.
+    assert_code_contains(code, "pub enum StagedWorkingReply<Daemon: ComponentDaemon>");
+    assert_code_contains(code, "pub struct StageWorkingInput");
     assert_code_contains(
         code,
-        "fn handle_working_input<'connection>(engine: &'connection mut Self::Engine, input: Input, connection: &'connection triad_runtime::ConnectionContext)",
+        "pub struct ConcludeWorkingInput<Daemon: ComponentDaemon>",
     );
-    assert_code_contains(code, "pub struct EngineActor<Daemon: ComponentDaemon>");
-    assert_code_contains(code, "engine: ActorRef<EngineActor<Daemon>>");
-    assert_code_contains(code, "EngineActor::<Daemon>::spawn(EngineActor { engine })");
+    assert_code_contains(code, "advance_gate: std::sync::Arc<tokio::sync::Mutex<()>>");
     assert_code_contains(
         code,
-        "subscriptions: std::sync::Arc<EmittedSubscriptions<Daemon>>",
+        "let advance_gate = Daemon::shared_advance_gate(&engine).unwrap_or_default();",
     );
-    assert_code_contains(code, "pub struct WorkingOutcome<Daemon: ComponentDaemon>");
-    assert_code_contains(code, "output: Output");
-    assert_code_contains(code, "event: Option<Daemon::StreamEvent>");
-    assert_code_contains(
-        code,
-        "type Reply = Result<WorkingOutcome<Daemon>, Daemon::Error>;",
-    );
-    // The actor handler computes the output under `&mut self.engine`, then the
-    // published event under `&self.engine`, returning both together.
-    assert_code_contains(
-        code,
-        "let output = Daemon::handle_working_input(&mut self.engine, message.input, &message.context).await?;",
-    );
-    assert_code_contains(
-        code,
-        "let event = Daemon::published_event(&self.engine, &output).await?;",
-    );
-    assert_code_contains(code, "Ok(WorkingOutcome { output, event })");
-    // The runtime computes the subscription filter BEFORE the ask, then registers
-    // the writer and publishes the returned event after the ask resolves.
-    assert_code_contains(code, "let filter = Daemon::subscription_filter(&input);");
-    assert_code_contains(
-        code,
-        "let outcome = match Daemon::working_input_lane(&input)",
-    );
-    assert_code_contains(
-        code,
-        "WorkingInputLane::Immediate => { match self.engine.ask(WorkingInput { input, context }).await",
-    );
-    assert_code_contains(
-        code,
-        "transport.write_frame(outcome.output.encode_signal_frame()?).await?;",
-    );
-    assert_code_contains(
-        code,
-        "if let (Some(filter), Some(token)) = (filter, Daemon::subscription_token(&outcome.output))",
-    );
-    assert_code_contains(code, "if let Some(event) = outcome.event {");
-    assert_code_contains(code, "self.subscriptions.publish(event).await?");
-    // The stream tier shares the actor lifecycle: graceful stop crosses the
-    // mailbox, not a direct `Daemon::stop` on a shared engine.
-    assert_code_contains(code, "self.engine.stop_gracefully().await");
-    assert_code_contains(code, "self.engine.wait_for_shutdown().await");
-}
-
-#[test]
-fn actor_tier_emits_the_staged_working_lane() {
-    // Both actor tiers (stream and non-stream) carry the staged three-phase
-    // working turn: a defaulted lane classifier, the staged-advance object
-    // crossing the spine, the two extra engine messages, and the first-in
-    // first-out advance gate on the runtime. Components that never return
-    // `WorkingInputLane::Staged` keep today's single-turn behavior — every
-    // new hook has a default.
-    for (schema_fixture, lower_target) in [
-        ("daemon-stream.schema", "test:signal"),
-        ("spirit-min.schema", "spirit:lib"),
-    ] {
-        let schema = FixtureSchema::new(schema_fixture).lower(lower_target);
-        let generated =
-            DaemonModule::new(single_listener_shape(), &schema, "schema-rust").to_generated_file();
-        let code = generated.code.as_str();
-
-        assert_code_contains(code, "pub enum WorkingInputLane");
-        assert_code_contains(
-            code,
-            "fn working_input_lane(input: &Input) -> WorkingInputLane { let _ = input; WorkingInputLane::Immediate }",
-        );
-        assert_code_contains(code, "pub enum StagedWorkingTurn<Daemon: ComponentDaemon>");
-        assert_code_contains(
-            code,
-            "pub trait StagedAdvance<Daemon: ComponentDaemon>: Send",
-        );
-        assert_code_contains(code, "fn stage_working_input<'connection>(");
-        assert_code_contains(
-            code,
-            "fn shared_advance_gate(engine: &Self::Engine) -> Option<std::sync::Arc<tokio::sync::Mutex<()>>>",
-        );
-        assert_code_contains(code, "pub enum StagedWorkingReply<Daemon: ComponentDaemon>");
-        assert_code_contains(code, "pub struct StageWorkingInput");
-        assert_code_contains(
-            code,
-            "pub struct ConcludeWorkingInput<Daemon: ComponentDaemon>",
-        );
-        assert_code_contains(code, "advance_gate: std::sync::Arc<tokio::sync::Mutex<()>>");
-        assert_code_contains(
-            code,
-            "let advance_gate = Daemon::shared_advance_gate(&engine).unwrap_or_default();",
-        );
-        assert_code_contains(code, "let _advance_turn = self.advance_gate.lock().await;");
-        assert_code_contains(code, "advance.resolve().await;");
-        assert_code_contains(code, "self.engine.ask(ConcludeWorkingInput { advance })");
-        assert_code_contains(code, "message.advance.conclude(&mut self.engine).await");
-    }
+    assert_code_contains(code, "let _advance_turn = self.advance_gate.lock().await;");
+    assert_code_contains(code, "advance.resolve().await;");
+    assert_code_contains(code, "self.engine.ask(ConcludeWorkingInput { advance })");
+    assert_code_contains(code, "message.advance.conclude(&mut self.engine).await");
 }
 
 #[test]
 fn component_decoded_tier_emits_no_staged_lane() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated =
-        DaemonModule::new(component_decoded_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(component_decoded_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
     assert_code_excludes(code, "WorkingInputLane");
@@ -455,43 +329,8 @@ fn component_decoded_tier_emits_no_staged_lane() {
 }
 
 #[test]
-fn tcp_listener_tier_composes_with_stream_subscriptions() {
-    let schema = FixtureSchema::new("daemon-stream.schema").lower("test:signal");
-    let generated = DaemonModule::new(tcp_shape(), &schema, "schema-rust").to_generated_file();
-    let code = generated.code.as_str();
-
-    assert_code_contains(code, "GeneratedSingleAndTcpDaemon<Self>");
-    assert_code_contains(
-        code,
-        "impl<Daemon: ComponentDaemon> AsyncConnectionRuntime<TcpStream> for GeneratedDaemonRuntime<Daemon>",
-    );
-    assert_code_contains(
-        code,
-        "async fn handle_working_connection<Stream>(&self, connection: AcceptedConnection<Stream>)",
-    );
-    assert_code_contains(
-        code,
-        "Stream: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static",
-    );
-    assert_code_contains(code, "WorkingTransport::from_connection(connection)");
-    assert_code_contains(
-        code,
-        "type SubscriptionWriter = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;",
-    );
-    assert_code_contains(
-        code,
-        "writers: std::collections::HashMap<SubscriptionTokenInner, SubscriptionWriter>",
-    );
-    assert_code_contains(code, "self.handle_working_connection(connection).await");
-    assert_code_excludes(code, "OwnedWriteHalf");
-    assert_code_excludes(code, "UnixStream");
-}
-
-#[test]
 fn schema_without_a_stream_emits_no_subscription_plumbing() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated =
-        DaemonModule::new(single_listener_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(single_listener_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
     assert_code_excludes(code, "EmittedSubscriptions");
@@ -504,9 +343,7 @@ fn schema_without_a_stream_emits_no_subscription_plumbing() {
 
 #[test]
 fn upgrade_listener_tier_emits_the_third_listener_alongside_meta() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated =
-        DaemonModule::new(upgrade_tier_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(upgrade_tier_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
     // The listener-tier enum gains the third `Upgrade` identity alongside Meta.
@@ -577,9 +414,7 @@ fn upgrade_listener_tier_emits_the_third_listener_alongside_meta() {
 
 #[test]
 fn upgrade_tier_without_meta_emits_a_two_listener_multi_daemon() {
-    let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated =
-        DaemonModule::new(upgrade_only_shape(), &schema, "schema-rust").to_generated_file();
+    let generated = DaemonModule::new(upgrade_only_shape(), "schema-rust").to_generated_file();
     let code = generated.code.as_str();
 
     // The enum carries Working + Upgrade only; the Meta tier is absent.

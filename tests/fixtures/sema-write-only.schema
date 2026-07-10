@@ -1,10 +1,13 @@
-[(Record Entry)]
-[(Recorded Receipt)]
+{}
+[Record.Entry]
+[Recorded.Receipt]
 {
-  SemaWriteInput [(Record Entry)]
-  SemaWriteOutput [(Recorded Receipt)]
-  Topic String
-  Identifier Integer
-  Entry { Topic }
-  Receipt { Identifier }
+  SemaWriteInput.[Record.Entry]
+  SemaWriteOutput.[Recorded.Receipt]
+  Topic.String
+  Identifier.Integer
+  Entry.{ Topic }
+  Receipt.{ Identifier }
 }
+{}
+{}

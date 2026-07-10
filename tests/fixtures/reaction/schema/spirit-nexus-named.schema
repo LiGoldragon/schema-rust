@@ -2,23 +2,19 @@
 []
 []
 {
-  (| Work Event WriteDone ReadDone EffectDone |) [(SignalArrived Event) (SemaWriteCompleted WriteDone) (SemaReadCompleted ReadDone) (EffectCompleted EffectDone)]
-  (| Action Reply Write Read Effect Continuation |) [(ReplyToSignal Reply) (CommandSemaWrite Write) (CommandSemaRead Read) (CommandEffect Effect) (Continue Continuation)]
-
-  SignalInput { String }
-  SignalOutput { String }
-  SemaReadInput { String }
-  SemaReadOutput { Integer }
-  SemaWriteOutput { Boolean }
-
-  SemaWriteInput [(Record)]
-  Record SignalInput
-
-  NexusEffectCommand [(Stash)]
-  Stash SignalInput
-  NexusEffectResult [(Stashed)]
-  Stashed SignalOutput
-
-  NexusWork (Work SignalInput SemaWriteOutput SemaReadOutput NexusEffectResult)
-  NexusAction (Action SignalOutput SemaWriteInput SemaReadInput NexusEffectCommand NexusWork)
+  SignalInput.String
+  SignalOutput.String
+  SemaReadInput.String
+  SemaReadOutput.Integer
+  SemaWriteOutput.Boolean
+  SemaWriteInput.[Record.SignalInput]
+  NexusEffectCommand.[Stash.SignalInput]
+  NexusEffectResult.[Stashed.SignalOutput]
+  NexusWork.Work.(SignalInput SemaWriteOutput SemaReadOutput NexusEffectResult)
+  NexusAction.Action.(SignalOutput SemaWriteInput SemaReadInput NexusEffectCommand NexusWork)
 }
+{
+  Work.((Event WriteDone ReadDone EffectDone) [SignalArrived.Event SemaWriteCompleted.WriteDone SemaReadCompleted.ReadDone EffectCompleted.EffectDone])
+  Action.((Reply Write Read Effect Continuation) [ReplyToSignal.Reply CommandSemaWrite.Write CommandSemaRead.Read CommandEffect.Effect Continue.Continuation])
+}
+{}

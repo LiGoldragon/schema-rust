@@ -1,5 +1,12 @@
 {}
 []
 []
-{ Domain [(Technology [(Software [(Programming ProgrammingLeaf) Theory])])] ProgrammingLeaf [All TypeSystems Parsing] DomainScope (ScopeOf Domain) ScopeSet (Vector DomainScope) }
-[]
+{
+  Domain.[Technology.Software]
+  Software.[Programming.ProgrammingLeaf Theory]
+  ProgrammingLeaf.[All TypeSystems Parsing]
+  DomainScope.ScopeOf.Domain
+  ScopeSet.Vector.DomainScope
+}
+{}
+{}

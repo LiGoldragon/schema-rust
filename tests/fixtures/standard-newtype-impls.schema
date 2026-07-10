@@ -1,9 +1,17 @@
-[(Record NameText)]
-[(Accepted NameText)]
+{}
+[Record.NameText]
+[Accepted.NameText]
 {
-  NameText String { | Display AsRef PartialEq | }
-  FilePath Path { | Display AsRef PartialEq | }
-  Count Integer { | Display PartialEq PartialOrd | }
-  Enabled Boolean { | Display PartialEq | }
-  WrappedName NameText
+  NameText.String
+  FilePath.Path
+  Count.Integer
+  Enabled.Boolean
+  WrappedName.NameText
+}
+{}
+{
+  NameText.[ Display AsRef PartialEq ]
+  FilePath.[ Display AsRef PartialEq ]
+  Count.[ Display PartialEq PartialOrd ]
+  Enabled.[ Display PartialEq ]
 }

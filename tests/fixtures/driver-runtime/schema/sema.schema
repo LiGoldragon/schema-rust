@@ -1,12 +1,15 @@
-[(Read Query)]
-[(ReadDone Report)]
+{}
+[Read.Query]
+[ReadDone.Report]
 {
-  Topic String
-  Query { Topic }
-  Report { Topic }
-  SemaReceipt { Integer }
-  SemaReadInput [Read]
-  SemaReadOutput [ReadDone]
-  SemaWriteInput [(Record Query)]
-  SemaWriteOutput [(Recorded SemaReceipt)]
+  Topic.String
+  Query.{ Topic }
+  Report.{ Topic }
+  SemaReceipt.{ Integer }
+  SemaReadInput.[Read]
+  SemaReadOutput.[ReadDone]
+  SemaWriteInput.[Record.Query]
+  SemaWriteOutput.[Recorded.SemaReceipt]
 }
+{}
+{}

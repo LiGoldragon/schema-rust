@@ -1,7 +1,12 @@
-[(Observe Query)]
-[(Observed Report)]
+{}
+[Observe.Query]
+[Observed.Report]
 {
-  Topic String
-  Query { Topic }
-  Report { Topic }
+  Topic.String
+  Query.{ Topic }
+  Report.{ Topic }
+  DriverInput.[Observe.Query]
+  DriverOutput.[Observed.Report]
 }
+{}
+{}

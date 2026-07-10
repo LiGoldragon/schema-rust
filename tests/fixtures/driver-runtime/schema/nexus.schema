@@ -1,20 +1,13 @@
-{ ContractInput driver-contract:lib:Input ContractOutput driver-contract:lib:Output SemaReadInput driver-runtime:sema:SemaReadInput SemaReadOutput driver-runtime:sema:SemaReadOutput SemaWriteInput driver-runtime:sema:SemaWriteInput SemaWriteOutput driver-runtime:sema:SemaWriteOutput }
-[(SignalArrived ContractInput)]
-[
-  (CommandSemaRead SemaReadInput)
-  (CommandSemaWrite SemaWriteInput)
-  (ReplyToSignal ContractOutput)
-]
 {
-  NexusWork [
-    (SignalArrived ContractInput)
-    (SemaReadCompleted SemaReadOutput)
-    (SemaWriteCompleted SemaWriteOutput)
-  ]
-  NexusAction [
-    (CommandSemaRead SemaReadInput)
-    (CommandSemaWrite SemaWriteInput)
-    (ReplyToSignal ContractOutput)
-  ]
-  DecisionReceipt { Integer }
+  driver-contract.lib.[DriverInput DriverOutput]
+  driver-runtime.sema.[SemaReadInput SemaReadOutput SemaWriteInput SemaWriteOutput]
 }
+[SignalArrived.DriverInput]
+[CommandSemaRead.SemaReadInput CommandSemaWrite.SemaWriteInput ReplyToSignal.DriverOutput]
+{
+  NexusWork.[SignalArrived.DriverInput SemaReadCompleted.SemaReadOutput SemaWriteCompleted.SemaWriteOutput]
+  NexusAction.[CommandSemaRead.SemaReadInput CommandSemaWrite.SemaWriteInput ReplyToSignal.DriverOutput]
+  DecisionReceipt.{ Integer }
+}
+{}
+{}

@@ -151,10 +151,15 @@ themselves into Rust-model nouns. No generated component path reads or writes a
 separate assembled-schema text file.
 
 The rendered source is `RustModule::render()`, so tests can inspect the module
-data shape before comparing generated source text. Namespace entries arrive as
-visibility-tagged declarations: `(Public Name Value)` or `(Private Name
-Value)`. The emitter must project that boundary into Rust instead of
-flattening every type into the same public surface.
+data shape before comparing generated source text. Each namespace entry carries
+a typed `Visibility` on its declaration, and the emitter must project that
+boundary into Rust instead of flattening every type into the same public
+surface. The model holds visibility as typed data, not the retired
+`(Public Name Value)` / `(Private Name Value)` parenthesized tag. Authored
+type-privacy — a schema author declaring a shared private type — is DEFERRED by
+psyche pending a future programmable-macros discussion, so the checked-in
+fixtures are all public; the `pub(crate)` projection path below is retained for
+when that authoring surface returns.
 
 The active fixtures use the strict positional dotted schema shape: an enum body
 is a square-bracket vector of variants, unit variants are bare capitalized
@@ -183,10 +188,12 @@ form.
   `Rejected.SignalRejection` emit as Rust `type` aliases. A brace-body
   declaration with exactly one field emits as a tuple newtype.
   `TypeDeclaration::Struct` is the named-field map shape. A newtype in
-  `TrueSchema` is a single-element brace with just the wrapped type —
-  `(Public Topic { String })`, not a derived field name; the
-  authoring surface for it is `Topic@String` / `Topic@{ String }`. The
-  generated tuple newtype carries a NOTA-transparent shape so
+  `TrueSchema` is a single-element brace carrying just the wrapped type and no
+  field name; the current authoring surface is the dotted `Topic.{ String }` —
+  a brace body holding one bare type — as the checked-in fixtures write it (for
+  example `DecisionReceipt.{ Integer }`). The retired `@`-suffixed `Topic@String`
+  form and the parenthesized `(Public Topic { String })` form are no longer
+  authored. The generated tuple newtype carries a NOTA-transparent shape so
   `Topic([foo])` and `topic.0` round-trip without a wrapper field name.
 - Generated Rust is source-visible under `src/schema/`; consumers include or
   compile that source rather than hiding the interface in `OUT_DIR` or behind a

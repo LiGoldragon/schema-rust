@@ -1,7 +1,0 @@
-[(Record Entry) (Select [(Receipt { RecordIdentifier Message })])]
-[]
-{
-  RecordIdentifier Integer
-  Message String
-  Entry { selected.Receipt later.Receipt }
-}

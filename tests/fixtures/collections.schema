@@ -1,14 +1,17 @@
-[(Register Cluster) (Observe Query)]
-[(Projected (Map NodeName NodeConfig)) (Listed (Vector NodeName))]
+{}
+[Register.Cluster Observe.Query]
+[Projected.(Map.(NodeName NodeConfig)) Listed.Vector.NodeName]
 {
-  NodeName String
-  NodeConfig String
-  Service String
-  Query Topic
-  Topic String
-  Healthy Boolean
-  ConfigPath Path
-  Digest Bytes
-  Fingerprint (Bytes 4)
-  Cluster { (Vector Service) (Map NodeName NodeConfig) (Optional NodeConfig) Healthy ConfigPath Digest Fingerprint }
+  NodeName.String
+  NodeConfig.String
+  Service.String
+  Query.Topic
+  Topic.String
+  Healthy.Boolean
+  ConfigPath.Path
+  Digest.Bytes
+  Fingerprint.Bytes.4
+  Cluster.{ Vector.Service Map.(NodeName NodeConfig) Optional.NodeConfig Healthy ConfigPath Digest Fingerprint }
 }
+{}
+{}

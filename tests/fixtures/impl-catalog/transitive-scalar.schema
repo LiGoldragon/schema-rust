@@ -2,6 +2,10 @@
 []
 []
 {
-  StatementText String
-  Statement StatementText { | Display | }
+  StatementText.String
+  Statement.StatementText
+}
+{}
+{
+  Statement.[ Display ]
 }

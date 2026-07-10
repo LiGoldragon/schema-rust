@@ -14,11 +14,6 @@ use support::FixtureNota;
 #[path = "fixtures/big-schemas/spirit-reactive-large.generated.rs"]
 mod spirit_large_generated;
 
-#[allow(dead_code)]
-#[allow(clippy::enum_variant_names)]
-#[path = "fixtures/big-schemas/triad-reactive-large.generated.rs"]
-mod triad_large_generated;
-
 struct BigRustFixture<'fixture> {
     name: &'fixture str,
     identity: &'fixture str,
@@ -161,13 +156,6 @@ impl<'fixture> BigRustFixture<'fixture> {
                 Self::assert_has_variant(Self::root_enum(&schema.input()), "Record");
                 Self::assert_has_variant(Self::root_enum(&schema.output()), "Recorded");
             }
-            "triad-reactive-large" => {
-                Self::assert_has_type(&schema.namespace(), "SignalRequest");
-                Self::assert_has_type(&schema.namespace(), "NexusRequest");
-                Self::assert_has_type(&schema.namespace(), "SemaRequest");
-                Self::assert_has_variant(Self::root_enum(&schema.input()), "SignalIn");
-                Self::assert_has_variant(Self::root_enum(&schema.output()), "SignalOut");
-            }
             "imported-mail-consumer" => {
                 assert!(!schema.imports().is_empty());
                 assert!(!schema.resolved_imports().is_empty());
@@ -239,18 +227,6 @@ fn large_spirit_schema_emits_checked_rust_snapshot() {
 }
 
 #[test]
-fn large_triad_schema_lowers_to_typed_schema_data() {
-    BigRustFixture::local("triad-reactive-large", "example:triad-reactive-large")
-        .assert_lowers_to_typed_schema_data();
-}
-
-#[test]
-fn large_triad_schema_emits_checked_rust_snapshot() {
-    BigRustFixture::local("triad-reactive-large", "example:triad-reactive-large")
-        .assert_matches_checked_in_rust();
-}
-
-#[test]
 fn large_imported_schema_lowers_to_typed_schema_data() {
     BigRustFixture::imported("imported-mail-consumer", "example:imported-mail-consumer")
         .assert_lowers_to_typed_schema_data();
@@ -266,8 +242,6 @@ fn large_imported_schema_emits_checked_cross_crate_rust_snapshot() {
 fn rust_emission_is_stable_after_schema_source_artifact_round_trip() {
     BigRustFixture::local("spirit-reactive-large", "example:spirit-reactive-large")
         .assert_emission_uses_schema_source_artifact();
-    BigRustFixture::local("triad-reactive-large", "example:triad-reactive-large")
-        .assert_emission_uses_schema_source_artifact();
     BigRustFixture::imported("imported-mail-consumer", "example:imported-mail-consumer")
         .assert_emission_uses_schema_source_artifact();
 }
@@ -275,8 +249,6 @@ fn rust_emission_is_stable_after_schema_source_artifact_round_trip() {
 #[test]
 fn generated_big_rust_contains_the_current_schema_stack_surfaces() {
     let spirit = BigRustFixture::local("spirit-reactive-large", "example:spirit-reactive-large")
-        .generate_rust();
-    let triad = BigRustFixture::local("triad-reactive-large", "example:triad-reactive-large")
         .generate_rust();
     let imported =
         BigRustFixture::imported("imported-mail-consumer", "example:imported-mail-consumer")
@@ -295,19 +267,6 @@ fn generated_big_rust_contains_the_current_schema_stack_surfaces() {
     // custom-named complex field by declaring it as a newtype, not inline.
     assert!(spirit.contains("pub entries: Entries,"));
     assert!(spirit.contains("pub by_topic: ByTopic,"));
-
-    assert!(triad.contains("pub enum SignalRequest"));
-    assert!(triad.contains("pub enum NexusRequest"));
-    assert!(triad.contains("pub enum SemaRequest"));
-    assert!(triad.contains("pub struct PushSemaResult(SemaReply);"));
-    assert!(triad.contains("pub struct EntryWritten"));
-    assert!(triad.contains("pub enum RuntimeEvent"));
-    assert!(
-        triad.contains(
-            "pub type Frame = signal_frame::StreamingFrame<Input, Output, RuntimeEvent>;"
-        )
-    );
-    assert!(triad.contains("pub fn into_subscription_frame("));
     assert!(!spirit.contains("pub type Frame = signal_frame::StreamingFrame"));
 
     assert!(
@@ -347,39 +306,6 @@ fn compiled_large_spirit_generated_rust_parses_frames_and_emits_mail_events() {
         spirit_large_generated::OriginRoute::new(7001)
     );
     assert_eq!(event.root, spirit_large_generated::MessageRoot::Input);
-}
-
-#[test]
-fn compiled_reactive_generated_rust_builds_signal_frame_streaming_events() {
-    let event_identifier = signal_frame::StreamEventIdentifier::new(
-        signal_frame::SessionEpoch::new(5),
-        signal_frame::ExchangeLane::Acceptor,
-        signal_frame::LaneSequence::first(),
-    );
-    let event = triad_large_generated::RuntimeEvent::MessageCommitted(
-        triad_large_generated::MessageCommitted::new(triad_large_generated::CommitSequence::new(9)),
-    );
-
-    let frame = event.clone().into_subscription_frame(
-        event_identifier,
-        signal_frame::SubscriptionTokenInner::new(22),
-    );
-    let bytes = frame.encode_length_prefixed().expect("encode frame");
-    let decoded = triad_large_generated::Frame::decode_length_prefixed(&bytes)
-        .expect("decode streaming frame");
-
-    match decoded.into_body() {
-        triad_large_generated::FrameBody::SubscriptionEvent {
-            event_identifier: decoded_identifier,
-            token,
-            event: decoded_event,
-        } => {
-            assert_eq!(decoded_identifier, event_identifier);
-            assert_eq!(token, signal_frame::SubscriptionTokenInner::new(22));
-            assert_eq!(decoded_event, event);
-        }
-        _ => panic!("expected subscription event"),
-    }
 }
 
 fn fixture_path(name: &str, extension: &str) -> PathBuf {

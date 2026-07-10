@@ -25,7 +25,7 @@ fn module(source: &str) -> RustModule {
 /// error naming the offending name, instead of panicking at `Ident::new`.
 #[test]
 fn hyphenated_type_name_yields_typed_error_not_panic() {
-    let module = module("{}\n[]\n[]\n{\n  Foo-Bar String\n}\n");
+    let module = module("{}\n[]\n[]\n{\n  Foo-Bar.String\n}\n{}\n{}\n");
     let error = module
         .verify_names()
         .expect_err("a hyphenated name is not a legal Rust identifier");
@@ -38,22 +38,30 @@ fn hyphenated_type_name_yields_typed_error_not_panic() {
     );
 }
 
-/// A name starting with a digit is likewise a NOTA-legal atom but an illegal
-/// Rust identifier.
+/// A name starting with a digit is not a valid capitalized type-name prefix, so
+/// the dotted source grammar rejects it at lowering with a typed NOTA error
+/// rather than letting it reach the Rust-name boundary. The malformed-name
+/// boundary moved earlier under the strict positional grammar, but the property
+/// holds: a malformed name is a typed error, never a panic.
 #[test]
 fn leading_digit_type_name_yields_typed_error() {
-    let module = module("{}\n[]\n[]\n{\n  2Things String\n}\n");
-    let error = module
-        .verify_names()
-        .expect_err("a leading-digit name is not a legal Rust identifier");
-    assert!(matches!(error, SchemaError::MalformedSchemaNode { .. }));
+    let error = SchemaEngine::default()
+        .lower_source(
+            "{}\n[]\n[]\n{\n  2Things.String\n}\n{}\n{}\n",
+            SchemaIdentity::new("name-validation:lib", "0.1.0"),
+        )
+        .expect_err("a leading-digit name is not a valid type-name prefix");
+    assert!(matches!(
+        error,
+        SchemaError::ExpectedSyntaxDeclaration { .. }
+    ));
 }
 
 /// A well-formed schema passes name validation. The boundary is a gate on
 /// malformed names, not a blanket rejection.
 #[test]
 fn well_formed_names_pass_validation() {
-    let module = module("{}\n[]\n[]\n{\n  RecordIdentifier String\n}\n");
+    let module = module("{}\n[]\n[]\n{\n  RecordIdentifier.String\n}\n{}\n{}\n");
     module
         .verify_names()
         .expect("a PascalCase name is a legal Rust identifier");
@@ -69,7 +77,7 @@ fn source_emission_path_returns_err_for_malformed_name() {
 
     let engine = SchemaEngine::default();
     let resolver = ImportResolver::default();
-    let source = SchemaSource::from_schema_text("{}\n[]\n[]\n{\n  Bad/Name String\n}\n")
+    let source = SchemaSource::from_schema_text("{}\n[]\n[]\n{\n  Bad/Name.String\n}\n{}\n{}\n")
         .expect("NOTA parses the symbol atom name");
     let emitter = RustEmitter::new(RustEmissionOptions::binary_only());
     let result = emitter.emit_module_from_schema_source(

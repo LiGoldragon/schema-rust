@@ -26,7 +26,7 @@ fn schema_rust_cli_generates_environment_backed_feedback() {
     assert!(stdout.contains("(Generated ("));
     assert!(stdout.contains("nexus"));
     assert!(stdout.contains("src/schema/nexus.rs"));
-    assert!(stdout.contains("ContractOutput driver-contract:lib:Output"));
+    assert!(stdout.contains("driver-contract.lib.[DriverInput DriverOutput]"));
     assert!(stdout.contains("sema"));
     assert!(stdout.contains("src/schema/sema.rs"));
 }

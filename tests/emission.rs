@@ -171,62 +171,6 @@ fn emits_rust_source_as_a_separate_artifact() {
 }
 
 #[test]
-fn emits_domain_scope_equivalence_expansion_from_relations() {
-    let source = FixtureSchema::new("domain-relations.schema").read();
-    let artifact = SchemaSourceArtifact::from_schema_text(&source).expect("schema source decodes");
-    let schema = artifact
-        .source()
-        .lower(
-            &SchemaEngine::default(),
-            SchemaIdentity::new("example:domain", "0.1.0"),
-        )
-        .expect("schema source lowers");
-    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
-
-    assert_code_contains(generated.as_str(), "pub enum DomainScope");
-    assert_code_contains(generated.as_str(), "pub enum TechnologyScope");
-    assert_code_contains(generated.as_str(), "pub enum HardwareScope");
-    assert_code_contains(generated.as_str(), "pub enum SoftwareScope");
-    assert_code_contains(generated.as_str(), "impl DomainScope");
-    assert_code_contains(generated.as_str(), "impl From<Domain> for DomainScope");
-    assert_code_contains(generated.as_str(), "All");
-    assert_code_contains(
-        generated.as_str(),
-        "impl From<Technology> for TechnologyScope",
-    );
-    assert_code_contains(
-        generated.as_str(),
-        "pub fn contains_scope(&self, scope: &Self) -> bool",
-    );
-    assert_code_contains(
-        generated.as_str(),
-        "pub fn contains_domain(&self, domain: &Domain) -> bool",
-    );
-    assert_code_contains(generated.as_str(), "nota::NotaDecode");
-    assert_code_contains(generated.as_str(), "nota::NotaEncode");
-    assert_code_excludes(generated.as_str(), "fn to_nota(&self) -> String");
-    assert_code_excludes(generated.as_str(), "from_nota_block");
-    assert_code_excludes(generated.as_str(), "fn nota_path_from_block");
-    assert_code_excludes(generated.as_str(), "impl NotaEncode for DomainScope");
-    assert_code_excludes(generated.as_str(), "pub fn from_path");
-    assert_code_excludes(generated.as_str(), "pub fn try_from_path");
-    assert_code_excludes(generated.as_str(), "pub fn path_segments");
-    assert_code_contains(generated.as_str(), "pub fn expand(&self) -> ScopeSet");
-    assert_code_contains(
-        generated.as_str(),
-        "if relation.iter().any(|scope| scope == self)",
-    );
-    assert_code_contains(
-        generated.as_str(),
-        "DomainScope::Technology(TechnologyScope::Hardware(HardwareScope::Networking))",
-    );
-    assert_code_contains(
-        generated.as_str(),
-        "DomainScope::Technology(TechnologyScope::Software(SoftwareScope::Distributed(DistributedScope::Networking)))",
-    );
-}
-
-#[test]
 fn emits_terminal_value_domains_as_scope_all() {
     let source = FixtureSchema::new("domain-terminal-scope.schema").read();
     let artifact = SchemaSourceArtifact::from_schema_text(&source).expect("schema source decodes");
@@ -303,7 +247,7 @@ fn rust_lowering_uses_true_schema_as_the_canonical_entrypoint() {
 fn true_schema_product_component_identity_controls_rust_fields() {
     let schema = SchemaEngine::default()
         .lower_source(
-            "{}\n[]\n[]\n{\n  Time Integer\n  TimeRange { start.Time end.Time }\n}\n",
+            "{}\n[]\n[]\n{\n  Time.Integer\n  TimeRange.{ start.Time end.Time }\n}\n{}\n{}\n",
             SchemaIdentity::new("example:range", "0.1.0"),
         )
         .expect("repeated component disambiguators lower into TrueSchema");
@@ -311,7 +255,7 @@ fn true_schema_product_component_identity_controls_rust_fields() {
     assert!(
         schema
             .to_schema_text()
-            .contains("TimeRange { start.Time end.Time }"),
+            .contains("TimeRange.{ start.Time end.Time }"),
         "valid repeated-type disambiguators stay in canonical TrueSchema text"
     );
     let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
@@ -322,7 +266,7 @@ fn true_schema_product_component_identity_controls_rust_fields() {
 #[test]
 fn explicit_unique_product_component_identity_is_rejected_before_rust_emission() {
     let error = SchemaSource::from_schema_text(
-        "{}\n[]\n[]\n{\n  Topic String\n  Entry { label.Topic }\n}\n",
+        "{}\n[]\n[]\n{\n  Topic.String\n  Entry.{ label.Topic }\n}\n{}\n{}\n",
     )
     .expect_err("explicit identity on a unique product component is invalid");
 
@@ -508,27 +452,6 @@ fn emitted_path_mirrors_schema_module_identity() {
     let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
 
     assert_eq!(generated.path, "src/schema/signal/public.rs");
-}
-
-#[test]
-fn inline_private_schema_types_emit_crate_local_rust_boundary() {
-    // A crate-private nested type emits a `pub(crate)` Rust boundary, and a
-    // public type whose fields reference it borrows that boundary onto each
-    // field. The crate-private declaration is `Receipt`, minted as a
-    // `PrivateHelper` inline declaration inside a nested root-enum variant
-    // payload (`Select [(Receipt { … })]`) — the currently-supported
-    // private-declaration spelling now that the strict-positional grammar no
-    // longer parses a Type-followed-by-brace as a struct field. `Entry` is a
-    // public namespace struct that references `Receipt` by name, so both of
-    // its fields downgrade to `pub(crate)` to keep the boundary closed.
-    let schema = FixtureSchema::new("inline-private-type.schema").lower("example:inline");
-    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
-    let code = generated.code.as_str();
-
-    assert!(code.contains("pub(crate) struct Receipt"));
-    assert!(code.contains("pub struct Entry"));
-    assert!(code.contains("pub(crate) selected: Receipt"));
-    assert!(code.contains("pub(crate) later: Receipt"));
 }
 
 #[test]

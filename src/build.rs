@@ -649,12 +649,7 @@ impl GeneratedModule {
         .validate()?;
         let rust_file = match emission.daemon_shape() {
             Some(daemon_shape) => {
-                let schema = engine.lower_schema_source_with_resolver(
-                    &schema_source,
-                    source.identity().clone(),
-                    resolver,
-                )?;
-                DaemonModule::new(daemon_shape.clone(), &schema, "schema-rust").to_generated_file()
+                DaemonModule::new(daemon_shape.clone(), "schema-rust").to_generated_file()
             }
             None => RustEmitter::new(emission.options().clone()).emit_file_from_schema_source(
                 &schema_source,
@@ -680,12 +675,9 @@ impl GeneratedModule {
         )
         .validate()?;
         let rust_file = match emission.daemon_shape() {
-            Some(daemon_shape) => DaemonModule::new(
-                daemon_shape.clone(),
-                environment.true_schema(),
-                "schema-rust",
-            )
-            .to_generated_file(),
+            Some(daemon_shape) => {
+                DaemonModule::new(daemon_shape.clone(), "schema-rust").to_generated_file()
+            }
             None => {
                 let module = RustEmitter::new(emission.options().clone())
                     .emit_module_from_true_schema(environment.true_schema());

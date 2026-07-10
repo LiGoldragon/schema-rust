@@ -74,8 +74,8 @@ fn daemon_runtime_driver_emits_nexus_and_sema_files_with_plane_targets() {
         .as_str();
 
     assert!(
-        nexus.contains("pub use driver_contract::schema::lib::Input as ContractInput;"),
-        "nexus should import contract wire root through a Rust alias:\n{nexus}"
+        nexus.contains("pub use driver_contract::schema::lib::DriverInput as DriverInput;"),
+        "nexus should import the contract's distinctly-named wire input under its own name:\n{nexus}"
     );
     assert!(
         nexus.contains("pub use crate::schema::sema::SemaReadInput as SemaReadInput;"),
@@ -95,7 +95,7 @@ fn daemon_runtime_driver_emits_nexus_and_sema_files_with_plane_targets() {
     );
     assert!(
         nexus.contains("pub type NexusRunnerNextStep = triad_runtime::NextStep<")
-            && nexus.contains("    ContractOutput,")
+            && nexus.contains("    DriverOutput,")
             && nexus.contains("    SemaWriteInput,")
             && nexus.contains("    SemaReadInput,")
             && nexus.contains("    std::convert::Infallible,")
@@ -117,7 +117,7 @@ fn daemon_runtime_driver_emits_nexus_and_sema_files_with_plane_targets() {
     assert!(
         source_contains_signature(
             nexus,
-            "fn budget_exhausted_reply(&self, exhausted: triad_runtime::ContinuationExhausted) -> ContractOutput;"
+            "fn budget_exhausted_reply(&self, exhausted: triad_runtime::ContinuationExhausted) -> DriverOutput;"
         ),
         "nexus runtime target should ask the component for a typed exhaustion reply:\n{nexus}"
     );
@@ -170,7 +170,7 @@ fn generated_package_carries_source_and_rust_artifacts() {
     );
     assert_eq!(
         module.source_artifact().content(),
-        "{\n  ContractInput driver-contract:lib:Input\n  ContractOutput driver-contract:lib:Output\n  SemaReadInput driver-runtime:sema:SemaReadInput\n  SemaReadOutput driver-runtime:sema:SemaReadOutput\n  SemaWriteInput driver-runtime:sema:SemaWriteInput\n  SemaWriteOutput driver-runtime:sema:SemaWriteOutput\n}\n[(SignalArrived ContractInput)]\n[(CommandSemaRead SemaReadInput) (CommandSemaWrite SemaWriteInput) (ReplyToSignal ContractOutput)]\n{\n  NexusWork [(SignalArrived ContractInput) (SemaReadCompleted SemaReadOutput) (SemaWriteCompleted SemaWriteOutput)]\n  NexusAction [(CommandSemaRead SemaReadInput) (CommandSemaWrite SemaWriteInput) (ReplyToSignal ContractOutput)]\n  DecisionReceipt { Integer }\n}"
+        "{\n  driver-contract.lib.[DriverInput DriverOutput]\n  driver-runtime.sema.[SemaReadInput SemaReadOutput SemaWriteInput SemaWriteOutput]\n}\n[SignalArrived.DriverInput]\n[CommandSemaRead.SemaReadInput CommandSemaWrite.SemaWriteInput ReplyToSignal.DriverOutput]\n{\n  NexusWork.[SignalArrived.DriverInput SemaReadCompleted.SemaReadOutput SemaWriteCompleted.SemaWriteOutput]\n  NexusAction.[CommandSemaRead.SemaReadInput CommandSemaWrite.SemaWriteInput ReplyToSignal.DriverOutput]\n  DecisionReceipt.{ Integer }\n}\n{}\n{}"
     );
     assert_eq!(module.rust_file().path, "src/schema/nexus.rs");
     assert!(
@@ -211,7 +211,7 @@ fn generated_package_feedback_summarizes_source_and_rust_outputs() {
     assert!(
         nexus
             .source_text()
-            .contains("ContractInput driver-contract:lib:Input"),
+            .contains("driver-contract.lib.[DriverInput DriverOutput]"),
         "feedback should expose canonical source text for fast inspection"
     );
     assert_eq!(nexus.rust_path(), "src/schema/nexus.rs");
@@ -260,9 +260,7 @@ fn driver_regenerates_rust_from_environment_true_schemas() {
         .find(|module| module.module().as_str() == "nexus")
         .expect("nexus feedback");
     assert!(
-        nexus
-            .source_text()
-            .contains("ContractOutput driver-contract:lib:Output"),
+        nexus.source_text().contains("ReplyToSignal.DriverOutput"),
         "environment-backed feedback keeps canonical selected source"
     );
 }
