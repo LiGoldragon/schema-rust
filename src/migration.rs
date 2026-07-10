@@ -29,8 +29,9 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
 use schema_language::{
-    AddField, AddVariant, ChangeFieldType, DefaultValue, FieldMigration, Name, SchemaEdit,
-    TypeReference, UpgradeObject,
+    AddField, AddVariant, ChangeFieldType, DefaultValue, FieldMigration,
+    MultiTypeReferenceProjection, Name, SchemaEdit, SingleTypeReferenceProjection, TypeReference,
+    UpgradeObject, ValueReferenceProjection,
 };
 
 use crate::RustfmtSkippedItems;
@@ -136,6 +137,10 @@ impl MigrationTarget {
                     let target = Self::find_or_insert_enum(&mut targets, &operation.target_type);
                     target.absorb_add_variant(operation);
                 }
+                // A rename is a name-table-only edit that moves no core bytes and
+                // emits zero migration code (per `schema_language`'s `Rename`), so
+                // it contributes no migration target.
+                SchemaEdit::Rename(_) => {}
             }
         }
         targets
@@ -384,7 +389,10 @@ impl FieldAction {
                 ..
             } => match migration {
                 FieldMigration::WrapSingleton => match new_type {
-                    TypeReference::Vector(inner) => (**inner).clone(),
+                    TypeReference::SingleTypeApplication {
+                        projection: SingleTypeReferenceProjection::Vector,
+                        argument,
+                    } => (**argument).clone(),
                     other => other.clone(),
                 },
                 FieldMigration::SetDefault(_) => new_type.clone(),
@@ -470,29 +478,47 @@ impl ToTokens for TypeRenderer<'_> {
             TypeReference::Boolean => quote! { bool }.to_tokens(tokens),
             TypeReference::Path => quote! { String }.to_tokens(tokens),
             TypeReference::Bytes => quote! { Bytes }.to_tokens(tokens),
-            TypeReference::FixedBytes(width) => {
-                let width = proc_macro2::Literal::u64_unsuffixed(*width);
+            TypeReference::ValueApplication {
+                projection: ValueReferenceProjection::Bytes,
+                value,
+            } => {
+                let width = proc_macro2::Literal::u64_unsuffixed(*value);
                 quote! { FixedBytes<#width> }.to_tokens(tokens);
             }
             TypeReference::Plain(name) => {
                 Ident::new(name.as_str(), Span::call_site()).to_tokens(tokens)
             }
-            TypeReference::Vector(inner) => {
-                let inner = TypeRenderer::new(inner);
+            TypeReference::SingleTypeApplication {
+                projection: SingleTypeReferenceProjection::Vector,
+                argument,
+            } => {
+                let inner = TypeRenderer::new(argument);
                 quote! { Vec<#inner> }.to_tokens(tokens);
             }
-            TypeReference::Optional(inner) => {
-                let inner = TypeRenderer::new(inner);
+            TypeReference::SingleTypeApplication {
+                projection: SingleTypeReferenceProjection::Optional,
+                argument,
+            } => {
+                let inner = TypeRenderer::new(argument);
                 quote! { Option<#inner> }.to_tokens(tokens);
             }
-            TypeReference::ScopeOf(inner) => match inner.plain_name() {
+            TypeReference::SingleTypeApplication {
+                projection: SingleTypeReferenceProjection::ScopeOf,
+                argument,
+            } => match argument.plain_name() {
                 Some(name) => {
                     let name = Ident::new(&format!("{name}Scope"), Span::call_site());
                     quote! { #name }.to_tokens(tokens);
                 }
-                None => TypeRenderer::new(inner).to_tokens(tokens),
+                None => TypeRenderer::new(argument).to_tokens(tokens),
             },
-            TypeReference::Map(key, value) => {
+            TypeReference::MultiTypeApplication {
+                projection: MultiTypeReferenceProjection::Map,
+                arguments,
+            } => {
+                let [key, value] = arguments.as_slice() else {
+                    panic!("Map application carries exactly a key and a value reference");
+                };
                 let key = TypeRenderer::new(key);
                 let value = TypeRenderer::new(value);
                 quote! { std::collections::HashMap<#key, #value> }.to_tokens(tokens);

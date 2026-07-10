@@ -134,12 +134,12 @@ impl<'fixture> BigRustFixture<'fixture> {
             self.name
         );
         assert!(
-            !Self::root_enum(schema.input()).variants.is_empty(),
+            !Self::root_enum(&schema.input()).variants.is_empty(),
             "{} must lower typed input variants",
             self.name
         );
         assert!(
-            !Self::root_enum(schema.output()).variants.is_empty(),
+            !Self::root_enum(&schema.output()).variants.is_empty(),
             "{} must lower typed output variants",
             self.name
         );
@@ -156,22 +156,22 @@ impl<'fixture> BigRustFixture<'fixture> {
 
         match self.name {
             "spirit-reactive-large" => {
-                Self::assert_has_type(schema.namespace(), "Entry");
-                Self::assert_has_type(schema.namespace(), "RecordSet");
-                Self::assert_has_variant(Self::root_enum(schema.input()), "Record");
-                Self::assert_has_variant(Self::root_enum(schema.output()), "Recorded");
+                Self::assert_has_type(&schema.namespace(), "Entry");
+                Self::assert_has_type(&schema.namespace(), "RecordSet");
+                Self::assert_has_variant(Self::root_enum(&schema.input()), "Record");
+                Self::assert_has_variant(Self::root_enum(&schema.output()), "Recorded");
             }
             "triad-reactive-large" => {
-                Self::assert_has_type(schema.namespace(), "SignalRequest");
-                Self::assert_has_type(schema.namespace(), "NexusRequest");
-                Self::assert_has_type(schema.namespace(), "SemaRequest");
-                Self::assert_has_variant(Self::root_enum(schema.input()), "SignalIn");
-                Self::assert_has_variant(Self::root_enum(schema.output()), "SignalOut");
+                Self::assert_has_type(&schema.namespace(), "SignalRequest");
+                Self::assert_has_type(&schema.namespace(), "NexusRequest");
+                Self::assert_has_type(&schema.namespace(), "SemaRequest");
+                Self::assert_has_variant(Self::root_enum(&schema.input()), "SignalIn");
+                Self::assert_has_variant(Self::root_enum(&schema.output()), "SignalOut");
             }
             "imported-mail-consumer" => {
                 assert!(!schema.imports().is_empty());
                 assert!(!schema.resolved_imports().is_empty());
-                Self::assert_has_variant(Self::root_enum(schema.output()), "Marked");
+                Self::assert_has_variant(Self::root_enum(&schema.output()), "Marked");
             }
             _ => panic!("unhandled big fixture {}", self.name),
         }

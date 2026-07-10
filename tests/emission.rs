@@ -338,8 +338,8 @@ fn schema_subobjects_lower_themselves_into_rust_model_nouns() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
     let context = RustLoweringContext::from_emitter(&RustEmitter::default());
 
-    let entry = schema
-        .namespace()
+    let namespace = schema.namespace();
+    let entry = namespace
         .iter()
         .find(|declaration| declaration.name().as_str() == "Entry")
         .expect("schema entry declaration");
@@ -350,11 +350,11 @@ fn schema_subobjects_lower_themselves_into_rust_model_nouns() {
     assert_eq!(entry_struct.name().as_str(), "Entry");
     assert_eq!(entry_struct.fields()[0].name().as_str(), "topics");
 
-    let input = schema
-        .input_and_output()
-        .into_iter()
+    let roots = schema.input_and_output();
+    let input = roots
+        .iter()
         .find(|root| root.name().as_str() == "Input")
-        .and_then(schema_language::Root::as_enum)
+        .and_then(|root| root.as_enum())
         .expect("schema input root enum");
     let rust_input = input.lower_to_rust(&context);
     assert_eq!(rust_input.name().as_str(), "Input");

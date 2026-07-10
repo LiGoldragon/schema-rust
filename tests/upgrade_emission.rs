@@ -35,7 +35,7 @@ fn pilot_upgrade() -> UpgradeObject {
             SchemaEdit::change_field_type(
                 "Entry",
                 "topic",
-                TypeReference::Vector(Box::new(TypeReference::Plain(Name::new("Topic")))),
+                TypeReference::vector(TypeReference::Plain(Name::new("Topic"))),
                 FieldMigration::WrapSingleton,
             ),
             SchemaEdit::add_variant("Kind", "Reflection", None),
@@ -135,7 +135,7 @@ fn emitted_source_compiles_and_migrates_a_value() {
             SchemaEdit::change_field_type(
                 "Reading",
                 "score",
-                TypeReference::Vector(Box::new(TypeReference::Integer)),
+                TypeReference::vector(TypeReference::Integer),
                 FieldMigration::WrapSingleton,
             ),
         ],

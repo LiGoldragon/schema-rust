@@ -2,10 +2,12 @@ use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::{ToTokens, quote};
 use schema_language::{
     Declaration, EnumDeclaration, EnumVariant, FamilyDeclaration, FamilyKey, FieldDeclaration,
-    ImplFact, ImplReference, ImportResolver, MethodParameter, MethodSignature, Name,
-    NewtypeDeclaration, ReferencedImpl, RelationDeclaration, RelationValue, ResolvedImport, Root,
-    RootApplication, RustSurface, SchemaEngine, SchemaError, SchemaIdentity, SchemaSource,
-    StreamDeclaration, StructDeclaration, TrueSchema, TypeDeclaration, TypeReference, Visibility,
+    ImplFact, ImplReference, ImportResolver, MethodParameter, MethodSignature,
+    MultiTypeReferenceProjection, Name, NewtypeDeclaration, ReferencedImplView, RelationDeclaration,
+    RelationValue, ResolvedImport, Root, RootApplication, RustSurface, SchemaEngine, SchemaError,
+    SchemaIdentity, SchemaSource, SingleTypeReferenceProjection, StreamDeclaration,
+    StructDeclaration, TrueSchema, TypeDeclaration, TypeReference, ValueReferenceProjection,
+    Visibility,
 };
 
 pub mod build;
@@ -246,10 +248,10 @@ impl RustLoweringContext {
         let variants = if let Some((parameters, variants)) =
             schema.declared_frame_body(head.name().as_str())
         {
-            self.expand_true_schema_frame_variants(schema, parameters, arguments, variants)
+            self.expand_true_schema_frame_variants(schema, &parameters, arguments, &variants)
         } else {
-            let import = schema
-                .resolved_imports()
+            let resolved_imports = schema.resolved_imports();
+            let import = resolved_imports
                 .iter()
                 .find(|import| import.local_name() == head.name())?;
             self.expand_true_schema_frame_variants(
@@ -656,7 +658,7 @@ impl LowerToRust<RustModule> for TrueSchema {
             declarations,
             root_enums,
             applied_roots,
-            streams: self.streams().to_vec(),
+            streams: self.streams(),
             relations: self
                 .relations()
                 .iter()
@@ -1294,10 +1296,14 @@ impl RustNewtype {
     }
 
     fn scope_root_name(&self) -> Option<&Name> {
-        let TypeReference::ScopeOf(reference) = &self.reference else {
+        let TypeReference::SingleTypeApplication {
+            projection: SingleTypeReferenceProjection::ScopeOf,
+            argument,
+        } = &self.reference
+        else {
             return None;
         };
-        reference.plain_name()
+        argument.plain_name()
     }
 
     fn is_scope_of(&self) -> bool {
@@ -1485,9 +1491,9 @@ impl LowerToRust<RustAppliedRoot> for RootApplication {
     }
 }
 
-/// An owned mirror of one [`schema_language::ReferencedImpl`] — an entry from the
+/// An owned mirror of one [`schema_language::ReferencedImplView`] — an entry from the
 /// schema-wide `{| … |}` impl catalog, paired with the type it targets. The
-/// borrowed `ReferencedImpl<'schema>` cannot cross into the owned
+/// borrowed `ReferencedImplView<'schema>` cannot cross into the owned
 /// [`RustModule`], so lowering clones it into this noun. The catalog carries
 /// no Rust body: this is the *selection* data that drives which standard impls
 /// the module emits and the *manifest* the emitted surface is verified against.
@@ -1507,7 +1513,7 @@ impl RustImplReference {
     }
 }
 
-impl LowerToRust<RustImplReference> for ReferencedImpl<'_> {
+impl LowerToRust<RustImplReference> for ReferencedImplView<'_> {
     fn lower_to_rust(&self, context: &RustLoweringContext) -> RustImplReference {
         RustImplReference {
             target: self.target().clone(),
@@ -1853,13 +1859,11 @@ impl RustRenderContext {
                 .private_type_names
                 .iter()
                 .any(|private_name| private_name == name.as_str()),
-            TypeReference::Vector(inner)
-            | TypeReference::Optional(inner)
-            | TypeReference::ScopeOf(inner) => self.references_private_type(inner),
-            TypeReference::Map(key, value) => {
-                self.references_private_type(key) || self.references_private_type(value)
+            TypeReference::SingleTypeApplication { argument, .. } => {
+                self.references_private_type(argument)
             }
-            TypeReference::Application { arguments, .. } => arguments
+            TypeReference::MultiTypeApplication { arguments, .. }
+            | TypeReference::Application { arguments, .. } => arguments
                 .iter()
                 .any(|argument| self.references_private_type(argument)),
             TypeReference::String
@@ -1867,7 +1871,7 @@ impl RustRenderContext {
             | TypeReference::Boolean
             | TypeReference::Path
             | TypeReference::Bytes
-            | TypeReference::FixedBytes(_) => false,
+            | TypeReference::ValueApplication { .. } => false,
         }
     }
 }
@@ -1950,35 +1954,53 @@ impl ToTokens for RustTypeReferenceTokens<'_> {
             TypeReference::Boolean => quote! { Boolean }.to_tokens(tokens),
             TypeReference::Path => quote! { Path }.to_tokens(tokens),
             TypeReference::Bytes => quote! { Bytes }.to_tokens(tokens),
-            TypeReference::FixedBytes(width) => {
-                let width = proc_macro2::Literal::u64_unsuffixed(*width);
+            TypeReference::ValueApplication {
+                projection: ValueReferenceProjection::Bytes,
+                value,
+            } => {
+                let width = proc_macro2::Literal::u64_unsuffixed(*value);
                 quote! { FixedBytes<#width> }.to_tokens(tokens);
             }
             TypeReference::Plain(name) => RustIdentifier::new(name.as_str()).to_tokens(tokens),
-            TypeReference::Vector(inner) => {
-                let inner = Self::new(inner);
+            TypeReference::SingleTypeApplication {
+                projection: SingleTypeReferenceProjection::Vector,
+                argument,
+            } => {
+                let inner = Self::new(argument);
                 quote! { Vec<#inner> }.to_tokens(tokens);
             }
-            TypeReference::Map(key, value) => {
-                let key = Self::new(key);
-                let value = Self::new(value);
-                quote! { std::collections::BTreeMap<#key, #value> }.to_tokens(tokens);
-            }
-            TypeReference::Optional(inner) => {
-                let inner = Self::new(inner);
+            TypeReference::SingleTypeApplication {
+                projection: SingleTypeReferenceProjection::Optional,
+                argument,
+            } => {
+                let inner = Self::new(argument);
                 quote! { Option<#inner> }.to_tokens(tokens);
             }
-            TypeReference::ScopeOf(inner) => match inner.plain_name() {
+            TypeReference::SingleTypeApplication {
+                projection: SingleTypeReferenceProjection::ScopeOf,
+                argument,
+            } => match argument.plain_name() {
                 Some(name) => {
                     let scope_name = format!("{}Scope", name);
                     let name = RustIdentifier::new(&scope_name);
                     name.to_tokens(tokens);
                 }
                 None => {
-                    let inner = Self::new(inner);
+                    let inner = Self::new(argument);
                     quote! { #inner }.to_tokens(tokens);
                 }
             },
+            TypeReference::MultiTypeApplication {
+                projection: MultiTypeReferenceProjection::Map,
+                arguments,
+            } => {
+                let [key, value] = arguments.as_slice() else {
+                    panic!("Map application carries exactly a key and a value reference");
+                };
+                let key = Self::new(key);
+                let value = Self::new(value);
+                quote! { std::collections::BTreeMap<#key, #value> }.to_tokens(tokens);
+            }
             TypeReference::Application { head, arguments } => {
                 let head = RustIdentifier::new(head.name().as_str());
                 let arguments = arguments.iter().map(Self::new);
@@ -4980,7 +5002,7 @@ impl<'schema> CollectionScan<'schema> {
         for declaration in self.schema.namespace() {
             Self::collect_declaration_map_keys(declaration.value(), &mut names);
         }
-        for root in self.schema.input_and_output() {
+        for root in &self.schema.input_and_output() {
             Self::collect_root_map_keys(root, &mut names);
         }
         names
@@ -5014,7 +5036,7 @@ impl<'schema> CollectionScan<'schema> {
             || self
                 .schema
                 .input_and_output()
-                .into_iter()
+                .iter()
                 .any(Self::root_uses_bytes)
     }
 
@@ -5051,20 +5073,18 @@ impl<'schema> CollectionScan<'schema> {
     fn reference_uses_bytes(reference: &TypeReference) -> bool {
         match reference {
             TypeReference::Bytes => true,
-            TypeReference::Vector(inner)
-            | TypeReference::Optional(inner)
-            | TypeReference::ScopeOf(inner) => Self::reference_uses_bytes(inner),
-            TypeReference::Map(key, value) => {
-                Self::reference_uses_bytes(key) || Self::reference_uses_bytes(value)
+            TypeReference::SingleTypeApplication { argument, .. } => {
+                Self::reference_uses_bytes(argument)
             }
-            TypeReference::Application { arguments, .. } => {
+            TypeReference::MultiTypeApplication { arguments, .. }
+            | TypeReference::Application { arguments, .. } => {
                 arguments.iter().any(Self::reference_uses_bytes)
             }
             TypeReference::String
             | TypeReference::Integer
             | TypeReference::Boolean
             | TypeReference::Path
-            | TypeReference::FixedBytes(_)
+            | TypeReference::ValueApplication { .. }
             | TypeReference::Plain(_) => false,
         }
     }
@@ -5079,7 +5099,7 @@ impl<'schema> CollectionScan<'schema> {
             || self
                 .schema
                 .input_and_output()
-                .into_iter()
+                .iter()
                 .any(Self::root_uses_fixed_bytes)
     }
 
@@ -5117,14 +5137,15 @@ impl<'schema> CollectionScan<'schema> {
 
     fn reference_uses_fixed_bytes(reference: &TypeReference) -> bool {
         match reference {
-            TypeReference::FixedBytes(_) => true,
-            TypeReference::Vector(inner)
-            | TypeReference::Optional(inner)
-            | TypeReference::ScopeOf(inner) => Self::reference_uses_fixed_bytes(inner),
-            TypeReference::Map(key, value) => {
-                Self::reference_uses_fixed_bytes(key) || Self::reference_uses_fixed_bytes(value)
+            TypeReference::ValueApplication {
+                projection: ValueReferenceProjection::Bytes,
+                ..
+            } => true,
+            TypeReference::SingleTypeApplication { argument, .. } => {
+                Self::reference_uses_fixed_bytes(argument)
             }
-            TypeReference::Application { arguments, .. } => {
+            TypeReference::MultiTypeApplication { arguments, .. }
+            | TypeReference::Application { arguments, .. } => {
                 arguments.iter().any(Self::reference_uses_fixed_bytes)
             }
             TypeReference::String
@@ -5161,15 +5182,19 @@ impl<'schema> CollectionScan<'schema> {
             | TypeReference::Boolean
             | TypeReference::Path
             | TypeReference::Bytes
-            | TypeReference::FixedBytes(_)
+            | TypeReference::ValueApplication { .. }
             | TypeReference::Plain(_) => {}
-            TypeReference::Vector(inner)
-            | TypeReference::Optional(inner)
-            | TypeReference::ScopeOf(inner) => {
-                Self::collect_map_keys(inner, names);
+            TypeReference::SingleTypeApplication { argument, .. } => {
+                Self::collect_map_keys(argument, names);
             }
-            TypeReference::Map(key, value) => {
-                if let TypeReference::Plain(name) = key.as_ref() {
+            TypeReference::MultiTypeApplication {
+                projection: MultiTypeReferenceProjection::Map,
+                arguments,
+            } => {
+                let [key, value] = arguments.as_slice() else {
+                    panic!("Map application carries exactly a key and a value reference");
+                };
+                if let TypeReference::Plain(name) = key {
                     let name = name.as_str().to_owned();
                     if !names.contains(&name) {
                         names.push(name);
@@ -7372,18 +7397,38 @@ impl RustModuleRenderer {
             TypeReference::Boolean => "Boolean".to_owned(),
             TypeReference::Path => "Path".to_owned(),
             TypeReference::Bytes => "Bytes".to_owned(),
-            TypeReference::FixedBytes(width) => format!("FixedBytes<{width}>"),
+            TypeReference::ValueApplication {
+                projection: ValueReferenceProjection::Bytes,
+                value,
+            } => format!("FixedBytes<{value}>"),
             TypeReference::Plain(name) => name.as_str().to_owned(),
-            TypeReference::Vector(inner) => format!("Vec<{}>", self.rust_type(inner)),
-            TypeReference::Map(key, value) => format!(
-                "std::collections::BTreeMap<{}, {}>",
-                self.rust_type(key),
-                self.rust_type(value)
-            ),
-            TypeReference::Optional(inner) => format!("Option<{}>", self.rust_type(inner)),
-            TypeReference::ScopeOf(inner) => match inner.plain_name() {
+            TypeReference::SingleTypeApplication {
+                projection: SingleTypeReferenceProjection::Vector,
+                argument,
+            } => format!("Vec<{}>", self.rust_type(argument)),
+            TypeReference::MultiTypeApplication {
+                projection: MultiTypeReferenceProjection::Map,
+                arguments,
+            } => {
+                let [key, value] = arguments.as_slice() else {
+                    panic!("Map application carries exactly a key and a value reference");
+                };
+                format!(
+                    "std::collections::BTreeMap<{}, {}>",
+                    self.rust_type(key),
+                    self.rust_type(value)
+                )
+            }
+            TypeReference::SingleTypeApplication {
+                projection: SingleTypeReferenceProjection::Optional,
+                argument,
+            } => format!("Option<{}>", self.rust_type(argument)),
+            TypeReference::SingleTypeApplication {
+                projection: SingleTypeReferenceProjection::ScopeOf,
+                argument,
+            } => match argument.plain_name() {
                 Some(name) => format!("{name}Scope"),
-                None => self.rust_type(inner),
+                None => self.rust_type(argument),
             },
             TypeReference::Application { head, arguments } => {
                 let arguments = arguments
