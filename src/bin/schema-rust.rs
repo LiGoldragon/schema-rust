@@ -4,7 +4,7 @@ use std::{
     process::ExitCode,
 };
 
-use nota::{NotaDecode, NotaDecodeError, NotaEncode, NotaSource};
+use nota::{NotaDecode, NotaDecodeError, NotaEncode, NotaError, NotaSource, PrettyLayout};
 use schema_language::{ImportResolver, SchemaEnvironment, SchemaEnvironmentResult};
 use schema_rust::{
     RustEmissionOptions, RustEmissionTarget,
@@ -28,20 +28,56 @@ fn main() -> ExitCode {
 
 struct SchemaRustCli {
     command: ComponentCommand,
+    output_form: OutputForm,
 }
 
 impl SchemaRustCli {
     fn from_environment() -> Self {
+        let mut output_form = OutputForm::Canonical;
+        let mut operands = Vec::new();
+        for argument in std::env::args().skip(1) {
+            if argument == OutputForm::PRETTY_FLAG {
+                output_form = OutputForm::Pretty;
+            } else {
+                operands.push(argument);
+            }
+        }
         Self {
-            command: ComponentCommand::from_environment(),
+            command: ComponentCommand::from_arguments(operands),
+            output_form,
         }
     }
 
     fn run(&self) -> Result<(), SchemaRustCliError> {
         let input = RequestText::from_argument(self.command.nota_argument()?)?.parse()?;
         let output = input.execute()?;
-        println!("{}", output.to_nota());
+        println!("{}", self.output_form.render(&output)?);
         Ok(())
+    }
+}
+
+/// How the generated NOTA document is written to stdout.
+///
+/// The default `Canonical` form is the single-line encoder output every
+/// consumer and golden depends on. `Pretty`, requested with `--pretty`, reflows
+/// that same document across indented lines for reading; it is a pure
+/// readability projection that re-parses to the identical document.
+enum OutputForm {
+    Canonical,
+    Pretty,
+}
+
+impl OutputForm {
+    const PRETTY_FLAG: &'static str = "--pretty";
+
+    fn render(&self, output: &Output) -> Result<String, SchemaRustCliError> {
+        let canonical = output.to_nota();
+        match self {
+            Self::Canonical => Ok(canonical),
+            Self::Pretty => PrettyLayout::standard()
+                .render_nota(&canonical)
+                .map_err(SchemaRustCliError::Pretty),
+        }
     }
 }
 
@@ -367,4 +403,7 @@ enum SchemaRustCliError {
 
     #[error("generation failed: {0}")]
     Build(#[from] BuildError),
+
+    #[error("failed to lay out NOTA for reading: {0}")]
+    Pretty(NotaError),
 }

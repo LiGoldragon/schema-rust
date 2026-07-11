@@ -331,8 +331,8 @@ dependencies = [
 
 [[package]]
 name = "nota"
-version = "0.5.1"
-source = "git+https://github.com/LiGoldragon/nota.git?branch=main#7dc0ab7ef15a1aeb695243a535a3585452917e18"
+version = "0.6.0"
+source = "git+https://github.com/LiGoldragon/nota.git?branch=main#ef58dcfb12f45682776feff0ca0b66c0040d8b90"
 dependencies = [
  "nota-derive",
  "rkyv",
@@ -341,7 +341,7 @@ dependencies = [
 [[package]]
 name = "nota-derive"
 version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/nota.git?branch=main#7dc0ab7ef15a1aeb695243a535a3585452917e18"
+source = "git+https://github.com/LiGoldragon/nota.git?branch=main#ef58dcfb12f45682776feff0ca0b66c0040d8b90"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -503,7 +503,7 @@ dependencies = [
 
 [[package]]
 name = "schema-rust"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "nota",
  "prettyplease",
