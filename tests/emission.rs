@@ -1090,7 +1090,7 @@ fn generated_trace_identity_is_typed_from_interface_headers() {
     assert_eq!(event.name(), "SignalInputRecord");
     assert_eq!(
         generated::NotaEncode::to_nota(&event),
-        "(Signal (Input Record))"
+        "Signal.Input.Record"
     );
 
     let archive =
@@ -1363,7 +1363,7 @@ fn generated_upgrade_trait_accepts_previous_schema_objects_observably() {
     assert_eq!(
         event,
         UpgradeEvent {
-            description: "accepted previous Entry as ([schema] Clarification [old client spoke previous entry] High)".to_owned(),
+            description: "accepted previous Entry as {[schema] Clarification (old client spoke previous entry) High}".to_owned(),
         },
     );
 }

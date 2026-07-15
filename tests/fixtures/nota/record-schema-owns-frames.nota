@@ -1,1 +1,1 @@
-(Record ([schema] Constraint [schema owns signal frames] Maximum))
+Record.{[schema] Constraint (schema owns signal frames) Maximum}

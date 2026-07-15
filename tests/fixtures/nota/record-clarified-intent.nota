@@ -1,1 +1,1 @@
-(Record ([schema] Constraint [agent's clarified intent] Maximum))
+Record.{[schema] Constraint (agent's clarified intent) Maximum}

@@ -1,1 +1,1 @@
-(Record ([schema] Constraint [component messages use binary rkyv] Maximum))
+Record.{[schema] Constraint (component messages use binary rkyv) Maximum}
