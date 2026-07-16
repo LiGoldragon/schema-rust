@@ -35,13 +35,10 @@ nota-text = []
 
 [dev-dependencies]
 rkyv = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
-sema-engine = { git = "https://github.com/LiGoldragon/sema-engine.git", branch = "main" }
-signal-frame = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
+sema-engine = { git = "https://github.com/LiGoldragon/sema-engine.git", rev = "653a44b7dcd3d0de9e6b9358d1806413680eda67" }
+signal-frame = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "b61ec7d9e98e" }
 
 [lints.rust]
 unsafe_code = "forbid"
 unused      = { level = "warn", priority = -1 }
 dead_code   = "warn"
-
-[patch.crates-io]
-kameo = { git = "https://github.com/LiGoldragon/kameo.git", branch = "main" }
