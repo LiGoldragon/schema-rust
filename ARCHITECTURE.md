@@ -133,6 +133,10 @@ source/true-schema pipeline.
   to the ordinary socket and the configured meta mode to the meta socket, so
   security-sensitive chmod behavior stays in the shared daemon path.
 
+## Qualified external contract roots
+
+`schema-language` resolves terminal contract roots as exact package identities, not local imports. `RustTypeReferenceTokens` renders those values as direct normalized crate paths such as `signal_lojix::Input` and `meta_signal_lojix::Output`; no `use` alias is emitted and the local generated module continues to define its own `Input` and `Output`. Ordinary resolved imports retain the established `RustImport` re-export path because they are source declarations rather than terminal contract roots.
+
 ## Source Input And True Schema
 
 The public source-facing contract is typed schema source data decoded through

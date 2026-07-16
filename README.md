@@ -35,6 +35,8 @@ Public schema declarations emit `pub` Rust nouns; private schema declarations
 emit `pub(crate)` module-local nouns so inline PascalCase schema sugar does not
 become an exported API by accident.
 
+Terminal contract roots from dependencies remain package-qualified through emission. A schema reference such as `signal-lojix.Input` lowers through the resolved package identity and renders directly as `signal_lojix::Input`; it is never emitted as a local `use ... as Input`. This lets signal and meta-signal contracts both export `Input`/`Output` while the consuming schema retains its own local roots.
+
 Composite type references come from typed datatype objects in the authored
 schema, written as dotted positional application: `Vector.Topic`,
 `Map.(Topic RecordIdentifier)`, and `Optional.Topic`. Product components are

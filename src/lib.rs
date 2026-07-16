@@ -1686,7 +1686,8 @@ impl RustRenderContext {
             | TypeReference::Boolean
             | TypeReference::Path
             | TypeReference::Bytes
-            | TypeReference::ValueApplication { .. } => false,
+            | TypeReference::ValueApplication { .. }
+            | TypeReference::ExternalRoot(_) => false,
         }
     }
 }
@@ -1777,6 +1778,9 @@ impl ToTokens for RustTypeReferenceTokens<'_> {
                 quote! { FixedBytes<#width> }.to_tokens(tokens);
             }
             TypeReference::Plain(name) => RustIdentifier::new(name.as_str()).to_tokens(tokens),
+            TypeReference::ExternalRoot(root) => syn::parse_str::<syn::Type>(&root.rust_path())
+                .expect("resolved external root emits a Rust type path")
+                .to_tokens(tokens),
             TypeReference::SingleTypeApplication {
                 projection: SingleTypeReferenceProjection::Vector,
                 argument,
@@ -4585,7 +4589,8 @@ impl<'schema> CollectionScan<'schema> {
             | TypeReference::Boolean
             | TypeReference::Path
             | TypeReference::ValueApplication { .. }
-            | TypeReference::Plain(_) => false,
+            | TypeReference::Plain(_)
+            | TypeReference::ExternalRoot(_) => false,
         }
     }
 
@@ -4653,7 +4658,8 @@ impl<'schema> CollectionScan<'schema> {
             | TypeReference::Boolean
             | TypeReference::Path
             | TypeReference::Bytes
-            | TypeReference::Plain(_) => false,
+            | TypeReference::Plain(_)
+            | TypeReference::ExternalRoot(_) => false,
         }
     }
 
@@ -4683,7 +4689,8 @@ impl<'schema> CollectionScan<'schema> {
             | TypeReference::Path
             | TypeReference::Bytes
             | TypeReference::ValueApplication { .. }
-            | TypeReference::Plain(_) => {}
+            | TypeReference::Plain(_)
+            | TypeReference::ExternalRoot(_) => {}
             TypeReference::SingleTypeApplication { argument, .. } => {
                 Self::collect_map_keys(argument, names);
             }
@@ -6799,6 +6806,7 @@ impl RustModuleRenderer {
                 value,
             } => format!("FixedBytes<{value}>"),
             TypeReference::Plain(name) => name.as_str().to_owned(),
+            TypeReference::ExternalRoot(root) => root.rust_path(),
             TypeReference::SingleTypeApplication {
                 projection: SingleTypeReferenceProjection::Vector,
                 argument,

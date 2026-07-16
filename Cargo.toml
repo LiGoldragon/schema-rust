@@ -1,6 +1,6 @@
 [package]
 name         = "schema-rust"
-version      = "0.8.0"
+version      = "0.9.0"
 edition      = "2024"
 rust-version = "1.88"
 license      = "MIT OR Apache-2.0"
@@ -17,7 +17,7 @@ nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", bran
 prettyplease = "0.2"
 proc-macro2 = "1"
 quote = "1"
-schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "59d59aca5767523a929e5bd6fcd011a4a4e8ff23" }
+schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "4dcd70eb672d2926b4ce85f99c17de9ed24776cc" }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
 triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }

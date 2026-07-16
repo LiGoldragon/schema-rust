@@ -488,6 +488,9 @@ impl ToTokens for TypeRenderer<'_> {
             TypeReference::Plain(name) => {
                 Ident::new(name.as_str(), Span::call_site()).to_tokens(tokens)
             }
+            TypeReference::ExternalRoot(root) => syn::parse_str::<syn::Type>(&root.rust_path())
+                .expect("resolved external root emits a Rust type path")
+                .to_tokens(tokens),
             TypeReference::SingleTypeApplication {
                 projection: SingleTypeReferenceProjection::Vector,
                 argument,
