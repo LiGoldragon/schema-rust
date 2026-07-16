@@ -20,7 +20,7 @@ quote = "1"
 schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "7fac6ac810bc" }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
-triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
+triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "d93ad0d08e46" }
 
 [features]
 # Activates the `#[cfg(feature = "nota-text")]` blocks inside any

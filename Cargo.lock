@@ -258,7 +258,7 @@ dependencies = [
 [[package]]
 name = "kameo"
 version = "0.20.0"
-source = "git+https://github.com/LiGoldragon/kameo.git?branch=main#f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01"
+source = "git+https://github.com/LiGoldragon/kameo.git?rev=f491b45d#f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01"
 dependencies = [
  "downcast-rs",
  "dyn-clone",
@@ -272,7 +272,7 @@ dependencies = [
 [[package]]
 name = "kameo_macros"
 version = "0.20.0"
-source = "git+https://github.com/LiGoldragon/kameo.git?branch=main#f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01"
+source = "git+https://github.com/LiGoldragon/kameo.git?rev=f491b45d#f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -580,17 +580,6 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 [[package]]
 name = "signal-frame"
 version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=drop-next#bb86bef67e478ff52690a4dcceec8f22d2b005ad"
-dependencies = [
- "paste",
- "rkyv",
- "signal-frame-macros 0.1.1 (git+https://github.com/LiGoldragon/signal-frame.git?branch=drop-next)",
- "thiserror",
-]
-
-[[package]]
-name = "signal-frame"
-version = "0.3.0"
 source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#0027ea3cef353b1c168ca6862e40c6077a853642"
 dependencies = [
  "paste",
@@ -600,9 +589,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "signal-frame"
+version = "0.3.0"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?rev=b61ec7d9e98e#b61ec7d9e98e8d80381ad9497efcd4379adb5ede"
+dependencies = [
+ "paste",
+ "rkyv",
+ "signal-frame-macros 0.1.1 (git+https://github.com/LiGoldragon/signal-frame.git?rev=b61ec7d9e98e)",
+ "thiserror",
+]
+
+[[package]]
 name = "signal-frame-macros"
 version = "0.1.1"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=drop-next#bb86bef67e478ff52690a4dcceec8f22d2b005ad"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#44d22a07e75e6d2ff13581a5bb84d47c6ef35e97"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -612,7 +612,7 @@ dependencies = [
 [[package]]
 name = "signal-frame-macros"
 version = "0.1.1"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#44d22a07e75e6d2ff13581a5bb84d47c6ef35e97"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?rev=b61ec7d9e98e#b61ec7d9e98e8d80381ad9497efcd4379adb5ede"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -756,13 +756,13 @@ dependencies = [
 
 [[package]]
 name = "triad-runtime"
-version = "0.6.1"
-source = "git+https://github.com/LiGoldragon/triad-runtime.git?branch=main#f9a6a7c8ab50dbd5b5a8ef7bfd7ea8c9acb713e1"
+version = "0.7.0"
+source = "git+https://github.com/LiGoldragon/triad-runtime.git?rev=d93ad0d08e46#d93ad0d08e46ecfff08b8f67fcebc4a0d936d0ae"
 dependencies = [
  "kameo",
  "rkyv",
  "rustix",
- "signal-frame 0.3.0 (git+https://github.com/LiGoldragon/signal-frame.git?branch=drop-next)",
+ "signal-frame 0.3.0 (git+https://github.com/LiGoldragon/signal-frame.git?rev=b61ec7d9e98e)",
  "thiserror",
  "tokio",
 ]
@@ -848,3 +848,8 @@ checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
 dependencies = [
  "windows-link",
 ]
+
+[[patch.unused]]
+name = "kameo"
+version = "0.20.0"
+source = "git+https://github.com/LiGoldragon/kameo.git?branch=main#f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01"
