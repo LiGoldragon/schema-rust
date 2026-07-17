@@ -768,6 +768,76 @@ pub mod short_header {
 #[rustfmt::skip]
 const SIGNAL_SHORT_HEADER_BYTE_COUNT: usize = 8;
 #[rustfmt::skip]
+/// Reserved refusal header. Real variant headers pack root and
+/// variant indices into the top sixteen bits and leave the low
+/// forty-eight bits zero, so the all-ones value can never name a
+/// declared variant.
+const ENGINE_REFUSAL_SHORT_HEADER: u64 = u64::MAX;
+#[rustfmt::skip]
+/// Why the daemon refused to produce an ordinary reply.
+#[derive(
+    rkyv::Archive,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq
+)]
+pub enum EngineRefusalReason {
+    /// The engine ran and rejected the request with its typed
+    /// domain error; the rendered error text is the detail.
+    Rejected,
+    /// The engine layer could not serve the request at all.
+    Unavailable,
+}
+#[rustfmt::skip]
+impl std::fmt::Display for EngineRefusalReason {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Rejected => formatter.write_str("engine rejected the request"),
+            Self::Unavailable => formatter.write_str("engine unavailable"),
+        }
+    }
+}
+#[rustfmt::skip]
+/// The refusal reply a daemon writes when the engine failed, so
+/// the caller receives a complete typed frame instead of a closed
+/// socket it cannot distinguish from daemon death. The typed
+/// engine error stays daemon-side; the wire carries the
+/// classification plus the rendered error text.
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct EngineRefusal {
+    pub reason: EngineRefusalReason,
+    pub detail: String,
+}
+#[rustfmt::skip]
+impl EngineRefusal {
+    pub fn rejected(detail: String) -> Self {
+        Self {
+            reason: EngineRefusalReason::Rejected,
+            detail,
+        }
+    }
+    pub fn unavailable(detail: String) -> Self {
+        Self {
+            reason: EngineRefusalReason::Unavailable,
+            detail,
+        }
+    }
+    pub fn encode_signal_frame(&self) -> Result<Vec<u8>, SignalFrameError> {
+        let archive = rkyv::to_bytes::<rkyv::rancor::Error>(self)
+            .map_err(|_| SignalFrameError::ArchiveEncode)?;
+        let mut frame = Vec::with_capacity(
+            SIGNAL_SHORT_HEADER_BYTE_COUNT + archive.len(),
+        );
+        frame.extend_from_slice(&ENGINE_REFUSAL_SHORT_HEADER.to_le_bytes());
+        frame.extend_from_slice(&archive);
+        Ok(frame)
+    }
+}
+#[rustfmt::skip]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SignalFrameError {
     ArchiveEncode,
@@ -775,6 +845,7 @@ pub enum SignalFrameError {
     FrameTooShort { found: usize },
     UnknownHeader { root_enum: &'static str, header: u64 },
     HeaderMismatch { expected: u64, found: u64 },
+    EngineRefused { refusal: EngineRefusal },
 }
 #[rustfmt::skip]
 impl std::fmt::Display for SignalFrameError {
@@ -793,6 +864,9 @@ impl std::fmt::Display for SignalFrameError {
                     formatter,
                     "decoded payload header mismatch: expected 0x{expected:016X}, found 0x{found:016X}"
                 )
+            }
+            Self::EngineRefused { refusal } => {
+                write!(formatter, "{}: {}", refusal.reason, refusal.detail)
             }
         }
     }
@@ -912,6 +986,16 @@ impl Input {
         let mut header_bytes = [0_u8; SIGNAL_SHORT_HEADER_BYTE_COUNT];
         header_bytes.copy_from_slice(&frame[..SIGNAL_SHORT_HEADER_BYTE_COUNT]);
         let header = u64::from_le_bytes(header_bytes);
+        if header == ENGINE_REFUSAL_SHORT_HEADER {
+            let refusal = rkyv::from_bytes::<
+                EngineRefusal,
+                rkyv::rancor::Error,
+            >(&frame[SIGNAL_SHORT_HEADER_BYTE_COUNT..])
+                .map_err(|_| SignalFrameError::ArchiveDecode)?;
+            return Err(SignalFrameError::EngineRefused {
+                refusal,
+            });
+        }
         let route = Self::route_from_short_header(header)?;
         let value = rkyv::from_bytes::<
             Self,
@@ -993,6 +1077,16 @@ impl Output {
         let mut header_bytes = [0_u8; SIGNAL_SHORT_HEADER_BYTE_COUNT];
         header_bytes.copy_from_slice(&frame[..SIGNAL_SHORT_HEADER_BYTE_COUNT]);
         let header = u64::from_le_bytes(header_bytes);
+        if header == ENGINE_REFUSAL_SHORT_HEADER {
+            let refusal = rkyv::from_bytes::<
+                EngineRefusal,
+                rkyv::rancor::Error,
+            >(&frame[SIGNAL_SHORT_HEADER_BYTE_COUNT..])
+                .map_err(|_| SignalFrameError::ArchiveDecode)?;
+            return Err(SignalFrameError::EngineRefused {
+                refusal,
+            });
+        }
         let route = Self::route_from_short_header(header)?;
         let value = rkyv::from_bytes::<
             Self,

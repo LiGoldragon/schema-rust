@@ -333,6 +333,15 @@ form.
   constants are part of the generated artifact the build driver already
   checks, so a schema edit that moves a family closure fails freshness until
   regeneration.
+- The emitted frame codec carries a refusal surface beside the per-root
+  codecs: `EngineRefusal` (reason plus rendered detail text) encodes under the
+  reserved all-ones short header — a value no declared variant can occupy
+  because real headers pack indices into the top sixteen bits — and
+  `decode_signal_frame` returns it as the typed
+  `SignalFrameError::EngineRefused`. The emitted working spine answers every
+  decoded request with a complete frame: the ordinary output, or that refusal
+  when the engine fails, so a caller never has to read a closed socket as
+  possible daemon death.
 - Generated signal roots emit rkyv-derived data types, NOTA text conversion,
   short-header route triage, binary signal-frame encode/decode methods, and
   the universal `signal-frame` request/reply aliases and builders. Non-streaming

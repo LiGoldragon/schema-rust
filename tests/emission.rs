@@ -1125,6 +1125,35 @@ fn compiled_fixture_is_usable_rust() {
 
 #[cfg(feature = "nota-text")]
 #[test]
+fn engine_refusal_frame_round_trips_as_typed_decode_refusal() {
+    let refusal = generated::EngineRefusal::rejected("bookmark push refused".to_string());
+    let frame = refusal
+        .encode_signal_frame()
+        .expect("refusal frame encodes");
+
+    let decoded = generated::Input::decode_signal_frame(&frame)
+        .expect_err("a refusal frame is a typed refusal, not a payload");
+    let generated::SignalFrameError::EngineRefused { refusal: received } = decoded else {
+        panic!("expected EngineRefused, got {decoded:?}");
+    };
+    assert_eq!(received, refusal);
+    assert_eq!(received.reason, generated::EngineRefusalReason::Rejected);
+    assert_eq!(received.detail, "bookmark push refused");
+
+    let unavailable = generated::EngineRefusal::unavailable("engine actor stopped".to_string());
+    let frame = unavailable
+        .encode_signal_frame()
+        .expect("refusal frame encodes");
+    let decoded = generated::Output::decode_signal_frame(&frame)
+        .expect_err("both roots decode the shared refusal header");
+    assert!(matches!(
+        decoded,
+        generated::SignalFrameError::EngineRefused { refusal }
+            if refusal.reason == generated::EngineRefusalReason::Unavailable
+    ));
+}
+
+#[test]
 fn generated_roots_wrap_into_messages_with_automatic_origin_route() {
     let input = FixtureNota::new("nota/observe-schema-principle.nota")
         .read()
