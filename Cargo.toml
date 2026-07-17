@@ -13,14 +13,14 @@ name = "schema_rust"
 path = "src/lib.rs"
 
 [dependencies]
-nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", branch = "main" }
+nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", rev = "7d0651a0e098efea5fe2578cb06d88e009d40ff0" }
 prettyplease = "0.2"
 proc-macro2 = "1"
 quote = "1"
-schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "59d59aca5767523a929e5bd6fcd011a4a4e8ff23" }
+schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "4270fbdad5318518291829c2f08b22090e833182" }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
-triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
+triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "d323f9024f8490961c687798cf2dad4aea54aa7e" }
 
 [features]
 # Activates the `#[cfg(feature = "nota-text")]` blocks inside any
@@ -35,8 +35,8 @@ nota-text = []
 
 [dev-dependencies]
 rkyv = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
-sema-engine = { git = "https://github.com/LiGoldragon/sema-engine.git", branch = "main" }
-signal-frame = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
+sema-engine = { git = "https://github.com/LiGoldragon/sema-engine.git", rev = "93a6b5f063292e000a7bf395fdd5b46e3e943068" }
+signal-frame = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "f46872e7e8edae5264c892443d415a273b231234" }
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -44,4 +44,4 @@ unused      = { level = "warn", priority = -1 }
 dead_code   = "warn"
 
 [patch.crates-io]
-kameo = { git = "https://github.com/LiGoldragon/kameo.git", branch = "main" }
+kameo = { git = "https://github.com/LiGoldragon/kameo.git", rev = "f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01" }

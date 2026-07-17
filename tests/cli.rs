@@ -7,7 +7,7 @@ fn schema_rust_cli_generates_environment_backed_feedback() {
     let contract_schema_directory =
         manifest_directory.join("tests/fixtures/driver-contract/schema");
     let request = format!(
-        "(Generate ({} driver-runtime 0.1.0 [(NexusRuntime nexus) (SemaRuntime sema)] [(driver-contract {} 0.1.0)]))",
+        "Generate.{{ {} driver-runtime 0.1.0 [NexusRuntime.nexus SemaRuntime.sema] [{{ driver-contract {} 0.1.0 }}] }}",
         runtime_root.display(),
         contract_schema_directory.display()
     );
@@ -23,7 +23,7 @@ fn schema_rust_cli_generates_environment_backed_feedback() {
         String::from_utf8_lossy(&output.stderr)
     );
     let stdout = String::from_utf8(output.stdout).expect("stdout is UTF-8");
-    assert!(stdout.contains("(Generated ("));
+    assert!(stdout.contains("Generated.{"));
     assert!(stdout.contains("nexus"));
     assert!(stdout.contains("src/schema/nexus.rs"));
     assert!(stdout.contains("driver-contract.lib.[DriverInput DriverOutput]"));
@@ -38,7 +38,7 @@ fn schema_rust_cli_pretty_flag_reflows_the_same_document() {
     let contract_schema_directory =
         manifest_directory.join("tests/fixtures/driver-contract/schema");
     let request = format!(
-        "(Generate ({} driver-runtime 0.1.0 [(NexusRuntime nexus) (SemaRuntime sema)] [(driver-contract {} 0.1.0)]))",
+        "Generate.{{ {} driver-runtime 0.1.0 [NexusRuntime.nexus SemaRuntime.sema] [{{ driver-contract {} 0.1.0 }}] }}",
         runtime_root.display(),
         contract_schema_directory.display()
     );
