@@ -8,6 +8,7 @@ use schema_rust::RustEmitter;
 
 mod support;
 
+#[cfg(feature = "nota-text")]
 use support::FixtureNota;
 
 #[allow(dead_code)]
@@ -283,6 +284,7 @@ fn generated_big_rust_contains_the_current_schema_stack_surfaces() {
     );
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn compiled_large_spirit_generated_rust_parses_frames_and_emits_mail_events() {
     let input = FixtureNota::new("nota/large-record-schema-rust.nota")

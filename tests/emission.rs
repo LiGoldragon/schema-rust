@@ -9,7 +9,9 @@ use std::path::PathBuf;
 
 mod support;
 
-use support::{FixtureNota, FixtureSchema};
+#[cfg(feature = "nota-text")]
+use support::FixtureNota;
+use support::FixtureSchema;
 
 fn generated_fixture_path(file_name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -1077,6 +1079,7 @@ fn runtime_target_emits_write_only_sema_engine_when_write_roots_exist() {
     assert!(!code.contains("fn observe(&self"));
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn generated_trace_identity_is_typed_from_interface_headers() {
     let signal_route = generated::ObjectName::Signal(generated::SignalObjectName::Input(
@@ -1120,6 +1123,7 @@ fn compiled_fixture_is_usable_rust() {
     assert_eq!(input.short_header(), generated::short_header::INPUT_RECORD);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn generated_roots_wrap_into_messages_with_automatic_origin_route() {
     let input = FixtureNota::new("nota/observe-schema-principle.nota")
@@ -1141,6 +1145,7 @@ fn generated_roots_wrap_into_messages_with_automatic_origin_route() {
     ));
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn generated_input_parses_cli_nota_and_emits_nota() {
     let source = FixtureNota::new("nota/record-clarified-intent.nota").read();
@@ -1164,6 +1169,7 @@ fn generated_input_parses_cli_nota_and_emits_nota() {
     assert_eq!(input.to_string(), source);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn generated_signal_input_round_trips_from_nota_to_rkyv_bytes() {
     let input = FixtureNota::new("nota/record-component-rkyv.nota")
@@ -1178,6 +1184,7 @@ fn generated_signal_input_round_trips_from_nota_to_rkyv_bytes() {
     assert_eq!(decoded, input);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn generated_signal_frame_methods_round_trip_and_triage_route() {
     let input = FixtureNota::new("nota/record-schema-owns-frames.nota")
@@ -1221,6 +1228,7 @@ impl generated::MessageSentHook for MailHook {
     }
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn generated_signal_roots_emit_typed_message_sent_events() {
     let input = FixtureNota::new("nota/observe-schema-principle.nota")
@@ -1319,6 +1327,7 @@ struct PreviousEntry {
     description: String,
 }
 
+#[cfg(feature = "nota-text")]
 #[derive(Debug, PartialEq, Eq)]
 struct UpgradeEvent {
     description: String,
@@ -1337,6 +1346,7 @@ impl generated::UpgradeFrom<PreviousEntry> for generated::Entry {
     }
 }
 
+#[cfg(feature = "nota-text")]
 impl UpgradeEvent {
     fn from_previous_entry(previous: PreviousEntry) -> Result<Self, RuntimeError> {
         let entry =
@@ -1352,6 +1362,7 @@ impl UpgradeEvent {
     }
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn generated_upgrade_trait_accepts_previous_schema_objects_observably() {
     let event = UpgradeEvent::from_previous_entry(PreviousEntry {
@@ -1419,6 +1430,7 @@ fn collection_free_schema_keeps_checked_generated_source_stable() {
     assert_generated_fixture("spirit_generated.rs", generated.as_str());
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn generated_collection_struct_round_trips_through_nota() {
     // Author a Cluster carrying all three collection kinds, encode it
@@ -1476,6 +1488,7 @@ fn generated_collection_struct_round_trips_through_nota() {
     assert_eq!(empty_parsed, empty);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn generated_collection_payload_root_variant_round_trips_to_nota_and_rkyv() {
     let mut projection = std::collections::BTreeMap::new();
