@@ -331,8 +331,8 @@ dependencies = [
 
 [[package]]
 name = "nota"
-version = "0.8.0"
-source = "git+https://github.com/LiGoldragon/nota.git?rev=7d0651a0e098efea5fe2578cb06d88e009d40ff0#7d0651a0e098efea5fe2578cb06d88e009d40ff0"
+version = "0.9.0"
+source = "git+https://github.com/LiGoldragon/nota.git?rev=89dc3c85a9ff96d4e4d53accfd867df672cae5a8#89dc3c85a9ff96d4e4d53accfd867df672cae5a8"
 dependencies = [
  "nota-derive",
  "rkyv",
@@ -341,7 +341,7 @@ dependencies = [
 [[package]]
 name = "nota-derive"
 version = "0.4.0"
-source = "git+https://github.com/LiGoldragon/nota.git?rev=7d0651a0e098efea5fe2578cb06d88e009d40ff0#7d0651a0e098efea5fe2578cb06d88e009d40ff0"
+source = "git+https://github.com/LiGoldragon/nota.git?rev=89dc3c85a9ff96d4e4d53accfd867df672cae5a8#89dc3c85a9ff96d4e4d53accfd867df672cae5a8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -492,8 +492,8 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "schema-language"
-version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/schema-language.git?rev=4270fbdad5318518291829c2f08b22090e833182#4270fbdad5318518291829c2f08b22090e833182"
+version = "0.3.0"
+source = "git+https://github.com/LiGoldragon/schema-language.git?rev=9c217610c4b8d3bdaa9f95542e28c04424a593e3#9c217610c4b8d3bdaa9f95542e28c04424a593e3"
 dependencies = [
  "blake3",
  "nota",
@@ -503,7 +503,7 @@ dependencies = [
 
 [[package]]
 name = "schema-rust"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "nota",
  "prettyplease",

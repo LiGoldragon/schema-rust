@@ -394,7 +394,9 @@ impl ToTokens for DaemonImportsTokens<'_> {
             quote! {}
         };
         let working_import = match self.shape.working_tier().contract_import_path() {
-            Some(working) => quote! { use #working::{EngineRefusal, Input, Output, SignalFrameError}; },
+            Some(working) => {
+                quote! { use #working::{EngineRefusal, Input, Output, SignalFrameError}; }
+            }
             None => quote! {},
         };
         let tcp_runtime_import = if has_tcp_tier {
