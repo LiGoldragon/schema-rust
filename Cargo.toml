@@ -26,7 +26,7 @@ quote = "1"
 schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "9c217610c4b8d3bdaa9f95542e28c04424a593e3" }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
-triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "1911b21bd9f1aca423255005050e9436e007f2be", optional = true }
+triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "acfb386fa638e2979b33bf2d003bb35fed0ceec0", optional = true }
 
 [features]
 # Activates the `#[cfg(feature = "nota-text")]` blocks inside any
@@ -44,7 +44,7 @@ cli = ["dep:triad-runtime"]
 rkyv = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 signal-frame = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "0786fbe8caf27552afcdd5deb85bc82ec6088337" }
 tokio = { version = "1", features = ["io-util", "net", "rt-multi-thread"] }
-triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "1911b21bd9f1aca423255005050e9436e007f2be" }
+triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "acfb386fa638e2979b33bf2d003bb35fed0ceec0" }
 trybuild = "1"
 
 [lints.rust]

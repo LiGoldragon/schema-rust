@@ -293,7 +293,7 @@ dependencies = [
 [[package]]
 name = "kameo"
 version = "0.20.0"
-source = "git+https://github.com/LiGoldragon/kameo.git?branch=main#f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01"
+source = "git+https://github.com/LiGoldragon/kameo.git?rev=f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01#f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01"
 dependencies = [
  "downcast-rs",
  "dyn-clone",
@@ -307,7 +307,7 @@ dependencies = [
 [[package]]
 name = "kameo_macros"
 version = "0.20.0"
-source = "git+https://github.com/LiGoldragon/kameo.git?branch=main#f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01"
+source = "git+https://github.com/LiGoldragon/kameo.git?rev=f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01#f491b45d7dcb55e5837eddde3d5d7ca8ceaa9f01"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -857,7 +857,7 @@ dependencies = [
 [[package]]
 name = "triad-runtime"
 version = "0.8.0"
-source = "git+https://github.com/LiGoldragon/triad-runtime.git?rev=1911b21bd9f1aca423255005050e9436e007f2be#1911b21bd9f1aca423255005050e9436e007f2be"
+source = "git+https://github.com/LiGoldragon/triad-runtime.git?rev=acfb386fa638e2979b33bf2d003bb35fed0ceec0#acfb386fa638e2979b33bf2d003bb35fed0ceec0"
 dependencies = [
  "kameo",
  "rkyv",
