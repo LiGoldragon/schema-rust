@@ -780,10 +780,7 @@ impl GeneratedArtifact {
         if self.matches_existing()? {
             return Ok(());
         }
-        Err(BuildError::StaleGeneratedArtifact {
-            path: self.path.clone(),
-            update_environment_variable: check.update_environment_variable().to_owned(),
-        })
+        Err(check.stale_generated_artifact_error(self.path.clone()))
     }
 
     fn matches_existing(&self) -> Result<bool, BuildError> {
@@ -812,34 +809,49 @@ impl GeneratedArtifact {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-struct FreshnessCheck {
-    update_environment_variable: String,
-    update_files: bool,
+enum FreshnessCheck {
+    CheckOnly,
+    UpdateWhenRequested {
+        update_environment_variable: String,
+        update_files: bool,
+    },
 }
 
 impl FreshnessCheck {
     fn check_only() -> Self {
-        Self {
-            update_environment_variable: "<update variable unavailable>".to_owned(),
-            update_files: false,
-        }
+        Self::CheckOnly
     }
 
     fn from_environment(update_environment_variable: impl Into<String>) -> Self {
         let update_environment_variable = update_environment_variable.into();
         let update_files = env::var_os(&update_environment_variable).is_some();
-        Self {
+        Self::UpdateWhenRequested {
             update_environment_variable,
             update_files,
         }
     }
 
     fn updates_files(&self) -> bool {
-        self.update_files
+        matches!(
+            self,
+            Self::UpdateWhenRequested {
+                update_files: true,
+                ..
+            }
+        )
     }
 
-    fn update_environment_variable(&self) -> &str {
-        &self.update_environment_variable
+    fn stale_generated_artifact_error(&self, path: PathBuf) -> BuildError {
+        match self {
+            Self::CheckOnly => BuildError::StaleGeneratedArtifact { path },
+            Self::UpdateWhenRequested {
+                update_environment_variable,
+                ..
+            } => BuildError::StaleGeneratedArtifactUpdateAvailable {
+                path,
+                update_environment_variable: update_environment_variable.clone(),
+            },
+        }
     }
 }
 
@@ -859,10 +871,12 @@ pub enum BuildError {
         path: PathBuf,
         source: std::io::Error,
     },
+    #[error("generated artifact {path:?} is stale")]
+    StaleGeneratedArtifact { path: PathBuf },
     #[error(
         "generated artifact {path:?} is stale; set {update_environment_variable}=1 to update it"
     )]
-    StaleGeneratedArtifact {
+    StaleGeneratedArtifactUpdateAvailable {
         path: PathBuf,
         update_environment_variable: String,
     },
@@ -874,4 +888,37 @@ pub enum BuildError {
     SchemaSourceArchiveRoundTrip { path: PathBuf },
     #[error("environment result did not include requested module {module}")]
     MissingEnvironmentModule { module: String },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_only_staleness_has_no_update_instruction() {
+        let path = PathBuf::from("schema-rust-freshness-check-only-missing.rs");
+        let error = GeneratedArtifact::new(&path, "generated")
+            .check_with(&FreshnessCheck::check_only())
+            .expect_err("missing artifact is stale");
+
+        assert!(
+            matches!(&error, BuildError::StaleGeneratedArtifact { path: found } if found == &path)
+        );
+        assert!(!error.to_string().contains("set "));
+    }
+
+    #[test]
+    fn update_capable_staleness_carries_its_update_variable() {
+        let path = PathBuf::from("schema-rust-freshness-update-missing.rs");
+        let error = FreshnessCheck::from_environment("UPDATE_SCHEMA_RUST_FIXTURE")
+            .stale_generated_artifact_error(path.clone());
+
+        assert!(matches!(
+            error,
+            BuildError::StaleGeneratedArtifactUpdateAvailable {
+                path: found,
+                update_environment_variable,
+            } if found == path && update_environment_variable == "UPDATE_SCHEMA_RUST_FIXTURE"
+        ));
+    }
 }
