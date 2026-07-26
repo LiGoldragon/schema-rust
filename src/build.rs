@@ -385,31 +385,69 @@ impl GenerationDriver {
     }
 }
 
+#[derive(Clone, Debug, Eq, nota::NotaDecode, PartialEq)]
+pub struct CrateName(String);
+
+impl CrateName {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Eq, nota::NotaDecode, PartialEq)]
+pub struct SchemaVersion(String);
+
+impl SchemaVersion {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UpdateEnvironmentVariable(String);
+
+impl UpdateEnvironmentVariable {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContractCrateBuild {
     crate_root: PathBuf,
-    crate_name: String,
-    schema_version: String,
+    crate_name: CrateName,
+    schema_version: SchemaVersion,
     links_name: String,
     module: String,
-    update_environment_variable: String,
+    update_environment_variable: UpdateEnvironmentVariable,
     wire_contract_family: protos::WireContractFamily,
 }
 
 impl ContractCrateBuild {
     pub fn new(
         crate_root: impl Into<PathBuf>,
-        crate_name: impl Into<String>,
-        schema_version: impl Into<String>,
-        update_environment_variable: impl Into<String>,
+        crate_name: CrateName,
+        schema_version: SchemaVersion,
+        update_environment_variable: UpdateEnvironmentVariable,
         wire_contract_family: protos::WireContractFamily,
     ) -> Self {
-        let crate_name = crate_name.into();
         Self {
             crate_root: crate_root.into(),
-            links_name: crate_name.clone(),
+            links_name: crate_name.as_str().to_owned(),
             crate_name,
-            schema_version: schema_version.into(),
+            schema_version,
             module: "lib".to_owned(),
             update_environment_variable: update_environment_variable.into(),
             wire_contract_family,
@@ -417,9 +455,9 @@ impl ContractCrateBuild {
     }
 
     pub fn from_environment(
-        crate_name: impl Into<String>,
-        schema_version: impl Into<String>,
-        update_environment_variable: impl Into<String>,
+        crate_name: CrateName,
+        schema_version: SchemaVersion,
+        update_environment_variable: UpdateEnvironmentVariable,
         wire_contract_family: protos::WireContractFamily,
     ) -> Self {
         Self::new(
@@ -445,11 +483,11 @@ impl ContractCrateBuild {
         &self.crate_root
     }
 
-    pub fn crate_name(&self) -> &str {
+    pub fn crate_name(&self) -> &CrateName {
         &self.crate_name
     }
 
-    pub fn schema_version(&self) -> &str {
+    pub fn schema_version(&self) -> &SchemaVersion {
         &self.schema_version
     }
 
@@ -461,7 +499,7 @@ impl ContractCrateBuild {
         &self.module
     }
 
-    pub fn update_environment_variable(&self) -> &str {
+    pub fn update_environment_variable(&self) -> &UpdateEnvironmentVariable {
         &self.update_environment_variable
     }
 
@@ -470,9 +508,15 @@ impl ContractCrateBuild {
     }
 
     pub fn generation_plan(&self) -> GenerationPlan {
-        GenerationPlan::new(&self.crate_root, &self.crate_name, &self.schema_version).with_module(
-            ModuleEmission::wire_contract_module(&self.module, self.wire_contract_family),
+        GenerationPlan::new(
+            &self.crate_root,
+            self.crate_name.as_str(),
+            self.schema_version.as_str(),
         )
+        .with_module(ModuleEmission::wire_contract_module(
+            &self.module,
+            self.wire_contract_family,
+        ))
     }
 
     pub fn generated_package(&self) -> Result<GeneratedPackage, BuildError> {
@@ -482,7 +526,7 @@ impl ContractCrateBuild {
     pub fn run(&self) -> Result<(), BuildError> {
         self.print_cargo_directives();
         self.generated_package()?
-            .write_or_check(&self.update_environment_variable)
+            .write_or_check(self.update_environment_variable.as_str())
     }
 
     pub fn expect_fresh(&self) {

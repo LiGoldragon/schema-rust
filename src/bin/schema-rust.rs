@@ -9,8 +9,8 @@ use schema_language::{ImportResolver, SchemaEnvironment, SchemaEnvironmentResult
 use schema_rust::{
     RustEmissionOptions, RustEmissionTarget,
     build::{
-        BuildError, DependencySchema, GenerationDriver, GenerationFeedback, GenerationPlan,
-        ModuleEmission, ModuleFeedback,
+        BuildError, CrateName, DependencySchema, GenerationDriver, GenerationFeedback,
+        GenerationPlan, ModuleEmission, ModuleFeedback, SchemaVersion,
     },
 };
 use thiserror::Error;
@@ -333,24 +333,6 @@ impl CrateRoot {
 impl From<&Path> for CrateRoot {
     fn from(path: &Path) -> Self {
         Self(path.display().to_string())
-    }
-}
-
-#[derive(Clone, Debug, Eq, NotaDecode, PartialEq)]
-struct CrateName(String);
-
-impl CrateName {
-    fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-#[derive(Clone, Debug, Eq, NotaDecode, PartialEq)]
-struct SchemaVersion(String);
-
-impl SchemaVersion {
-    fn as_str(&self) -> &str {
-        &self.0
     }
 }
 

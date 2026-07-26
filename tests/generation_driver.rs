@@ -1,7 +1,8 @@
 use protos::WireContractFamily;
 use schema_language::{ImportResolver, SchemaEnvironment};
 use schema_rust::build::{
-    ContractCrateBuild, DependencySchema, GenerationDriver, GenerationPlan, ModuleEmission,
+    ContractCrateBuild, CrateName, DependencySchema, GenerationDriver, GenerationPlan,
+    ModuleEmission, SchemaVersion, UpdateEnvironmentVariable,
 };
 
 mod support;
@@ -296,18 +297,19 @@ fn contract_crate_build_is_the_standalone_wire_contract_driver() {
     let fixture = FixtureSchemaDirectory::new("driver-contract");
     let build = ContractCrateBuild::new(
         fixture.crate_root(),
-        "driver-contract",
-        "0.1.0",
-        "DRIVER_CONTRACT_UPDATE_SCHEMA_ARTIFACTS",
+        CrateName::new("driver-contract"),
+        SchemaVersion::new("0.1.0"),
+        UpdateEnvironmentVariable::new("DRIVER_CONTRACT_UPDATE_SCHEMA_ARTIFACTS"),
         WireContractFamily::SignalSpirit,
     );
 
-    assert_eq!(build.crate_name(), "driver-contract");
+    assert_eq!(build.crate_name(), &CrateName::new("driver-contract"));
+    assert_eq!(build.schema_version(), &SchemaVersion::new("0.1.0"));
     assert_eq!(build.links_name(), "driver-contract");
     assert_eq!(build.module(), "lib");
     assert_eq!(
         build.update_environment_variable(),
-        "DRIVER_CONTRACT_UPDATE_SCHEMA_ARTIFACTS"
+        &UpdateEnvironmentVariable::new("DRIVER_CONTRACT_UPDATE_SCHEMA_ARTIFACTS")
     );
     assert_eq!(
         build.generation_plan(),
@@ -324,9 +326,9 @@ fn contract_crate_build_is_the_standalone_wire_contract_driver() {
 fn contract_crate_build_emits_standalone_schema_file() {
     let generated = ContractCrateBuild::new(
         FixtureSchemaDirectory::new("driver-contract").crate_root(),
-        "driver-contract",
-        "0.1.0",
-        "DRIVER_CONTRACT_UPDATE_SCHEMA_ARTIFACTS",
+        CrateName::new("driver-contract"),
+        SchemaVersion::new("0.1.0"),
+        UpdateEnvironmentVariable::new("DRIVER_CONTRACT_UPDATE_SCHEMA_ARTIFACTS"),
         WireContractFamily::SignalSpirit,
     )
     .generated_package()
@@ -353,4 +355,10 @@ fn contract_crate_build_emits_standalone_schema_file() {
         !source.contains("pub trait NexusEngine") && !source.contains("pub trait SemaEngine"),
         "standalone contract crate must not emit daemon-internal engine traits:\n{source}"
     );
+}
+
+#[test]
+fn contract_crate_build_rejects_swapped_role_arguments() {
+    let cases = trybuild::TestCases::new();
+    cases.compile_fail("tests/ui/contract_crate_build/role_swapping.rs");
 }

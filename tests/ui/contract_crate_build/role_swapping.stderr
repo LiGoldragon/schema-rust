@@ -1,0 +1,28 @@
+error[E0308]: arguments to this function are incorrect
+  --> tests/ui/contract_crate_build/role_swapping.rs:7:13
+   |
+ 7 |     let _ = ContractCrateBuild::new(
+   |             ^^^^^^^^^^^^^^^^^^^^^^^
+ 8 |         "contract-root",
+ 9 |         SchemaVersion::new("0.1.0"),
+   |         --------------------------- expected `CrateName`, found `SchemaVersion`
+10 |         UpdateEnvironmentVariable::new("UPDATE_CONTRACT_SCHEMA"),
+   |         -------------------------------------------------------- expected `SchemaVersion`, found `UpdateEnvironmentVariable`
+11 |         CrateName::new("contract"),
+   |         -------------------------- expected `UpdateEnvironmentVariable`, found `CrateName`
+   |
+note: associated function defined here
+  --> src/build.rs
+   |
+   |     pub fn new(
+   |            ^^^
+help: reorder these arguments
+   |
+ 7 ~     let _ = ContractCrateBuild::new(
+ 8 +         "contract-root",
+ 9 +         CrateName::new("contract"),
+10 +         SchemaVersion::new("0.1.0"),
+11 +         UpdateEnvironmentVariable::new("UPDATE_CONTRACT_SCHEMA"),
+12 +         WireContractFamily::SignalSpirit,
+13 ~     );
+   |
