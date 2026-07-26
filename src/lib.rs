@@ -81,7 +81,10 @@ impl RustEmitter {
         }
     }
 
-    pub fn emit_file_from_true_schema(&self, schema: &TrueSchema) -> GeneratedFile {
+    pub fn emit_file_from_true_schema(
+        &self,
+        schema: &TrueSchema,
+    ) -> Result<GeneratedFile, RustGenerationError> {
         schema.lower_to_rust_file(self)
     }
 
@@ -91,11 +94,14 @@ impl RustEmitter {
         identity: SchemaIdentity,
         engine: &SchemaEngine,
         resolver: &ImportResolver,
-    ) -> Result<GeneratedFile, SchemaError> {
+    ) -> Result<GeneratedFile, RustGenerationError> {
         source.lower_to_rust_file(identity, engine, resolver, self)
     }
 
-    pub fn emit_code_from_true_schema(&self, schema: &TrueSchema) -> RustCode {
+    pub fn emit_code_from_true_schema(
+        &self,
+        schema: &TrueSchema,
+    ) -> Result<RustCode, RustGenerationError> {
         schema.lower_to_rust_code(self)
     }
 
@@ -109,27 +115,33 @@ impl RustEmitter {
         identity: SchemaIdentity,
         engine: &SchemaEngine,
         resolver: &ImportResolver,
-    ) -> Result<RustModule, SchemaError> {
+    ) -> Result<RustModule, RustGenerationError> {
         source.lower_to_rust_module(identity, engine, resolver, self)
     }
 }
 
 pub trait RustTrueSchemaLowering {
-    fn lower_to_rust_file(&self, emitter: &RustEmitter) -> GeneratedFile;
-    fn lower_to_rust_code(&self, emitter: &RustEmitter) -> RustCode;
+    fn lower_to_rust_file(
+        &self,
+        emitter: &RustEmitter,
+    ) -> Result<GeneratedFile, RustGenerationError>;
+    fn lower_to_rust_code(&self, emitter: &RustEmitter) -> Result<RustCode, RustGenerationError>;
     fn lower_to_rust_module(&self, emitter: &RustEmitter) -> RustModule;
 }
 
 impl RustTrueSchemaLowering for TrueSchema {
-    fn lower_to_rust_file(&self, emitter: &RustEmitter) -> GeneratedFile {
+    fn lower_to_rust_file(
+        &self,
+        emitter: &RustEmitter,
+    ) -> Result<GeneratedFile, RustGenerationError> {
         let module = self.lower_to_rust_module(emitter);
-        GeneratedFile {
+        Ok(GeneratedFile {
             path: module.file_path().to_owned(),
-            code: module.render(),
-        }
+            code: module.render()?,
+        })
     }
 
-    fn lower_to_rust_code(&self, emitter: &RustEmitter) -> RustCode {
+    fn lower_to_rust_code(&self, emitter: &RustEmitter) -> Result<RustCode, RustGenerationError> {
         self.lower_to_rust_module(emitter).render()
     }
 
@@ -146,7 +158,7 @@ pub trait RustSchemaSourceLowering {
         engine: &SchemaEngine,
         resolver: &ImportResolver,
         emitter: &RustEmitter,
-    ) -> Result<GeneratedFile, SchemaError>;
+    ) -> Result<GeneratedFile, RustGenerationError>;
 
     fn lower_to_rust_module(
         &self,
@@ -154,7 +166,7 @@ pub trait RustSchemaSourceLowering {
         engine: &SchemaEngine,
         resolver: &ImportResolver,
         emitter: &RustEmitter,
-    ) -> Result<RustModule, SchemaError>;
+    ) -> Result<RustModule, RustGenerationError>;
 }
 
 impl RustSchemaSourceLowering for SchemaSource {
@@ -164,11 +176,11 @@ impl RustSchemaSourceLowering for SchemaSource {
         engine: &SchemaEngine,
         resolver: &ImportResolver,
         emitter: &RustEmitter,
-    ) -> Result<GeneratedFile, SchemaError> {
+    ) -> Result<GeneratedFile, RustGenerationError> {
         let module = self.lower_to_rust_module(identity, engine, resolver, emitter)?;
         Ok(GeneratedFile {
             path: module.file_path().to_owned(),
-            code: module.render(),
+            code: module.render()?,
         })
     }
 
@@ -178,7 +190,7 @@ impl RustSchemaSourceLowering for SchemaSource {
         engine: &SchemaEngine,
         resolver: &ImportResolver,
         emitter: &RustEmitter,
-    ) -> Result<RustModule, SchemaError> {
+    ) -> Result<RustModule, RustGenerationError> {
         let schema = engine.lower_schema_source_with_resolver(self, identity, resolver)?;
         let module = schema.lower_to_rust_module(emitter);
         // Emission boundary: a malformed schema name (NOTA accepts symbol atoms
@@ -189,6 +201,16 @@ impl RustSchemaSourceLowering for SchemaSource {
         module.verify_catalog(&schema)?;
         Ok(module)
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+pub enum RustGenerationError {
+    #[error(transparent)]
+    Schema(#[from] SchemaError),
+    #[error("wire-contract generation requires a canonical Protos contract family")]
+    MissingWireContractFamily,
+    #[error("wire-contract family {family:?} has no active encoder binding")]
+    RetiredWireContractFamily { family: protos::WireContractFamily },
 }
 
 #[derive(Clone, Debug)]
@@ -520,8 +542,8 @@ impl RustModule {
         facts
     }
 
-    pub fn render(&self) -> RustCode {
-        let mut writer = RustModuleRenderer::new(self.options.clone());
+    pub fn render(&self) -> Result<RustCode, RustGenerationError> {
+        let mut writer = RustModuleRenderer::new(self.options.clone())?;
         writer.note_map_key_types(self.support.map_key_type_names().to_vec());
         writer.note_ordering_types(self.ordering_type_names());
         writer.note_private_type_names(self.support.private_type_names().to_vec());
@@ -595,7 +617,7 @@ impl RustModule {
             writer.emit_schema_plane_trait_support(&self.declarations, &self.root_enums);
             writer.emit_upgrade_support();
         }
-        RustCode(writer.finish())
+        Ok(RustCode(writer.finish()))
     }
 }
 
@@ -658,6 +680,7 @@ impl LowerToRust<RustModule> for TrueSchema {
 pub struct RustEmissionOptions {
     pub nota_surface: NotaSurface,
     pub target: RustEmissionTarget,
+    wire_contract_family: Option<protos::WireContractFamily>,
 }
 
 impl Default for RustEmissionOptions {
@@ -674,6 +697,7 @@ impl RustEmissionOptions {
         Self {
             nota_surface: NotaSurface::AlwaysEnabled,
             target: RustEmissionTarget::ComponentRuntime,
+            wire_contract_family: None,
         }
     }
 
@@ -689,6 +713,7 @@ impl RustEmissionOptions {
                 feature: feature.into(),
             },
             target: RustEmissionTarget::ComponentRuntime,
+            wire_contract_family: None,
         }
     }
 
@@ -701,7 +726,19 @@ impl RustEmissionOptions {
         Self {
             nota_surface: NotaSurface::Disabled,
             target: RustEmissionTarget::ComponentRuntime,
+            wire_contract_family: None,
         }
+    }
+
+    pub fn wire_contract(family: protos::WireContractFamily) -> Self {
+        Self::feature_gated_nota("nota-text")
+            .with_target(RustEmissionTarget::WireContract)
+            .with_wire_contract_family(family)
+    }
+
+    pub fn with_wire_contract_family(mut self, family: protos::WireContractFamily) -> Self {
+        self.wire_contract_family = Some(family);
+        self
     }
 
     pub fn with_target(mut self, target: RustEmissionTarget) -> Self {
@@ -715,6 +752,37 @@ impl RustEmissionOptions {
 
     pub fn target(&self) -> RustEmissionTarget {
         self.target
+    }
+
+    fn resolved_wire_binding(&self) -> Result<Option<WireBinding>, RustGenerationError> {
+        if self.target != RustEmissionTarget::WireContract {
+            return Ok(None);
+        }
+        let family = self
+            .wire_contract_family
+            .ok_or(RustGenerationError::MissingWireContractFamily)?;
+        let binding = family
+            .current_binding()
+            .ok_or(RustGenerationError::RetiredWireContractFamily { family })?;
+        Ok(Some(WireBinding::new(
+            binding.contract().value(),
+            binding.revision().value(),
+        )))
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct WireBinding {
+    contract_id: u32,
+    wire_revision: u16,
+}
+
+impl WireBinding {
+    const fn new(contract_id: u32, wire_revision: u16) -> Self {
+        Self {
+            contract_id,
+            wire_revision,
+        }
     }
 }
 
@@ -740,21 +808,16 @@ impl RustEmissionTarget {
         self.runtime_planes().emits_any()
     }
 
-    /// Whether this target faces the wire and therefore needs the basic
-    /// signal-frame codec (route enums, `short_header`,
-    /// `encode_signal_frame` / `decode_signal_frame`, `SignalFrameError`).
+    /// Whether this target faces the wire and therefore needs the bound
+    /// signal-frame contract (route enums, `short_header`, request/reply frame
+    /// encoders, single-request decoding, and `SignalFrameError`).
     ///
-    /// A separately-generated `WireContract` crate IS the wire framing —
-    /// peers and the owning daemon import it and call the codec on it — so
-    /// it carries the codec even though it emits no daemon-side runtime
-    /// planes. `SignalRuntime` and `ComponentRuntime` (bootstrap) also face
-    /// the wire. The `NexusRuntime` / `SemaRuntime` internal planes never
-    /// touch the wire and must not receive frame codec code.
+    /// A separately-generated `WireContract` crate IS the wire framing:
+    /// peers and the owning daemon import its bound frame and codec. Runtime
+    /// targets carry only their internal typed envelopes; they never mint or
+    /// decode transport headers locally.
     fn emits_wire_frame(self) -> bool {
-        match self {
-            Self::WireContract | Self::SignalRuntime | Self::ComponentRuntime => true,
-            Self::DeclarationModule | Self::NexusRuntime | Self::SemaRuntime => false,
-        }
+        matches!(self, Self::WireContract)
     }
 
     fn runtime_planes(self) -> RuntimePlaneSet {
@@ -1963,19 +2026,18 @@ impl ToTokens for RouteMatchArm<'_, '_> {
     }
 }
 
-/// The full signal-frame binary codec impl for one root enum: `route`,
-/// `short_header`, `route_from_short_header`, `encode_signal_frame`, and
-/// `decode_signal_frame`. Owns the root enum and renders the per-variant
-/// triage arms plus the fixed encode/decode bodies. The route and
-/// short-header arms are derived from the same `ShortHeader` noun the
-/// `short_header` module uses, so the constant names always agree.
+/// Bound route projection for one generated root enum.
 struct SignalFrameImplTokens<'enum_source> {
     root_enum: &'enum_source RustEnum,
+    root_index: usize,
 }
 
 impl<'enum_source> SignalFrameImplTokens<'enum_source> {
-    fn new(root_enum: &'enum_source RustEnum) -> Self {
-        Self { root_enum }
+    fn new(root_enum: &'enum_source RustEnum, root_index: usize) -> Self {
+        Self {
+            root_enum,
+            root_index,
+        }
     }
 }
 
@@ -1983,13 +2045,37 @@ impl ToTokens for SignalFrameImplTokens<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let name = RustIdentifier::new(self.root_enum.name().as_str()).ident();
         let route_name = RouteName::new(self.root_enum.name()).ident();
-        let root_name_literal = self.root_enum.name().as_str();
-
         let route_arms = self
             .root_enum
             .variants()
             .iter()
             .map(|variant| RouteMatchArm::new(variant, &route_name));
+
+        let wire_route_arms =
+            self.root_enum
+                .variants()
+                .iter()
+                .enumerate()
+                .map(|(variant_index, variant)| {
+                    let variant_ident = RustIdentifier::new(variant.name().as_str()).ident();
+                    let root = Literal::u8_unsuffixed(self.root_index as u8);
+                    let variant_code = Literal::u8_unsuffixed(variant_index as u8);
+                    if variant.payload().is_some() {
+                        quote! {
+                            Self::#variant_ident(_) => signal_frame::WireRoute::new(
+                                signal_frame::RootCode::new(#root),
+                                signal_frame::VariantCode::new(#variant_code),
+                            ),
+                        }
+                    } else {
+                        quote! {
+                            Self::#variant_ident => signal_frame::WireRoute::new(
+                                signal_frame::RootCode::new(#root),
+                                signal_frame::VariantCode::new(#variant_code),
+                            ),
+                        }
+                    }
+                });
 
         let short_header_arms =
             self.root_enum
@@ -1997,28 +2083,19 @@ impl ToTokens for SignalFrameImplTokens<'_> {
                 .iter()
                 .enumerate()
                 .map(|(variant_index, variant)| {
-                    let constant =
-                        ShortHeader::new(self.root_enum.name(), variant.name(), 0, variant_index)
-                            .constant_identifier();
+                    let constant = ShortHeader::new(
+                        self.root_enum.name(),
+                        variant.name(),
+                        self.root_index,
+                        variant_index,
+                    )
+                    .constant_identifier();
                     let variant_ident = RustIdentifier::new(variant.name().as_str()).ident();
                     if variant.payload().is_some() {
                         quote! { Self::#variant_ident(_) => short_header::#constant, }
                     } else {
                         quote! { Self::#variant_ident => short_header::#constant, }
                     }
-                });
-
-        let route_from_header_arms =
-            self.root_enum
-                .variants()
-                .iter()
-                .enumerate()
-                .map(|(variant_index, variant)| {
-                    let constant =
-                        ShortHeader::new(self.root_enum.name(), variant.name(), 0, variant_index)
-                            .constant_identifier();
-                    let variant_ident = RustIdentifier::new(variant.name().as_str()).ident();
-                    quote! { short_header::#constant => Ok(#route_name::#variant_ident), }
                 });
 
         quote! {
@@ -2028,45 +2105,15 @@ impl ToTokens for SignalFrameImplTokens<'_> {
                         #(#route_arms)*
                     }
                 }
+                pub fn wire_route(&self) -> signal_frame::WireRoute {
+                    match self {
+                        #(#wire_route_arms)*
+                    }
+                }
                 pub fn short_header(&self) -> u64 {
                     match self {
                         #(#short_header_arms)*
                     }
-                }
-                pub fn route_from_short_header(header: u64) -> Result<#route_name, SignalFrameError> {
-                    match header {
-                        #(#route_from_header_arms)*
-                        _ => Err(SignalFrameError::UnknownHeader { root_enum: #root_name_literal, header }),
-                    }
-                }
-                pub fn encode_signal_frame(&self) -> Result<Vec<u8>, SignalFrameError> {
-                    let archive = rkyv::to_bytes::<rkyv::rancor::Error>(self)
-                        .map_err(|_| SignalFrameError::ArchiveEncode)?;
-                    let mut frame = Vec::with_capacity(SIGNAL_SHORT_HEADER_BYTE_COUNT + archive.len());
-                    frame.extend_from_slice(&self.short_header().to_le_bytes());
-                    frame.extend_from_slice(&archive);
-                    Ok(frame)
-                }
-                pub fn decode_signal_frame(frame: &[u8]) -> Result<(#route_name, Self), SignalFrameError> {
-                    if frame.len() < SIGNAL_SHORT_HEADER_BYTE_COUNT {
-                        return Err(SignalFrameError::FrameTooShort { found: frame.len() });
-                    }
-                    let mut header_bytes = [0_u8; SIGNAL_SHORT_HEADER_BYTE_COUNT];
-                    header_bytes.copy_from_slice(&frame[..SIGNAL_SHORT_HEADER_BYTE_COUNT]);
-                    let header = u64::from_le_bytes(header_bytes);
-                    if header == ENGINE_REFUSAL_SHORT_HEADER {
-                        let refusal = rkyv::from_bytes::<EngineRefusal, rkyv::rancor::Error>(&frame[SIGNAL_SHORT_HEADER_BYTE_COUNT..])
-                            .map_err(|_| SignalFrameError::ArchiveDecode)?;
-                        return Err(SignalFrameError::EngineRefused { refusal });
-                    }
-                    let route = Self::route_from_short_header(header)?;
-                    let value = rkyv::from_bytes::<Self, rkyv::rancor::Error>(&frame[SIGNAL_SHORT_HEADER_BYTE_COUNT..])
-                        .map_err(|_| SignalFrameError::ArchiveDecode)?;
-                    let expected = value.short_header();
-                    if expected != header {
-                        return Err(SignalFrameError::HeaderMismatch { expected, found: header });
-                    }
-                    Ok((route, value))
                 }
             }
         }
@@ -2126,12 +2173,18 @@ impl<'enums> ShortHeader<'enums> {
         Ident::new(&name, Span::call_site())
     }
 
-    fn value(&self) -> u64 {
-        ((self.root_index as u64) << 56) | ((self.variant_index as u64) << 48)
+    fn value(&self, binding: WireBinding) -> u64 {
+        ((self.root_index as u64) << 56)
+            | ((self.variant_index as u64) << 48)
+            | ((binding.wire_revision as u64) << 32)
+            | binding.contract_id as u64
     }
 
-    fn value_literal(&self) -> syn::LitInt {
-        syn::LitInt::new(&format!("0x{:016X}", self.value()), Span::call_site())
+    fn value_literal(&self, binding: WireBinding) -> syn::LitInt {
+        syn::LitInt::new(
+            &format!("0x{:016X}", self.value(binding)),
+            Span::call_site(),
+        )
     }
 }
 
@@ -2140,11 +2193,15 @@ impl<'enums> ShortHeader<'enums> {
 /// by declaration order.
 struct ShortHeaderModuleTokens<'enums> {
     root_enums: &'enums [RustEnum],
+    binding: WireBinding,
 }
 
 impl<'enums> ShortHeaderModuleTokens<'enums> {
-    fn new(root_enums: &'enums [RustEnum]) -> Self {
-        Self { root_enums }
+    fn new(root_enums: &'enums [RustEnum], binding: WireBinding) -> Self {
+        Self {
+            root_enums,
+            binding,
+        }
     }
 }
 
@@ -2167,13 +2224,39 @@ impl ToTokens for ShortHeaderModuleTokens<'_> {
                             variant_index,
                         );
                         let constant = header.constant_identifier();
-                        let value = header.value_literal();
+                        let value = header.value_literal(self.binding);
                         quote! { pub const #constant: u64 = #value; }
                     })
             });
+        let contract_id = self.binding.contract_id as u64;
+        let revision = self.binding.wire_revision as u64;
+        let handshake_request = syn::LitInt::new(
+            &format!(
+                "0x{:016X}",
+                (0xff_u64 << 56) | (revision << 32) | contract_id
+            ),
+            Span::call_site(),
+        );
+        let handshake_reply = syn::LitInt::new(
+            &format!(
+                "0x{:016X}",
+                (0xff_u64 << 56) | (1_u64 << 48) | (revision << 32) | contract_id
+            ),
+            Span::call_site(),
+        );
+        let engine_refusal = syn::LitInt::new(
+            &format!(
+                "0x{:016X}",
+                (0xff_u64 << 56) | (2_u64 << 48) | (revision << 32) | contract_id
+            ),
+            Span::call_site(),
+        );
         quote! {
             pub mod short_header {
                 #(#constants)*
+                pub const HANDSHAKE_REQUEST: u64 = #handshake_request;
+                pub const HANDSHAKE_REPLY: u64 = #handshake_reply;
+                pub const ENGINE_REFUSAL: u64 = #engine_refusal;
             }
         }
         .to_tokens(tokens);
@@ -2634,7 +2717,7 @@ impl ToTokens for SignalFrameTransportSupportTokens<'_> {
             .iter()
             .map(|variant| Literal::string(variant.name().as_str()));
         let frame_alias = quote! {
-            pub type Frame = signal_frame::ExchangeFrame<Input, Output>;
+            pub type Frame = signal_frame::BoundExchangeFrame<ContractMarker, Input, Output>;
             pub type FrameBody = signal_frame::ExchangeFrameBody<Input, Output>;
         };
         quote! {
@@ -2646,7 +2729,9 @@ impl ToTokens for SignalFrameTransportSupportTokens<'_> {
 
             impl signal_frame::LogVariant for Input {
                 fn log_variant(&self) -> u64 {
-                    self.short_header()
+                    let route = self.wire_route();
+                    u64::from(route.root().value())
+                        | (u64::from(route.variant().value()) << 8)
                 }
             }
 
@@ -2657,12 +2742,18 @@ impl ToTokens for SignalFrameTransportSupportTokens<'_> {
 
             impl Input {
                 pub fn into_frame(self, exchange: signal_frame::ExchangeIdentifier) -> Frame {
-                    let short_header = signal_frame::ShortHeader::new(self.short_header());
+                    let route = self.wire_route();
                     let request = signal_frame::Request::from_payload(self);
-                    Frame::with_short_header(
-                        short_header,
-                        FrameBody::Request { exchange, request },
-                    )
+                    Frame::new(route, FrameBody::Request { exchange, request })
+                }
+
+                pub fn encode_request_frame(
+                    self,
+                    exchange: signal_frame::ExchangeIdentifier,
+                ) -> Result<Vec<u8>, SignalFrameError> {
+                    self.into_frame(exchange)
+                        .encode()
+                        .map_err(|_| SignalFrameError::FrameEncode)
                 }
             }
 
@@ -2671,14 +2762,20 @@ impl ToTokens for SignalFrameTransportSupportTokens<'_> {
                     self,
                     exchange: signal_frame::ExchangeIdentifier,
                 ) -> Frame {
-                    let short_header = signal_frame::ShortHeader::new(self.short_header());
+                    let route = self.wire_route();
                     let reply = signal_frame::Reply::committed(signal_frame::NonEmpty::single(
                         signal_frame::SubReply::Ok(self),
                     ));
-                    Frame::with_short_header(
-                        short_header,
-                        FrameBody::Reply { exchange, reply },
-                    )
+                    Frame::new(route, FrameBody::Reply { exchange, reply })
+                }
+
+                pub fn encode_reply_frame(
+                    self,
+                    exchange: signal_frame::ExchangeIdentifier,
+                ) -> Result<Vec<u8>, SignalFrameError> {
+                    self.into_reply_frame(exchange)
+                        .encode()
+                        .map_err(|_| SignalFrameError::FrameEncode)
                 }
             }
         }
@@ -4734,6 +4831,7 @@ struct RustModuleRenderer {
     private_type_names: Vec<String>,
     nota_surface: NotaSurface,
     target: RustEmissionTarget,
+    wire_binding: Option<WireBinding>,
 }
 
 struct EnumConstructorPayload {
@@ -4938,15 +5036,17 @@ struct TraceInterfaceRoot<'schema> {
 }
 
 impl RustModuleRenderer {
-    fn new(options: RustEmissionOptions) -> Self {
-        Self {
+    fn new(options: RustEmissionOptions) -> Result<Self, RustGenerationError> {
+        let wire_binding = options.resolved_wire_binding()?;
+        Ok(Self {
             output: String::new(),
             map_key_types: Vec::new(),
             ordering_types: Vec::new(),
             private_type_names: Vec::new(),
             nota_surface: options.nota_surface().clone(),
             target: options.target(),
-        }
+            wire_binding,
+        })
     }
 
     fn nota_surface(&self) -> &NotaSurface {
@@ -4959,6 +5059,11 @@ impl RustModuleRenderer {
 
     fn emits_wire_frame(&self) -> bool {
         self.target.emits_wire_frame()
+    }
+
+    fn wire_binding(&self) -> WireBinding {
+        self.wire_binding
+            .expect("wire frame emission was validated with a binding")
     }
 
     fn emits_short_headers(&self) -> bool {
@@ -5422,32 +5527,57 @@ impl RustModuleRenderer {
     }
 
     fn emit_short_headers(&mut self, root_enums: &[RustEnum]) {
-        self.emit_item_tokens(ShortHeaderModuleTokens::new(root_enums).into_token_stream());
+        self.emit_item_tokens(
+            ShortHeaderModuleTokens::new(root_enums, self.wire_binding()).into_token_stream(),
+        );
     }
 
-    /// Emit the basic signal-frame codec: the short-header byte count,
-    /// the [`SignalFrameError`] type, the per-root route enums, and the
-    /// per-root frame impls (`route` / `short_header` /
-    /// `route_from_short_header` / `encode_signal_frame` /
-    /// `decode_signal_frame`).
+    /// Emit the bound signal-frame codec: the contract marker,
+    /// [`SignalFrameError`], per-root route enums, exact route/body
+    /// validation, and request/reply frame methods.
     ///
     /// This is the wire framing every wire-facing target needs — a
     /// separately-generated `WireContract` crate IS the framing that peers
     /// and the owning daemon import and call the codec on. It is gated by
-    /// [`RustModuleRenderer::emits_wire_frame`] in [`RustModule::render`], so it
-    /// reaches `WireContract`, `SignalRuntime`, and `ComponentRuntime` but
-    /// never the internal `NexusRuntime` / `SemaRuntime` planes. The
-    /// streaming / observable surface is gated separately by
-    /// [`RustModuleRenderer::emits_signal`] plus a declared stream — see
-    /// [`RustModuleRenderer::emit_signal_frame_streaming_support`].
+    /// [`RustModuleRenderer::emits_wire_frame`] in [`RustModule::render`], so
+    /// it reaches only `WireContract`; runtime targets import that contract
+    /// rather than minting a second framing implementation.
     fn emit_signal_frame_codec(&mut self, root_enums: &[RustEnum]) {
+        let binding = self.wire_binding();
+        let contract_id = Literal::u32_suffixed(binding.contract_id);
+        let wire_revision = Literal::u16_suffixed(binding.wire_revision);
+        let valid_routes = root_enums
+            .iter()
+            .enumerate()
+            .flat_map(|(root_index, root)| {
+                root.variants()
+                    .iter()
+                    .enumerate()
+                    .map(move |(variant_index, _)| {
+                        let root = Literal::u8_unsuffixed(root_index as u8);
+                        let variant = Literal::u8_unsuffixed(variant_index as u8);
+                        quote! { (#root, #variant) }
+                    })
+            });
+        let output_root = root_enums
+            .iter()
+            .position(|root| root.name().as_str() == "Output")
+            .unwrap_or(1);
+        let output_root = Literal::u8_unsuffixed(output_root as u8);
         self.emit_item_tokens(quote! {
-            const SIGNAL_SHORT_HEADER_BYTE_COUNT: usize = 8;
-            /// Reserved refusal header. Real variant headers pack root and
-            /// variant indices into the top sixteen bits and leave the low
-            /// forty-eight bits zero, so the all-ones value can never name a
-            /// declared variant.
-            const ENGINE_REFUSAL_SHORT_HEADER: u64 = u64::MAX;
+            pub enum ContractMarker {}
+            impl signal_frame::WireContract for ContractMarker {
+                const BINDING: signal_frame::ContractBinding = signal_frame::ContractBinding::new(
+                    match signal_frame::ContractId::try_new(#contract_id) {
+                        Ok(contract) => contract,
+                        Err(_) => panic!("generated contract ID must be nonzero"),
+                    },
+                    match signal_frame::WireRevision::try_new(#wire_revision) {
+                        Ok(revision) => revision,
+                        Err(_) => panic!("generated wire revision must be nonzero"),
+                    },
+                );
+            }
             /// Why the daemon refused to produce an ordinary reply.
             #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
             pub enum EngineRefusalReason {
@@ -5482,37 +5612,182 @@ impl RustModuleRenderer {
                 pub fn unavailable(detail: String) -> Self {
                     Self { reason: EngineRefusalReason::Unavailable, detail }
                 }
-                pub fn encode_signal_frame(&self) -> Result<Vec<u8>, SignalFrameError> {
+                pub fn encode_bound_frame(&self) -> Result<Vec<u8>, SignalFrameError> {
                     let archive = rkyv::to_bytes::<rkyv::rancor::Error>(self)
                         .map_err(|_| SignalFrameError::ArchiveEncode)?;
-                    let mut frame = Vec::with_capacity(SIGNAL_SHORT_HEADER_BYTE_COUNT + archive.len());
-                    frame.extend_from_slice(&ENGINE_REFUSAL_SHORT_HEADER.to_le_bytes());
+                    let mut frame = Vec::with_capacity(signal_frame::SHORT_HEADER_BYTE_COUNT + archive.len());
+                    frame.extend_from_slice(&short_header::ENGINE_REFUSAL.to_le_bytes());
                     frame.extend_from_slice(&archive);
                     Ok(frame)
                 }
             }
             #[derive(Clone, Debug, PartialEq, Eq)]
             pub enum SignalFrameError {
+                FrameEncode,
                 ArchiveEncode,
                 ArchiveDecode,
                 FrameTooShort { found: usize },
-                UnknownHeader { root_enum: &'static str, header: u64 },
-                HeaderMismatch { expected: u64, found: u64 },
+                LegacyHeader { contract_id: u32, wire_revision: u16 },
+                ContractMismatch { expected: u32, found: u32 },
+                UnsupportedWireRevision { contract_id: u32, expected: u16, found: u16 },
+                UnknownRoute { root: u8, variant: u8 },
+                RouteBodyMismatch { root: u8, variant: u8, body: &'static str },
+                UnexpectedFrameBody { found: &'static str },
+                OperationCount { found: usize },
                 EngineRefused { refusal: EngineRefusal },
             }
             impl std::fmt::Display for SignalFrameError {
                 fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                     match self {
+                        Self::FrameEncode => formatter.write_str("failed to encode bound signal frame"),
                         Self::ArchiveEncode => formatter.write_str("failed to encode rkyv archive"),
                         Self::ArchiveDecode => formatter.write_str("failed to decode rkyv archive"),
                         Self::FrameTooShort { found } => write!(formatter, "signal frame too short: {found} bytes"),
-                        Self::UnknownHeader { root_enum, header } => write!(formatter, "unknown {root_enum} short header 0x{header:016X}"),
-                        Self::HeaderMismatch { expected, found } => write!(formatter, "decoded payload header mismatch: expected 0x{expected:016X}, found 0x{found:016X}"),
+                        Self::LegacyHeader { contract_id, wire_revision } => write!(formatter, "legacy unbound signal frame ({contract_id}, {wire_revision})"),
+                        Self::ContractMismatch { expected, found } => write!(formatter, "signal contract mismatch: expected {expected}, found {found}"),
+                        Self::UnsupportedWireRevision { contract_id, expected, found } => write!(formatter, "unsupported wire revision for contract {contract_id}: expected {expected}, found {found}"),
+                        Self::UnknownRoute { root, variant } => write!(formatter, "unknown bound signal route ({root}, {variant})"),
+                        Self::RouteBodyMismatch { root, variant, body } => write!(formatter, "bound signal route ({root}, {variant}) does not carry {body}"),
+                        Self::UnexpectedFrameBody { found } => write!(formatter, "expected one request frame, found {found}"),
+                        Self::OperationCount { found } => write!(formatter, "expected one request operation, found {found}"),
                         Self::EngineRefused { refusal } => write!(formatter, "{}: {}", refusal.reason, refusal.detail),
                     }
                 }
             }
             impl std::error::Error for SignalFrameError {}
+            impl ContractMarker {
+                pub fn handshake_request_frame(
+                    request: signal_frame::HandshakeRequest,
+                ) -> Frame {
+                    Frame::new(
+                        signal_frame::WireRoute::new(
+                            signal_frame::RootCode::new(0xff),
+                            signal_frame::VariantCode::new(0),
+                        ),
+                        FrameBody::HandshakeRequest(request),
+                    )
+                }
+
+                pub fn handshake_reply_frame(reply: signal_frame::HandshakeReply) -> Frame {
+                    Frame::new(
+                        signal_frame::WireRoute::new(
+                            signal_frame::RootCode::new(0xff),
+                            signal_frame::VariantCode::new(1),
+                        ),
+                        FrameBody::HandshakeReply(reply),
+                    )
+                }
+
+                pub fn decode_frame(bytes: &[u8]) -> Result<Frame, SignalFrameError> {
+                    if bytes.len() < signal_frame::SHORT_HEADER_BYTE_COUNT {
+                        return Err(SignalFrameError::FrameTooShort { found: bytes.len() });
+                    }
+                    let mut header_bytes = [0_u8; signal_frame::SHORT_HEADER_BYTE_COUNT];
+                    header_bytes.copy_from_slice(&bytes[..signal_frame::SHORT_HEADER_BYTE_COUNT]);
+                    let header = u64::from_le_bytes(header_bytes);
+                    let contract_id = header as u32;
+                    let wire_revision = (header >> 32) as u16;
+                    if contract_id == 0 || wire_revision == 0 {
+                        return Err(SignalFrameError::LegacyHeader { contract_id, wire_revision });
+                    }
+                    if contract_id != #contract_id {
+                        return Err(SignalFrameError::ContractMismatch {
+                            expected: #contract_id,
+                            found: contract_id,
+                        });
+                    }
+                    if wire_revision != #wire_revision {
+                        return Err(SignalFrameError::UnsupportedWireRevision {
+                            contract_id,
+                            expected: #wire_revision,
+                            found: wire_revision,
+                        });
+                    }
+                    let root = (header >> 56) as u8;
+                    let variant = (header >> 48) as u8;
+                    match (root, variant) {
+                        #(#valid_routes)|*
+                        | (0xff, 0)
+                        | (0xff, 1)
+                        | (0xff, 2) => {}
+                        _ => return Err(SignalFrameError::UnknownRoute { root, variant }),
+                    }
+                    if (root, variant) == (0xff, 2) {
+                        let refusal = rkyv::from_bytes::<EngineRefusal, rkyv::rancor::Error>(
+                            &bytes[signal_frame::SHORT_HEADER_BYTE_COUNT..],
+                        )
+                        .map_err(|_| SignalFrameError::ArchiveDecode)?;
+                        return Err(SignalFrameError::EngineRefused { refusal });
+                    }
+                    let frame = Frame::decode(bytes).map_err(|_| SignalFrameError::ArchiveDecode)?;
+                    let header_route = signal_frame::WireRoute::new(
+                        signal_frame::RootCode::new(root),
+                        signal_frame::VariantCode::new(variant),
+                    );
+                    let body_matches = match frame.body() {
+                        FrameBody::HandshakeRequest(_) => (root, variant) == (0xff, 0),
+                        FrameBody::HandshakeReply(_) => (root, variant) == (0xff, 1),
+                        FrameBody::Request { request, .. } => {
+                            request.route().is_ok_and(|route| route == header_route)
+                        }
+                        FrameBody::Reply { reply, .. } => match reply {
+                            signal_frame::Reply::Accepted { per_operation, .. } => {
+                                match per_operation.head() {
+                                    signal_frame::SubReply::Ok(output) => {
+                                        output.wire_route() == header_route
+                                    }
+                                    signal_frame::SubReply::Failed {
+                                        detail: Some(output),
+                                        ..
+                                    } => output.wire_route() == header_route,
+                                    signal_frame::SubReply::Invalidated
+                                    | signal_frame::SubReply::Failed { detail: None, .. }
+                                    | signal_frame::SubReply::Skipped => root == #output_root,
+                                }
+                            }
+                            signal_frame::Reply::Rejected { .. } => root == #output_root,
+                        },
+                    };
+                    if !body_matches {
+                        let body = match frame.body() {
+                            FrameBody::HandshakeRequest(_) => "handshake request",
+                            FrameBody::HandshakeReply(_) => "handshake reply",
+                            FrameBody::Request { .. } => "request",
+                            FrameBody::Reply { .. } => "reply",
+                        };
+                        return Err(SignalFrameError::RouteBodyMismatch { root, variant, body });
+                    }
+                    Ok(frame)
+                }
+
+                pub fn decode_single_request(
+                    bytes: &[u8],
+                ) -> Result<(signal_frame::ExchangeIdentifier, Input), SignalFrameError> {
+                    let frame = Self::decode_frame(bytes)?;
+                    match frame.into_body() {
+                        FrameBody::Request { exchange, request } => {
+                            let found = request.payloads().len();
+                            if found != 1 {
+                                return Err(SignalFrameError::OperationCount { found });
+                            }
+                            Ok((exchange, request.payloads.into_head()))
+                        }
+                        FrameBody::HandshakeRequest(_) => {
+                            Err(SignalFrameError::UnexpectedFrameBody {
+                                found: "handshake request",
+                            })
+                        }
+                        FrameBody::HandshakeReply(_) => {
+                            Err(SignalFrameError::UnexpectedFrameBody {
+                                found: "handshake reply",
+                            })
+                        }
+                        FrameBody::Reply { .. } => Err(SignalFrameError::UnexpectedFrameBody {
+                            found: "reply",
+                        }),
+                    }
+                }
+            }
         });
         self.blank();
 
@@ -5521,8 +5796,8 @@ impl RustModuleRenderer {
             self.blank();
         }
 
-        for root_enum in root_enums {
-            self.emit_signal_frame_impl(root_enum);
+        for (root_index, root_enum) in root_enums.iter().enumerate() {
+            self.emit_signal_frame_impl(root_enum, root_index);
             self.blank();
         }
     }
@@ -5545,8 +5820,10 @@ impl RustModuleRenderer {
         self.emit_item_tokens(RouteImplTokens::new(declaration).into_token_stream());
     }
 
-    fn emit_signal_frame_impl(&mut self, root_enum: &RustEnum) {
-        self.emit_item_tokens(SignalFrameImplTokens::new(root_enum).into_token_stream());
+    fn emit_signal_frame_impl(&mut self, root_enum: &RustEnum, root_index: usize) {
+        self.emit_item_tokens(
+            SignalFrameImplTokens::new(root_enum, root_index).into_token_stream(),
+        );
     }
 
     fn emit_signal_frame_transport_support(&mut self, root_enums: &[RustEnum]) {
@@ -5560,7 +5837,7 @@ impl RustModuleRenderer {
     }
 
     fn emit_trace_support(&mut self, declarations: &[RustDeclaration], root_enums: &[RustEnum]) {
-        let signal_roots = if self.runtime_planes().emits_signal() {
+        let signal_roots = if self.emits_wire_frame() {
             self.trace_signal_roots(root_enums)
         } else {
             Vec::new()
@@ -5821,8 +6098,10 @@ impl RustModuleRenderer {
         );
         self.blank();
         if self.emits_all_runtime_planes() {
-            self.emit_signal_message_root_support(root_enums);
-            self.blank();
+            if self.emits_wire_frame() {
+                self.emit_signal_message_root_support(root_enums);
+                self.blank();
+            }
             self.emit_schema_plane_support();
             self.blank();
         }
@@ -5838,7 +6117,7 @@ impl RustModuleRenderer {
             self.emit_plane_envelope("Sema");
             self.blank();
         }
-        if self.runtime_planes().emits_signal() {
+        if self.runtime_planes().emits_signal() && self.emits_wire_frame() {
             if !self.emits_all_runtime_planes() {
                 self.emit_signal_message_root_support(root_enums);
                 self.blank();
@@ -5929,7 +6208,12 @@ impl RustModuleRenderer {
         root_enums: &'declaration [RustEnum],
     ) -> Vec<&'declaration str> {
         match plane {
-            Plane::Signal => Vec::new(),
+            Plane::Signal => plane
+                .canonical_source_type_names()
+                .iter()
+                .copied()
+                .filter(|source| self.has_root_enum(root_enums, source))
+                .collect(),
             Plane::Nexus => plane
                 .canonical_source_type_names()
                 .iter()

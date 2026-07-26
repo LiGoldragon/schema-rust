@@ -395,7 +395,11 @@ impl ToTokens for DaemonImportsTokens<'_> {
         };
         let working_import = match self.shape.working_tier().contract_import_path() {
             Some(working) => {
-                quote! { use #working::{EngineRefusal, Input, Output, SignalFrameError}; }
+                quote! {
+                    use #working::{
+                        ContractMarker, EngineRefusal, Input, Output, SignalFrameError,
+                    };
+                }
             }
             None => quote! {},
         };
@@ -1522,7 +1526,7 @@ impl GeneratedDaemonRuntimeTokens {
                 {
                     let mut transport = WorkingTransport::new(&mut connection);
                     let frame = transport.read_frame().await?;
-                    let (_route, input) = Input::decode_signal_frame(&frame)?;
+                    let (exchange, input) = ContractMarker::decode_single_request(&frame)?;
                     let context = *transport.context();
                     let turn = match Daemon::working_input_lane(&input) {
                         WorkingInputLane::Immediate => {
@@ -1559,7 +1563,7 @@ impl GeneratedDaemonRuntimeTokens {
                         }
                     };
                     match turn {
-                        Ok(output) => match output.encode_signal_frame() {
+                        Ok(output) => match output.encode_reply_frame(exchange) {
                             Ok(reply) => {
                                 transport.write_frame(reply).await?;
                                 Ok(())
@@ -1802,7 +1806,7 @@ impl GeneratedDaemonRuntimeTokens {
                 ) where
                     Stream: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
                 {
-                    if let Ok(frame) = refusal.encode_signal_frame() {
+                    if let Ok(frame) = refusal.encode_bound_frame() {
                         let _ = transport.write_frame(frame).await;
                     }
                 }

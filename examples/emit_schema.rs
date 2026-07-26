@@ -33,6 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "{}",
         RustEmitter::default()
             .emit_code_from_true_schema(&schema)
+            .expect("schema emits")
             .as_str()
     );
     Ok(())

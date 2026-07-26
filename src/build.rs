@@ -11,7 +11,7 @@ use schema_language::{
 
 use crate::{
     DaemonModule, GeneratedFile, NexusDaemonShape, RustEmissionOptions, RustEmissionTarget,
-    RustEmitter,
+    RustEmitter, RustGenerationError,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -38,8 +38,10 @@ impl GenerationPlan {
         crate_root: impl Into<PathBuf>,
         crate_name: impl Into<String>,
         version: impl Into<String>,
+        family: protos::WireContractFamily,
     ) -> Self {
-        Self::new(crate_root, crate_name, version).with_module(ModuleEmission::wire_contract())
+        Self::new(crate_root, crate_name, version)
+            .with_module(ModuleEmission::wire_contract(family))
     }
 
     pub fn daemon_runtime(
@@ -149,8 +151,8 @@ impl ModuleEmission {
         self.daemon_shape.as_ref()
     }
 
-    pub fn wire_contract() -> Self {
-        Self::wire_contract_module("lib")
+    pub fn wire_contract(family: protos::WireContractFamily) -> Self {
+        Self::wire_contract_module("lib", family)
     }
 
     pub fn declaration_module(module: impl Into<String>) -> Self {
@@ -161,12 +163,11 @@ impl ModuleEmission {
         )
     }
 
-    pub fn wire_contract_module(module: impl Into<String>) -> Self {
-        Self::new(
-            module,
-            RustEmissionOptions::feature_gated_nota("nota-text")
-                .with_target(RustEmissionTarget::WireContract),
-        )
+    pub fn wire_contract_module(
+        module: impl Into<String>,
+        family: protos::WireContractFamily,
+    ) -> Self {
+        Self::new(module, RustEmissionOptions::wire_contract(family))
     }
 
     pub fn nexus_runtime() -> Self {
@@ -392,6 +393,7 @@ pub struct ContractCrateBuild {
     links_name: String,
     module: String,
     update_environment_variable: String,
+    wire_contract_family: protos::WireContractFamily,
 }
 
 impl ContractCrateBuild {
@@ -400,6 +402,7 @@ impl ContractCrateBuild {
         crate_name: impl Into<String>,
         schema_version: impl Into<String>,
         update_environment_variable: impl Into<String>,
+        wire_contract_family: protos::WireContractFamily,
     ) -> Self {
         let crate_name = crate_name.into();
         Self {
@@ -409,6 +412,7 @@ impl ContractCrateBuild {
             schema_version: schema_version.into(),
             module: "lib".to_owned(),
             update_environment_variable: update_environment_variable.into(),
+            wire_contract_family,
         }
     }
 
@@ -416,12 +420,14 @@ impl ContractCrateBuild {
         crate_name: impl Into<String>,
         schema_version: impl Into<String>,
         update_environment_variable: impl Into<String>,
+        wire_contract_family: protos::WireContractFamily,
     ) -> Self {
         Self::new(
             PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("manifest dir set")),
             crate_name,
             schema_version,
             update_environment_variable,
+            wire_contract_family,
         )
     }
 
@@ -459,9 +465,14 @@ impl ContractCrateBuild {
         &self.update_environment_variable
     }
 
+    pub fn wire_contract_family(&self) -> protos::WireContractFamily {
+        self.wire_contract_family
+    }
+
     pub fn generation_plan(&self) -> GenerationPlan {
-        GenerationPlan::new(&self.crate_root, &self.crate_name, &self.schema_version)
-            .with_module(ModuleEmission::wire_contract_module(&self.module))
+        GenerationPlan::new(&self.crate_root, &self.crate_name, &self.schema_version).with_module(
+            ModuleEmission::wire_contract_module(&self.module, self.wire_contract_family),
+        )
     }
 
     pub fn generated_package(&self) -> Result<GeneratedPackage, BuildError> {
@@ -685,7 +696,7 @@ impl GeneratedModule {
                 module.verify_catalog(environment.true_schema())?;
                 GeneratedFile {
                     path: module.file_path().to_owned(),
-                    code: module.render(),
+                    code: module.render()?,
                 }
             }
         };
@@ -836,6 +847,8 @@ impl FreshnessCheck {
 pub enum BuildError {
     #[error(transparent)]
     Schema(#[from] SchemaError),
+    #[error(transparent)]
+    Generation(#[from] RustGenerationError),
     #[error("read generated artifact {path:?}: {source}")]
     ReadGeneratedArtifact {
         path: PathBuf,

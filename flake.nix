@@ -20,6 +20,7 @@
           type == "regular" && (
             pkgs.lib.hasSuffix ".schema" path
             || pkgs.lib.hasSuffix ".nota" path
+            || pkgs.lib.hasSuffix ".stderr" path
           );
         src = rust.cleanSource {
           root = ./.;
@@ -52,12 +53,15 @@
             touch $out
           '';
           generated-rkyv-boundary = pkgs.runCommand "schema-rust-generated-rkyv-boundary" { } ''
-            grep -R "encode_signal_frame" ${src}/tests/emission.rs >/dev/null
-            grep -R "decode_signal_frame" ${src}/tests/emission.rs >/dev/null
             grep -R "rkyv::Archive" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
-            grep -R "pub enum InputRoute" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
-            grep -R "pub enum OutputRoute" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
-            grep -R "pub fn encode_signal_frame" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
+            grep -R "pub fn with_origin_route" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
+            ! grep -R "pub mod short_header" ${src}/tests/fixtures/spirit_generated.rs
+            ! grep -R "pub enum SignalFrameError" ${src}/tests/fixtures/spirit_generated.rs
+            grep -R "impl signal_frame::WireContract for ContractMarker" ${src}/tests/fixtures/spirit_wire_generated.rs >/dev/null
+            grep -R "pub type Frame = signal_frame::BoundExchangeFrame<ContractMarker, Input, Output>" ${src}/tests/fixtures/spirit_wire_generated.rs >/dev/null
+            grep -R "pub fn decode_single_request" ${src}/tests/fixtures/spirit_wire_generated.rs >/dev/null
+            grep -R "pub fn encode_request_frame" ${src}/tests/fixtures/spirit_wire_generated.rs >/dev/null
+            grep -R "pub fn encode_reply_frame" ${src}/tests/fixtures/spirit_wire_generated.rs >/dev/null
             touch $out
           '';
           generated-nexus-traits = pkgs.runCommand "schema-rust-generated-nexus-traits" { } ''
@@ -72,7 +76,7 @@
             ! grep -R "generated::InputNexus for SpiritNexus" ${src}/tests/emission.rs
             touch $out
           '';
-          generated-mail-events = pkgs.runCommand "schema-rust-generated-mail-events" { } ''
+          generated-runtime-envelopes = pkgs.runCommand "schema-rust-generated-runtime-envelopes" { } ''
             grep -R "pub struct MessageIdentifier(Integer)" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
             grep -R "impl MessageIdentifier" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
             grep -R "pub struct OriginRoute(Integer)" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
@@ -81,16 +85,25 @@
             grep -R "pub enum Plane" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
             grep -R "Sema(super::Sema<SemaRoot>)" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
             grep -R "pub mod signal" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
-            grep -R "pub enum MessageRoot" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
-            grep -R "pub struct MessageSent" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
             grep -R "pub origin_route: OriginRoute" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
-            grep -R "pub short_header: Integer" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
-            grep -R "pub struct MessageProcessed<Reply>" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
-            grep -R "pub trait MessageSentHook" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
-            grep -R "pub trait MessageProcessedHook<Reply>" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
+            grep -R "pub fn with_origin_route" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
+            ! grep -R "pub enum MessageRoot" ${src}/tests/fixtures/spirit_generated.rs
+            ! grep -R "pub struct MessageSent" ${src}/tests/fixtures/spirit_generated.rs
+            ! grep -R "pub mod short_header" ${src}/tests/fixtures/spirit_generated.rs
+            ! grep -R "pub enum SignalFrameError" ${src}/tests/fixtures/spirit_generated.rs
             ! grep -R "pub struct NexusMail<Payload>" ${src}/tests/fixtures/spirit_generated.rs
-            grep -R "fn generated_signal_roots_emit_typed_message_sent_events" ${src}/tests/emission.rs >/dev/null
-            grep -R "event.push_to" ${src}/tests/emission.rs >/dev/null
+            grep -R "fn generated_roots_wrap_into_messages_with_automatic_origin_route" ${src}/tests/emission.rs >/dev/null
+            touch $out
+          '';
+          generated-bound-wire-daemon = pkgs.runCommand "schema-rust-generated-bound-wire-daemon" { } ''
+            grep -R "impl signal_frame::WireContract for ContractMarker" ${src}/tests/fixtures/spirit_wire_generated.rs >/dev/null
+            grep -R "signal_frame::BoundExchangeFrame<ContractMarker, Input, Output>" ${src}/tests/fixtures/spirit_wire_generated.rs >/dev/null
+            grep -R "ContractMarker::decode_single_request" ${src}/tests/fixtures/spirit_daemon_generated.rs >/dev/null
+            grep -R "encode_reply_frame(exchange)" ${src}/tests/fixtures/spirit_daemon_generated.rs >/dev/null
+            grep -R "encode_bound_frame()" ${src}/tests/fixtures/spirit_daemon_generated.rs >/dev/null
+            ! grep -R "decode_signal_frame" ${src}/tests/fixtures/spirit_daemon_generated.rs
+            ! grep -R "encode_signal_frame" ${src}/tests/fixtures/spirit_daemon_generated.rs
+            ! grep -R "signal_frame::ExchangeFrame" ${src}/tests/fixtures/spirit_daemon_generated.rs
             touch $out
           '';
           generated-upgrade-traits = pkgs.runCommand "schema-rust-generated-upgrade-traits" { } ''

@@ -13,6 +13,7 @@ fn emit_standard_newtype_impls() -> String {
     let options = RustEmissionOptions::binary_only();
     RustEmitter::new(options)
         .emit_code_from_true_schema(&schema)
+        .expect("schema emits")
         .as_str()
         .to_owned()
 }

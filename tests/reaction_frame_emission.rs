@@ -19,6 +19,7 @@ fn emit_reaction_frame() -> String {
         .with_target(RustEmissionTarget::DeclarationModule);
     RustEmitter::new(options)
         .emit_code_from_true_schema(&schema)
+        .expect("schema emits")
         .as_str()
         .to_owned()
 }

@@ -4,7 +4,7 @@
 //! into a typed `SchemaError::MalformedSchemaNode` via `RustModule::verify_names`.
 
 use schema_language::{SchemaEngine, SchemaError, SchemaIdentity, TrueSchema};
-use schema_rust::{RustEmissionOptions, RustModule};
+use schema_rust::{RustEmissionOptions, RustGenerationError, RustModule};
 
 fn lower_source(source: &str) -> TrueSchema {
     SchemaEngine::default()
@@ -87,5 +87,8 @@ fn source_emission_path_returns_err_for_malformed_name() {
         &resolver,
     );
     let error = result.expect_err("a malformed name fails the source emission path");
-    assert!(matches!(error, SchemaError::MalformedSchemaNode { .. }));
+    assert!(matches!(
+        error,
+        RustGenerationError::Schema(SchemaError::MalformedSchemaNode { .. })
+    ));
 }

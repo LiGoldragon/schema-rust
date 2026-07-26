@@ -47,6 +47,7 @@ fn emit_spirit_nexus() -> String {
         .with_target(RustEmissionTarget::NexusRuntime);
     RustEmitter::new(options)
         .emit_code_from_true_schema(&schema)
+        .expect("schema emits")
         .as_str()
         .to_owned()
 }
@@ -60,6 +61,7 @@ fn emit_named_spirit_nexus() -> String {
         .with_target(RustEmissionTarget::NexusRuntime);
     RustEmitter::new(options)
         .emit_code_from_true_schema(&schema)
+        .expect("schema emits")
         .as_str()
         .to_owned()
 }

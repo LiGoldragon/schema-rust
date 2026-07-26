@@ -1,3 +1,4 @@
+use protos::WireContractFamily;
 use schema_language::{ImportResolver, SchemaEnvironment};
 use schema_rust::build::{
     ContractCrateBuild, DependencySchema, GenerationDriver, GenerationPlan, ModuleEmission,
@@ -298,6 +299,7 @@ fn contract_crate_build_is_the_standalone_wire_contract_driver() {
         "driver-contract",
         "0.1.0",
         "DRIVER_CONTRACT_UPDATE_SCHEMA_ARTIFACTS",
+        WireContractFamily::SignalSpirit,
     );
 
     assert_eq!(build.crate_name(), "driver-contract");
@@ -309,7 +311,12 @@ fn contract_crate_build_is_the_standalone_wire_contract_driver() {
     );
     assert_eq!(
         build.generation_plan(),
-        GenerationPlan::wire_contract(fixture.crate_root(), "driver-contract", "0.1.0")
+        GenerationPlan::wire_contract(
+            fixture.crate_root(),
+            "driver-contract",
+            "0.1.0",
+            WireContractFamily::SignalSpirit,
+        )
     );
 }
 
@@ -320,6 +327,7 @@ fn contract_crate_build_emits_standalone_schema_file() {
         "driver-contract",
         "0.1.0",
         "DRIVER_CONTRACT_UPDATE_SCHEMA_ARTIFACTS",
+        WireContractFamily::SignalSpirit,
     )
     .generated_package()
     .expect("contract crate generates");
@@ -334,10 +342,12 @@ fn contract_crate_build_emits_standalone_schema_file() {
         "standalone contract crate should emit public wire input root:\n{source}"
     );
     assert!(
-        source.contains("pub type Frame = signal_frame::ExchangeFrame<Input, Output>;")
-            && source.contains("impl signal_frame::RequestPayload for Input {}")
-            && source.contains("pub fn encode_signal_frame(&self)"),
-        "standalone contract crate should own signal-frame aliases and codecs:\n{source}"
+        source.contains(
+            "pub type Frame = signal_frame::BoundExchangeFrame<ContractMarker, Input, Output>;"
+        ) && source.contains("impl signal_frame::RequestPayload for Input {}")
+            && source.contains("pub fn decode_frame(bytes: &[u8])")
+            && source.contains("impl signal_frame::WireContract for ContractMarker"),
+        "standalone contract crate should own bound signal-frame aliases and codecs:\n{source}"
     );
     assert!(
         !source.contains("pub trait NexusEngine") && !source.contains("pub trait SemaEngine"),

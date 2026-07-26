@@ -622,363 +622,6 @@ impl From<ErrorReport> for Output {
 }
 
 #[rustfmt::skip]
-pub mod short_header {
-    pub const INPUT_RECORD: u64 = 0x0000000000000000;
-    pub const INPUT_OBSERVE: u64 = 0x0001000000000000;
-    pub const OUTPUT_RECORD_ACCEPTED: u64 = 0x0100000000000000;
-    pub const OUTPUT_RECORDS_STASHED: u64 = 0x0101000000000000;
-    pub const OUTPUT_ERROR: u64 = 0x0102000000000000;
-}
-
-#[rustfmt::skip]
-const SIGNAL_SHORT_HEADER_BYTE_COUNT: usize = 8;
-#[rustfmt::skip]
-/// Reserved refusal header. Real variant headers pack root and
-/// variant indices into the top sixteen bits and leave the low
-/// forty-eight bits zero, so the all-ones value can never name a
-/// declared variant.
-const ENGINE_REFUSAL_SHORT_HEADER: u64 = u64::MAX;
-#[rustfmt::skip]
-/// Why the daemon refused to produce an ordinary reply.
-#[derive(
-    rkyv::Archive,
-    rkyv::Serialize,
-    rkyv::Deserialize,
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq
-)]
-pub enum EngineRefusalReason {
-    /// The engine ran and rejected the request with its typed
-    /// domain error; the rendered error text is the detail.
-    Rejected,
-    /// The engine layer could not serve the request at all.
-    Unavailable,
-}
-#[rustfmt::skip]
-impl std::fmt::Display for EngineRefusalReason {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Rejected => formatter.write_str("engine rejected the request"),
-            Self::Unavailable => formatter.write_str("engine unavailable"),
-        }
-    }
-}
-#[rustfmt::skip]
-/// The refusal reply a daemon writes when the engine failed, so
-/// the caller receives a complete typed frame instead of a closed
-/// socket it cannot distinguish from daemon death. The typed
-/// engine error stays daemon-side; the wire carries the
-/// classification plus the rendered error text.
-#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct EngineRefusal {
-    pub reason: EngineRefusalReason,
-    pub detail: String,
-}
-#[rustfmt::skip]
-impl EngineRefusal {
-    pub fn rejected(detail: String) -> Self {
-        Self {
-            reason: EngineRefusalReason::Rejected,
-            detail,
-        }
-    }
-    pub fn unavailable(detail: String) -> Self {
-        Self {
-            reason: EngineRefusalReason::Unavailable,
-            detail,
-        }
-    }
-    pub fn encode_signal_frame(&self) -> Result<Vec<u8>, SignalFrameError> {
-        let archive = rkyv::to_bytes::<rkyv::rancor::Error>(self)
-            .map_err(|_| SignalFrameError::ArchiveEncode)?;
-        let mut frame = Vec::with_capacity(
-            SIGNAL_SHORT_HEADER_BYTE_COUNT + archive.len(),
-        );
-        frame.extend_from_slice(&ENGINE_REFUSAL_SHORT_HEADER.to_le_bytes());
-        frame.extend_from_slice(&archive);
-        Ok(frame)
-    }
-}
-#[rustfmt::skip]
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum SignalFrameError {
-    ArchiveEncode,
-    ArchiveDecode,
-    FrameTooShort { found: usize },
-    UnknownHeader { root_enum: &'static str, header: u64 },
-    HeaderMismatch { expected: u64, found: u64 },
-    EngineRefused { refusal: EngineRefusal },
-}
-#[rustfmt::skip]
-impl std::fmt::Display for SignalFrameError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ArchiveEncode => formatter.write_str("failed to encode rkyv archive"),
-            Self::ArchiveDecode => formatter.write_str("failed to decode rkyv archive"),
-            Self::FrameTooShort { found } => {
-                write!(formatter, "signal frame too short: {found} bytes")
-            }
-            Self::UnknownHeader { root_enum, header } => {
-                write!(formatter, "unknown {root_enum} short header 0x{header:016X}")
-            }
-            Self::HeaderMismatch { expected, found } => {
-                write!(
-                    formatter,
-                    "decoded payload header mismatch: expected 0x{expected:016X}, found 0x{found:016X}"
-                )
-            }
-            Self::EngineRefused { refusal } => {
-                write!(formatter, "{}: {}", refusal.reason, refusal.detail)
-            }
-        }
-    }
-}
-#[rustfmt::skip]
-impl std::error::Error for SignalFrameError {}
-
-#[rustfmt::skip]
-#[derive(
-    rkyv::Archive,
-    rkyv::Serialize,
-    rkyv::Deserialize,
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-)]
-pub enum InputRoute {
-    Record,
-    Observe,
-}
-
-#[rustfmt::skip]
-#[derive(
-    rkyv::Archive,
-    rkyv::Serialize,
-    rkyv::Deserialize,
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-)]
-pub enum OutputRoute {
-    RecordAccepted,
-    RecordsStashed,
-    Error,
-}
-
-#[rustfmt::skip]
-impl Input {
-    pub fn route(&self) -> InputRoute {
-        match self {
-            Self::Record(_) => InputRoute::Record,
-            Self::Observe(_) => InputRoute::Observe,
-        }
-    }
-    pub fn short_header(&self) -> u64 {
-        match self {
-            Self::Record(_) => short_header::INPUT_RECORD,
-            Self::Observe(_) => short_header::INPUT_OBSERVE,
-        }
-    }
-    pub fn route_from_short_header(header: u64) -> Result<InputRoute, SignalFrameError> {
-        match header {
-            short_header::INPUT_RECORD => Ok(InputRoute::Record),
-            short_header::INPUT_OBSERVE => Ok(InputRoute::Observe),
-            _ => {
-                Err(SignalFrameError::UnknownHeader {
-                    root_enum: "Input",
-                    header,
-                })
-            }
-        }
-    }
-    pub fn encode_signal_frame(&self) -> Result<Vec<u8>, SignalFrameError> {
-        let archive = rkyv::to_bytes::<rkyv::rancor::Error>(self)
-            .map_err(|_| SignalFrameError::ArchiveEncode)?;
-        let mut frame = Vec::with_capacity(
-            SIGNAL_SHORT_HEADER_BYTE_COUNT + archive.len(),
-        );
-        frame.extend_from_slice(&self.short_header().to_le_bytes());
-        frame.extend_from_slice(&archive);
-        Ok(frame)
-    }
-    pub fn decode_signal_frame(
-        frame: &[u8],
-    ) -> Result<(InputRoute, Self), SignalFrameError> {
-        if frame.len() < SIGNAL_SHORT_HEADER_BYTE_COUNT {
-            return Err(SignalFrameError::FrameTooShort {
-                found: frame.len(),
-            });
-        }
-        let mut header_bytes = [0_u8; SIGNAL_SHORT_HEADER_BYTE_COUNT];
-        header_bytes.copy_from_slice(&frame[..SIGNAL_SHORT_HEADER_BYTE_COUNT]);
-        let header = u64::from_le_bytes(header_bytes);
-        if header == ENGINE_REFUSAL_SHORT_HEADER {
-            let refusal = rkyv::from_bytes::<
-                EngineRefusal,
-                rkyv::rancor::Error,
-            >(&frame[SIGNAL_SHORT_HEADER_BYTE_COUNT..])
-                .map_err(|_| SignalFrameError::ArchiveDecode)?;
-            return Err(SignalFrameError::EngineRefused {
-                refusal,
-            });
-        }
-        let route = Self::route_from_short_header(header)?;
-        let value = rkyv::from_bytes::<
-            Self,
-            rkyv::rancor::Error,
-        >(&frame[SIGNAL_SHORT_HEADER_BYTE_COUNT..])
-            .map_err(|_| SignalFrameError::ArchiveDecode)?;
-        let expected = value.short_header();
-        if expected != header {
-            return Err(SignalFrameError::HeaderMismatch {
-                expected,
-                found: header,
-            });
-        }
-        Ok((route, value))
-    }
-}
-
-#[rustfmt::skip]
-impl Output {
-    pub fn route(&self) -> OutputRoute {
-        match self {
-            Self::RecordAccepted(_) => OutputRoute::RecordAccepted,
-            Self::RecordsStashed(_) => OutputRoute::RecordsStashed,
-            Self::Error(_) => OutputRoute::Error,
-        }
-    }
-    pub fn short_header(&self) -> u64 {
-        match self {
-            Self::RecordAccepted(_) => short_header::OUTPUT_RECORD_ACCEPTED,
-            Self::RecordsStashed(_) => short_header::OUTPUT_RECORDS_STASHED,
-            Self::Error(_) => short_header::OUTPUT_ERROR,
-        }
-    }
-    pub fn route_from_short_header(
-        header: u64,
-    ) -> Result<OutputRoute, SignalFrameError> {
-        match header {
-            short_header::OUTPUT_RECORD_ACCEPTED => Ok(OutputRoute::RecordAccepted),
-            short_header::OUTPUT_RECORDS_STASHED => Ok(OutputRoute::RecordsStashed),
-            short_header::OUTPUT_ERROR => Ok(OutputRoute::Error),
-            _ => {
-                Err(SignalFrameError::UnknownHeader {
-                    root_enum: "Output",
-                    header,
-                })
-            }
-        }
-    }
-    pub fn encode_signal_frame(&self) -> Result<Vec<u8>, SignalFrameError> {
-        let archive = rkyv::to_bytes::<rkyv::rancor::Error>(self)
-            .map_err(|_| SignalFrameError::ArchiveEncode)?;
-        let mut frame = Vec::with_capacity(
-            SIGNAL_SHORT_HEADER_BYTE_COUNT + archive.len(),
-        );
-        frame.extend_from_slice(&self.short_header().to_le_bytes());
-        frame.extend_from_slice(&archive);
-        Ok(frame)
-    }
-    pub fn decode_signal_frame(
-        frame: &[u8],
-    ) -> Result<(OutputRoute, Self), SignalFrameError> {
-        if frame.len() < SIGNAL_SHORT_HEADER_BYTE_COUNT {
-            return Err(SignalFrameError::FrameTooShort {
-                found: frame.len(),
-            });
-        }
-        let mut header_bytes = [0_u8; SIGNAL_SHORT_HEADER_BYTE_COUNT];
-        header_bytes.copy_from_slice(&frame[..SIGNAL_SHORT_HEADER_BYTE_COUNT]);
-        let header = u64::from_le_bytes(header_bytes);
-        if header == ENGINE_REFUSAL_SHORT_HEADER {
-            let refusal = rkyv::from_bytes::<
-                EngineRefusal,
-                rkyv::rancor::Error,
-            >(&frame[SIGNAL_SHORT_HEADER_BYTE_COUNT..])
-                .map_err(|_| SignalFrameError::ArchiveDecode)?;
-            return Err(SignalFrameError::EngineRefused {
-                refusal,
-            });
-        }
-        let route = Self::route_from_short_header(header)?;
-        let value = rkyv::from_bytes::<
-            Self,
-            rkyv::rancor::Error,
-        >(&frame[SIGNAL_SHORT_HEADER_BYTE_COUNT..])
-            .map_err(|_| SignalFrameError::ArchiveDecode)?;
-        let expected = value.short_header();
-        if expected != header {
-            return Err(SignalFrameError::HeaderMismatch {
-                expected,
-                found: header,
-            });
-        }
-        Ok((route, value))
-    }
-}
-
-#[rustfmt::skip]
-impl signal_frame::RequestPayload for Input {}
-#[rustfmt::skip]
-impl signal_frame::SignalOperationHeads for Input {
-    const HEADS: &'static [&'static str] = &["Record", "Observe"];
-}
-#[rustfmt::skip]
-impl signal_frame::LogVariant for Input {
-    fn log_variant(&self) -> u64 {
-        self.short_header()
-    }
-}
-#[rustfmt::skip]
-pub type Frame = signal_frame::ExchangeFrame<Input, Output>;
-#[rustfmt::skip]
-pub type FrameBody = signal_frame::ExchangeFrameBody<Input, Output>;
-#[rustfmt::skip]
-pub type Request = signal_frame::Request<Input>;
-#[rustfmt::skip]
-pub type ReplyEnvelope = signal_frame::Reply<Output>;
-#[rustfmt::skip]
-pub type RequestBuilder = signal_frame::RequestBuilder<Input>;
-#[rustfmt::skip]
-impl Input {
-    pub fn into_frame(self, exchange: signal_frame::ExchangeIdentifier) -> Frame {
-        let short_header = signal_frame::ShortHeader::new(self.short_header());
-        let request = signal_frame::Request::from_payload(self);
-        Frame::with_short_header(
-            short_header,
-            FrameBody::Request {
-                exchange,
-                request,
-            },
-        )
-    }
-}
-#[rustfmt::skip]
-impl Output {
-    pub fn into_reply_frame(self, exchange: signal_frame::ExchangeIdentifier) -> Frame {
-        let short_header = signal_frame::ShortHeader::new(self.short_header());
-        let reply = signal_frame::Reply::committed(
-            signal_frame::NonEmpty::single(signal_frame::SubReply::Ok(self)),
-        );
-        Frame::with_short_header(
-            short_header,
-            FrameBody::Reply {
-                exchange,
-                reply,
-            },
-        )
-    }
-}
-
-#[rustfmt::skip]
 #[derive(
     rkyv::Archive,
     rkyv::Serialize,
@@ -1152,8 +795,6 @@ impl SemaReadOutput {
     Eq,
 )]
 pub enum SignalObjectName {
-    Input(InputRoute),
-    Output(OutputRoute),
     Started,
     Stopped,
     Admitted,
@@ -1165,19 +806,6 @@ pub enum SignalObjectName {
 impl SignalObjectName {
     pub fn name(self) -> &'static str {
         match self {
-            Self::Input(route) => {
-                match route {
-                    InputRoute::Record => "SignalInputRecord",
-                    InputRoute::Observe => "SignalInputObserve",
-                }
-            }
-            Self::Output(route) => {
-                match route {
-                    OutputRoute::RecordAccepted => "SignalOutputRecordAccepted",
-                    OutputRoute::RecordsStashed => "SignalOutputRecordsStashed",
-                    OutputRoute::Error => "SignalOutputError",
-                }
-            }
             Self::Started => "SignalStarted",
             Self::Stopped => "SignalStopped",
             Self::Admitted => "SignalAdmitted",
@@ -1387,22 +1015,6 @@ impl OriginRoute {
 }
 
 #[rustfmt::skip]
-#[derive(
-    rkyv::Archive,
-    rkyv::Serialize,
-    rkyv::Deserialize,
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-)]
-pub enum MessageRoot {
-    Input,
-    Output,
-}
-
-#[rustfmt::skip]
 pub mod schema {
     #[derive(
         rkyv::Archive,
@@ -1514,111 +1126,6 @@ impl<Root> Sema<Root> {
 }
 
 #[rustfmt::skip]
-#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct MessageSent {
-    pub identifier: MessageIdentifier,
-    pub origin_route: OriginRoute,
-    pub root: MessageRoot,
-    pub short_header: Integer,
-}
-#[rustfmt::skip]
-#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct MessageProcessed<Reply> {
-    pub identifier: MessageIdentifier,
-    pub origin_route: OriginRoute,
-    pub reply: Reply,
-}
-#[rustfmt::skip]
-pub trait MessageSentHook {
-    type Error;
-    fn message_sent(&mut self, event: MessageSent) -> Result<(), Self::Error>;
-}
-#[rustfmt::skip]
-pub trait MessageProcessedHook<Reply> {
-    type Error;
-    fn message_processed(
-        &mut self,
-        event: MessageProcessed<Reply>,
-    ) -> Result<(), Self::Error>;
-}
-#[rustfmt::skip]
-impl MessageSent {
-    pub fn origin_route(&self) -> OriginRoute {
-        self.origin_route
-    }
-    pub fn push_to<Hook>(&self, hook: &mut Hook) -> Result<(), Hook::Error>
-    where
-        Hook: MessageSentHook,
-    {
-        hook.message_sent(self.clone())
-    }
-}
-#[rustfmt::skip]
-impl<Reply> MessageProcessed<Reply> {
-    pub fn new(
-        identifier: MessageIdentifier,
-        origin_route: OriginRoute,
-        reply: Reply,
-    ) -> Self {
-        Self {
-            identifier,
-            origin_route,
-            reply,
-        }
-    }
-    pub fn identifier(&self) -> MessageIdentifier {
-        self.identifier
-    }
-    pub fn origin_route(&self) -> OriginRoute {
-        self.origin_route
-    }
-    pub fn into_reply(self) -> Reply {
-        self.reply
-    }
-    pub fn push_to<Hook>(&self, hook: &mut Hook) -> Result<(), Hook::Error>
-    where
-        Hook: MessageProcessedHook<Reply>,
-        Reply: Clone,
-    {
-        hook.message_processed(self.clone())
-    }
-}
-#[rustfmt::skip]
-impl Input {
-    pub fn with_origin_route(self, origin_route: OriginRoute) -> Signal<Self> {
-        Signal::new(origin_route, self)
-    }
-}
-#[rustfmt::skip]
-impl signal::Signal<Input> {
-    pub fn message_sent(&self, identifier: MessageIdentifier) -> MessageSent {
-        MessageSent {
-            identifier,
-            origin_route: self.origin_route(),
-            root: MessageRoot::Input,
-            short_header: self.root().short_header(),
-        }
-    }
-}
-#[rustfmt::skip]
-impl Output {
-    pub fn with_origin_route(self, origin_route: OriginRoute) -> Signal<Self> {
-        Signal::new(origin_route, self)
-    }
-}
-#[rustfmt::skip]
-impl signal::Signal<Output> {
-    pub fn message_sent(&self, identifier: MessageIdentifier) -> MessageSent {
-        MessageSent {
-            identifier,
-            origin_route: self.origin_route(),
-            root: MessageRoot::Output,
-            short_header: self.root().short_header(),
-        }
-    }
-}
-
-#[rustfmt::skip]
 #[allow(clippy::module_inception)]
 pub mod signal {
     pub type Input = super::Input;
@@ -1642,6 +1149,20 @@ pub mod sema {
     pub type ReadInput = super::SemaReadInput;
     pub type ReadOutput = super::SemaReadOutput;
     pub type Sema<Root> = super::Sema<Root>;
+}
+
+#[rustfmt::skip]
+impl Input {
+    pub fn with_origin_route(self, origin_route: OriginRoute) -> Signal<Self> {
+        Signal::new(origin_route, self)
+    }
+}
+
+#[rustfmt::skip]
+impl Output {
+    pub fn with_origin_route(self, origin_route: OriginRoute) -> Signal<Self> {
+        Signal::new(origin_route, self)
+    }
 }
 
 #[rustfmt::skip]

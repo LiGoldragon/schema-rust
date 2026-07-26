@@ -192,7 +192,7 @@ impl GenerationRequest {
 
 #[derive(Clone, Debug, Eq, NotaDecode, PartialEq)]
 enum ModuleRequest {
-    WireContract(ModuleName),
+    WireContract(WireContractRequest),
     Declaration(ModuleName),
     SignalRuntime(ModuleName),
     NexusRuntime(ModuleName),
@@ -203,7 +203,10 @@ enum ModuleRequest {
 impl ModuleRequest {
     fn emission(&self) -> ModuleEmission {
         match self {
-            Self::WireContract(module) => ModuleEmission::wire_contract_module(module.as_str()),
+            Self::WireContract(request) => ModuleEmission::wire_contract_module(
+                request.module.as_str(),
+                request.family.registry_family(),
+            ),
             Self::Declaration(module) => ModuleEmission::declaration_module(module.as_str()),
             Self::SignalRuntime(module) => ModuleEmission::signal_runtime_module(module.as_str()),
             Self::NexusRuntime(module) => ModuleEmission::new(
@@ -221,6 +224,27 @@ impl ModuleRequest {
                 RustEmissionOptions::feature_gated_nota("nota-text")
                     .with_target(RustEmissionTarget::ComponentRuntime),
             ),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, NotaDecode, PartialEq)]
+struct WireContractRequest {
+    family: WireContractFamily,
+    module: ModuleName,
+}
+
+#[derive(Clone, Copy, Debug, Eq, NotaDecode, PartialEq)]
+enum WireContractFamily {
+    SignalSpirit,
+    MetaSignalSpirit,
+}
+
+impl WireContractFamily {
+    fn registry_family(self) -> protos::WireContractFamily {
+        match self {
+            Self::SignalSpirit => protos::WireContractFamily::SignalSpirit,
+            Self::MetaSignalSpirit => protos::WireContractFamily::MetaSignalSpirit,
         }
     }
 }

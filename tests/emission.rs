@@ -109,7 +109,9 @@ mod runner_generated;
 #[test]
 fn emits_rust_source_as_a_separate_artifact() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
+    let generated = RustEmitter::default()
+        .emit_file_from_true_schema(&schema)
+        .expect("schema emits");
 
     assert_eq!(generated.path, "src/schema/lib.rs");
     assert!(generated.code.as_str().contains("pub enum Input"));
@@ -123,10 +125,10 @@ fn emits_rust_source_as_a_separate_artifact() {
     assert!(generated.code.as_str().contains("pub enum Kind"));
     assert!(enum_header(generated.code.as_str(), "Kind").contains("Copy,"));
     assert!(!enum_header(generated.code.as_str(), "Input").contains("Copy,"));
-    assert!(generated.code.as_str().contains("pub mod short_header"));
-    assert!(generated.code.as_str().contains("pub enum InputRoute"));
+    assert!(!generated.code.as_str().contains("pub mod short_header"));
+    assert!(!generated.code.as_str().contains("pub enum InputRoute"));
     assert!(
-        generated
+        !generated
             .code
             .as_str()
             .contains("pub fn encode_signal_frame")
@@ -134,7 +136,7 @@ fn emits_rust_source_as_a_separate_artifact() {
     assert!(!generated.code.as_str().contains("pub trait InputNexus"));
     assert!(!generated.code.as_str().contains("pub trait OutputNexus"));
     assert!(!generated.code.as_str().contains("dispatch_mail_with_nexus"));
-    assert!(generated.code.as_str().contains("pub struct MessageSent"));
+    assert!(!generated.code.as_str().contains("pub struct MessageSent"));
     assert!(generated.code.as_str().contains("pub struct OriginRoute"));
     assert!(generated.code.as_str().contains("pub mod signal"));
     assert!(generated.code.as_str().contains("pub enum Plane"));
@@ -150,6 +152,7 @@ fn emits_rust_source_as_a_separate_artifact() {
             .as_str()
             .contains("pub type Input = super::Input;")
     );
+    assert!(generated.code.as_str().contains("pub fn with_origin_route"));
     assert!(
         generated
             .code
@@ -183,7 +186,9 @@ fn emits_terminal_value_domains_as_scope_all() {
             SchemaIdentity::new("example:domain", "0.1.0"),
         )
         .expect("schema source lowers");
-    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
+    let generated = RustEmitter::default()
+        .emit_code_from_true_schema(&schema)
+        .expect("schema emits");
 
     // Strict positional NOTA: the variant payload is required, so it carries
     // the leaf directly with no `Option` wrapper and no bespoke codec.
@@ -217,10 +222,15 @@ fn schema_object_lowers_itself_into_rust_through_emitter_policy() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
     let emitter = RustEmitter::default();
 
-    let generated = schema.lower_to_rust_file(&emitter);
+    let generated = schema.lower_to_rust_file(&emitter).expect("schema emits");
     let module = schema.lower_to_rust_module(&emitter);
 
-    assert_eq!(generated, emitter.emit_file_from_true_schema(&schema));
+    assert_eq!(
+        generated,
+        emitter
+            .emit_file_from_true_schema(&schema)
+            .expect("schema emits")
+    );
     assert_eq!(module, emitter.emit_module_from_true_schema(&schema));
     assert_eq!(generated.path, "src/schema/lib.rs");
     assert!(generated.code.as_str().contains("pub enum Input"));
@@ -260,7 +270,9 @@ fn true_schema_product_component_identity_controls_rust_fields() {
             .contains("TimeRange.{ start.Time end.Time }"),
         "valid repeated-type disambiguators stay in canonical TrueSchema text"
     );
-    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
+    let generated = RustEmitter::default()
+        .emit_code_from_true_schema(&schema)
+        .expect("schema emits");
     assert!(generated.as_str().contains("pub start: Time,"));
     assert!(generated.as_str().contains("pub end: Time,"));
 }
@@ -350,7 +362,9 @@ fn emitter_builds_rust_module_data_before_rendering_text() {
 #[test]
 fn generated_objects_expose_named_constructors_and_newtype_payload_accessors() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let code = RustEmitter::default().emit_code_from_true_schema(&schema);
+    let code = RustEmitter::default()
+        .emit_code_from_true_schema(&schema)
+        .expect("schema emits");
     let source = code.as_str();
 
     assert!(source.contains("pub struct Topic(String);"));
@@ -369,20 +383,19 @@ fn generated_objects_expose_named_constructors_and_newtype_payload_accessors() {
 fn emission_can_disable_nota_surface_for_binary_only_consumers() {
     // Binary-only shape — daemons and other binary-only consumers
     // ship zero NOTA derives and zero `nota::*` references.
-    // The emitted source carries only the `rkyv` + signal-frame
-    // surface, so the generated module compiles when the consumer
-    // does not depend on `nota` at all.
+    // The emitted source carries only the rkyv-backed internal runtime
+    // surface, so the generated module compiles when the consumer does not
+    // depend on either NOTA or the transport framing layer.
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated = RustEmitter::new(RustEmissionOptions {
-        nota_surface: NotaSurface::Disabled,
-        target: RustEmissionTarget::ComponentRuntime,
-    })
-    .emit_code_from_true_schema(&schema);
+    let generated = RustEmitter::new(RustEmissionOptions::binary_only())
+        .emit_code_from_true_schema(&schema)
+        .expect("schema emits");
     let code = generated.as_str();
 
     assert!(code.contains("rkyv::Archive"));
-    assert!(code.contains("pub fn encode_signal_frame"));
-    assert!(code.contains("pub fn decode_signal_frame"));
+    assert!(!code.contains("pub fn encode_signal_frame"));
+    assert!(!code.contains("pub fn decode_signal_frame"));
+    assert!(code.contains("pub fn with_origin_route"));
     assert!(!code.contains("nota"));
     assert!(!code.contains("NotaDecode"));
     assert!(!code.contains("NotaEncode"));
@@ -408,13 +421,9 @@ fn emission_can_gate_nota_surface_behind_text_client_feature() {
     // serves both text-facing CLIs (with the feature on) and
     // binary-only daemons (with the feature off).
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated = RustEmitter::new(RustEmissionOptions {
-        nota_surface: NotaSurface::FeatureGated {
-            feature: "nota-text".to_owned(),
-        },
-        target: RustEmissionTarget::ComponentRuntime,
-    })
-    .emit_code_from_true_schema(&schema);
+    let generated = RustEmitter::new(RustEmissionOptions::feature_gated_nota("nota-text"))
+        .emit_code_from_true_schema(&schema)
+        .expect("schema emits");
     let code = generated.as_str();
 
     assert!(code.contains("derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)"));
@@ -422,13 +431,16 @@ fn emission_can_gate_nota_surface_behind_text_client_feature() {
     assert!(code.contains("#[cfg(feature = \"nota-text\")]\npub use nota::{"));
     assert!(code.contains("#[cfg(feature = \"nota-text\")]\nimpl std::str::FromStr for Input"));
     assert!(code.contains("#[cfg(feature = \"nota-text\")]\nimpl std::fmt::Display for Output"));
-    assert!(code.contains("pub fn encode_signal_frame"));
-    assert!(code.contains("pub fn decode_signal_frame"));
+    assert!(!code.contains("pub fn encode_signal_frame"));
+    assert!(!code.contains("pub fn decode_signal_frame"));
+    assert!(code.contains("pub fn with_origin_route"));
     // The default shape is identical to this explicit
     // construction — the checked-in `spirit_generated.rs` snapshot
     // is the binding form. Constructed-positional and default-
     // constructed emissions must stay byte-identical.
-    let default_generated = RustEmitter::default().emit_code_from_true_schema(&schema);
+    let default_generated = RustEmitter::default()
+        .emit_code_from_true_schema(&schema)
+        .expect("schema emits");
     assert_eq!(code, default_generated.as_str());
 }
 
@@ -451,7 +463,9 @@ fn rust_emission_options_default_is_feature_gated_nota_text() {
 #[test]
 fn emitted_path_mirrors_schema_module_identity() {
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit-next:signal:public");
-    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
+    let generated = RustEmitter::default()
+        .emit_file_from_true_schema(&schema)
+        .expect("schema emits");
 
     assert_eq!(generated.path, "src/schema/signal/public.rs");
 }
@@ -459,7 +473,9 @@ fn emitted_path_mirrors_schema_module_identity() {
 #[test]
 fn emits_schema_plane_engine_traits_for_declared_signal_nexus_and_sema_languages() {
     let schema = FixtureSchema::new("plane-triad.schema").lower("spirit:lib");
-    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
+    let generated = RustEmitter::default()
+        .emit_file_from_true_schema(&schema)
+        .expect("schema emits");
 
     assert!(generated.code.as_str().contains("pub trait SignalEngine"));
     assert!(
@@ -533,7 +549,10 @@ fn emits_schema_plane_engine_traits_for_declared_signal_nexus_and_sema_languages
     );
     assert!(generated.code.as_str().contains("pub enum NexusObjectName"));
     assert!(generated.code.as_str().contains("pub enum SemaObjectName"));
-    assert!(generated.code.as_str().contains("Input(InputRoute)"));
+    assert!(
+        !generated.code.as_str().contains("Input(InputRoute)"),
+        "internal runtime traces must not mint transport route identities"
+    );
     assert!(generated.code.as_str().contains("Started,"));
     assert!(generated.code.as_str().contains("Stopped,"));
     assert!(generated.code.as_str().contains("Triaged,"));
@@ -690,7 +709,8 @@ fn nexus_runner_shape_emits_total_projection_and_generated_adapter() {
     let generated = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::ComponentRuntime),
     )
-    .emit_file_from_true_schema(&schema);
+    .emit_file_from_true_schema(&schema)
+    .expect("schema emits");
     let code = generated.code.as_str();
 
     assert_generated_fixture("runner_generated.rs", code);
@@ -765,9 +785,12 @@ fn nexus_runner_shape_emits_total_projection_and_generated_adapter() {
 fn wire_contract_target_emits_wire_codecs_without_runtime_plane_support() {
     let schema = FixtureSchema::new("plane-triad.schema").lower("spirit:lib");
     let generated = RustEmitter::new(
-        RustEmissionOptions::binary_only().with_target(RustEmissionTarget::WireContract),
+        RustEmissionOptions::binary_only()
+            .with_target(RustEmissionTarget::WireContract)
+            .with_wire_contract_family(protos::WireContractFamily::SignalSpirit),
     )
-    .emit_file_from_true_schema(&schema);
+    .emit_file_from_true_schema(&schema)
+    .expect("schema emits");
     let code = generated.code.as_str();
 
     assert!(code.contains("pub enum Input"));
@@ -783,15 +806,16 @@ fn wire_contract_target_emits_wire_codecs_without_runtime_plane_support() {
     // even though it emits no daemon-side runtime planes.
     assert!(code.contains("pub enum InputRoute"));
     assert!(code.contains("pub enum OutputRoute"));
-    assert!(code.contains("pub fn encode_signal_frame"));
-    assert!(code.contains("pub fn decode_signal_frame"));
+    assert!(code.contains("pub fn decode_frame"));
     assert!(code.contains("pub enum SignalFrameError"));
 
     // The published contract crate must be a real signal-frame contract,
     // not only a daemon-local short-header payload codec.
     assert!(code.contains("impl signal_frame::RequestPayload for Input"));
     assert!(code.contains("impl signal_frame::SignalOperationHeads for Input"));
-    assert!(code.contains("pub type Frame = signal_frame::ExchangeFrame<Input, Output>;"));
+    assert!(code.contains(
+        "pub type Frame = signal_frame::BoundExchangeFrame<ContractMarker, Input, Output>;"
+    ));
     assert!(code.contains("pub type FrameBody = signal_frame::ExchangeFrameBody<Input, Output>;"));
     assert!(code.contains("pub type Request = signal_frame::Request<Input>;"));
     assert!(code.contains("pub type ReplyEnvelope = signal_frame::Reply<Output>;"));
@@ -831,23 +855,27 @@ fn frame_codec_reaches_wire_contract_targets_but_not_internal_planes() {
     let schema = FixtureSchema::new("plane-triad.schema");
 
     let wire_contract = RustEmitter::new(
-        RustEmissionOptions::binary_only().with_target(RustEmissionTarget::WireContract),
+        RustEmissionOptions::binary_only()
+            .with_target(RustEmissionTarget::WireContract)
+            .with_wire_contract_family(protos::WireContractFamily::SignalSpirit),
     )
-    .emit_file_from_true_schema(&schema.lower("spirit:lib"));
+    .emit_file_from_true_schema(&schema.lower("spirit:lib"))
+    .expect("schema emits");
     let wire_code = wire_contract.code.as_str();
 
     // (1) The wire contract carries the basic frame codec + route enums.
     assert!(wire_code.contains("pub enum InputRoute"));
     assert!(wire_code.contains("pub enum OutputRoute"));
-    assert!(wire_code.contains("pub fn encode_signal_frame"));
-    assert!(wire_code.contains("pub fn decode_signal_frame"));
+    assert!(wire_code.contains("pub fn decode_frame"));
     assert!(wire_code.contains("pub enum SignalFrameError"));
 
     // (2) Even without streams, a contract crate exposes the universal
     // signal-frame request/reply surface its consumers import.
     assert!(wire_code.contains("impl signal_frame::RequestPayload for Input"));
     assert!(wire_code.contains("impl signal_frame::SignalOperationHeads for Input"));
-    assert!(wire_code.contains("pub type Frame = signal_frame::ExchangeFrame<Input, Output>;"));
+    assert!(wire_code.contains(
+        "pub type Frame = signal_frame::BoundExchangeFrame<ContractMarker, Input, Output>;"
+    ));
     assert!(
         wire_code.contains("pub type FrameBody = signal_frame::ExchangeFrameBody<Input, Output>;")
     );
@@ -863,7 +891,8 @@ fn frame_codec_reaches_wire_contract_targets_but_not_internal_planes() {
     let nexus_runtime = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::NexusRuntime),
     )
-    .emit_file_from_true_schema(&schema.lower("daemon:nexus"));
+    .emit_file_from_true_schema(&schema.lower("daemon:nexus"))
+    .expect("schema emits");
     let nexus_code = nexus_runtime.code.as_str();
 
     assert!(!nexus_code.contains("pub fn encode_signal_frame"));
@@ -881,7 +910,8 @@ fn signal_runtime_target_emits_signal_runtime_without_nexus_or_sema_support() {
         RustEmissionOptions::feature_gated_nota("nota-text")
             .with_target(RustEmissionTarget::SignalRuntime),
     )
-    .emit_file_from_true_schema(&schema);
+    .emit_file_from_true_schema(&schema)
+    .expect("schema emits");
     let code = generated.code.as_str();
 
     assert!(code.contains("pub enum Input"));
@@ -889,8 +919,8 @@ fn signal_runtime_target_emits_signal_runtime_without_nexus_or_sema_support() {
     assert!(code.contains("pub struct OriginRoute"));
     assert!(code.contains("pub struct MessageIdentifier"));
     assert!(code.contains("pub struct Signal<Root>"));
-    assert!(code.contains("pub struct MessageSent"));
-    assert!(code.contains("pub struct MessageProcessed<Reply>"));
+    assert!(!code.contains("pub struct MessageSent"));
+    assert!(!code.contains("pub struct MessageProcessed<Reply>"));
     assert!(code.contains("#[allow(clippy::module_inception)]\npub mod signal"));
     assert!(code.contains("pub mod signal"));
     assert!(code.contains("pub enum SignalObjectName"));
@@ -903,8 +933,9 @@ fn signal_runtime_target_emits_signal_runtime_without_nexus_or_sema_support() {
     assert!(code.contains(
         "fn reply_inner(&self, output: Self::NexusOutput) -> signal::Signal<signal::Output>;"
     ));
-    assert!(code.contains("pub fn encode_signal_frame"));
-    assert!(code.contains("pub fn decode_signal_frame"));
+    assert!(code.contains("pub fn with_origin_route"));
+    assert!(!code.contains("pub fn encode_signal_frame"));
+    assert!(!code.contains("pub fn decode_signal_frame"));
 
     assert!(!code.contains("pub trait NexusEngine"));
     assert!(!code.contains("pub trait SemaEngine"));
@@ -922,7 +953,8 @@ fn nexus_runtime_target_emits_only_nexus_runtime_support_even_when_other_plane_n
     let generated = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::NexusRuntime),
     )
-    .emit_file_from_true_schema(&schema);
+    .emit_file_from_true_schema(&schema)
+    .expect("schema emits");
     let code = generated.code.as_str();
 
     assert!(code.contains("pub enum NexusWork"));
@@ -959,7 +991,8 @@ fn sema_runtime_target_emits_only_sema_runtime_support_even_when_other_plane_nam
     let generated = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::SemaRuntime),
     )
-    .emit_file_from_true_schema(&schema);
+    .emit_file_from_true_schema(&schema)
+    .expect("schema emits");
     let code = generated.code.as_str();
 
     assert!(code.contains("pub enum SemaWriteInput"));
@@ -998,7 +1031,8 @@ fn sema_runtime_target_accepts_plane_local_root_names() {
     let generated = RustEmitter::new(
         RustEmissionOptions::binary_only().with_target(RustEmissionTarget::SemaRuntime),
     )
-    .emit_file_from_true_schema(&schema);
+    .emit_file_from_true_schema(&schema)
+    .expect("schema emits");
     let code = generated.code.as_str();
 
     assert!(code.contains("pub enum WriteInput"));
@@ -1034,7 +1068,9 @@ fn sema_runtime_target_accepts_plane_local_root_names() {
 #[test]
 fn runtime_target_emits_read_only_sema_engine_when_read_roots_exist() {
     let schema = FixtureSchema::new("sema-read-only.schema").lower("daemon:sema");
-    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
+    let generated = RustEmitter::default()
+        .emit_file_from_true_schema(&schema)
+        .expect("schema emits");
     let code = generated.code.as_str();
 
     assert!(code.contains("pub trait SemaEngine"));
@@ -1058,7 +1094,9 @@ fn runtime_target_emits_read_only_sema_engine_when_read_roots_exist() {
 #[test]
 fn runtime_target_emits_write_only_sema_engine_when_write_roots_exist() {
     let schema = FixtureSchema::new("sema-write-only.schema").lower("daemon:sema");
-    let generated = RustEmitter::default().emit_file_from_true_schema(&schema);
+    let generated = RustEmitter::default()
+        .emit_file_from_true_schema(&schema)
+        .expect("schema emits");
     let code = generated.code.as_str();
 
     assert!(code.contains("pub trait SemaEngine"));
@@ -1079,30 +1117,6 @@ fn runtime_target_emits_write_only_sema_engine_when_write_roots_exist() {
     assert!(!code.contains("fn observe(&self"));
 }
 
-#[cfg(feature = "nota-text")]
-#[test]
-fn generated_trace_identity_is_typed_from_interface_headers() {
-    let signal_route = generated::ObjectName::Signal(generated::SignalObjectName::Input(
-        generated::InputRoute::Record,
-    ));
-
-    assert_eq!(signal_route.name(), "SignalInputRecord");
-
-    let event = generated::TraceEvent::new(signal_route);
-    assert_eq!(event.object_name(), signal_route);
-    assert_eq!(event.name(), "SignalInputRecord");
-    assert_eq!(
-        generated::NotaEncode::to_nota(&event),
-        "Signal.Input.Record"
-    );
-
-    let archive =
-        rkyv::to_bytes::<rkyv::rancor::Error>(&event).expect("trace event archives as rkyv");
-    let decoded = rkyv::from_bytes::<generated::TraceEvent, rkyv::rancor::Error>(&archive)
-        .expect("trace event decodes from rkyv");
-    assert_eq!(decoded, event);
-}
-
 #[test]
 fn compiled_fixture_is_usable_rust() {
     let entry = generated::Entry {
@@ -1114,51 +1128,14 @@ fn compiled_fixture_is_usable_rust() {
     let input = generated::Input::Record(entry);
 
     assert!(matches!(input, generated::Input::Record(_)));
-    assert_eq!(generated::short_header::INPUT_RECORD, 0x0000_0000_0000_0000);
-    assert_eq!(
-        generated::short_header::INPUT_OBSERVE,
-        0x0001_0000_0000_0000
-    );
-    assert_eq!(input.route(), generated::InputRoute::Record);
-    assert_eq!(input.short_header(), generated::short_header::INPUT_RECORD);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn engine_refusal_frame_round_trips_as_typed_decode_refusal() {
-    let refusal = generated::EngineRefusal::rejected("bookmark push refused".to_string());
-    let frame = refusal
-        .encode_signal_frame()
-        .expect("refusal frame encodes");
-
-    let decoded = generated::Input::decode_signal_frame(&frame)
-        .expect_err("a refusal frame is a typed refusal, not a payload");
-    let generated::SignalFrameError::EngineRefused { refusal: received } = decoded else {
-        panic!("expected EngineRefused, got {decoded:?}");
-    };
-    assert_eq!(received, refusal);
-    assert_eq!(received.reason, generated::EngineRefusalReason::Rejected);
-    assert_eq!(received.detail, "bookmark push refused");
-
-    let unavailable = generated::EngineRefusal::unavailable("engine actor stopped".to_string());
-    let frame = unavailable
-        .encode_signal_frame()
-        .expect("refusal frame encodes");
-    let decoded = generated::Output::decode_signal_frame(&frame)
-        .expect_err("both roots decode the shared refusal header");
-    assert!(matches!(
-        decoded,
-        generated::SignalFrameError::EngineRefused { refusal }
-            if refusal.reason == generated::EngineRefusalReason::Unavailable
-    ));
 }
 
 #[test]
 fn generated_roots_wrap_into_messages_with_automatic_origin_route() {
-    let input = FixtureNota::new("nota/observe-schema-principle.nota")
-        .read()
-        .parse::<generated::Input>()
-        .expect("parse observe input");
+    let input = generated::Input::Observe(generated::Query {
+        topic: generated::Topic::new("schema"),
+        kind: generated::Kind::Principle,
+    });
     let message: generated::signal::Signal<generated::signal::Input> =
         input.with_origin_route(generated::OriginRoute::new(19));
 
@@ -1213,148 +1190,14 @@ fn generated_signal_input_round_trips_from_nota_to_rkyv_bytes() {
     assert_eq!(decoded, input);
 }
 
-#[cfg(feature = "nota-text")]
-#[test]
-fn generated_signal_frame_methods_round_trip_and_triage_route() {
-    let input = FixtureNota::new("nota/record-schema-owns-frames.nota")
-        .read()
-        .parse::<generated::Input>()
-        .expect("parse generated input");
-
-    let frame = input.encode_signal_frame().expect("encode signal frame");
-    let (route, decoded) =
-        generated::Input::decode_signal_frame(&frame).expect("decode signal frame");
-
-    assert_eq!(route, generated::InputRoute::Record);
-    assert_eq!(decoded, input);
-    assert_eq!(
-        generated::Input::route_from_short_header(generated::short_header::INPUT_OBSERVE)
-            .expect("observe route"),
-        generated::InputRoute::Observe
-    );
-}
-
-struct MailHook {
-    sent_events: Vec<generated::MessageSent>,
-    processed_events: Vec<generated::MessageProcessed<generated::Output>>,
-}
-
-impl MailHook {
-    fn new() -> Self {
-        Self {
-            sent_events: Vec::new(),
-            processed_events: Vec::new(),
-        }
-    }
-}
-
-impl generated::MessageSentHook for MailHook {
-    type Error = RuntimeError;
-
-    fn message_sent(&mut self, event: generated::MessageSent) -> Result<(), Self::Error> {
-        self.sent_events.push(event);
-        Ok(())
-    }
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn generated_signal_roots_emit_typed_message_sent_events() {
-    let input = FixtureNota::new("nota/observe-schema-principle.nota")
-        .read()
-        .parse::<generated::Input>()
-        .expect("parse observe input");
-    let event = input
-        .with_origin_route(generated::OriginRoute::new(900))
-        .message_sent(generated::MessageIdentifier::new(42));
-    let mut hook = MailHook::new();
-
-    event.push_to(&mut hook).expect("message sent event pushes");
-
-    assert_eq!(
-        hook.sent_events,
-        vec![generated::MessageSent {
-            identifier: generated::MessageIdentifier::new(42),
-            origin_route: generated::OriginRoute::new(900),
-            root: generated::MessageRoot::Input,
-            short_header: generated::short_header::INPUT_OBSERVE,
-        }],
-    );
-    assert_eq!(event.origin_route(), generated::OriginRoute::new(900));
-    assert_eq!(
-        generated::NotaSource::new("900")
-            .parse::<generated::OriginRoute>()
-            .expect("origin route decodes through shared codec"),
-        generated::OriginRoute::new(900)
-    );
-    assert_eq!(
-        generated::NotaEncode::to_nota(&generated::OriginRoute::new(900)),
-        "900"
-    );
-    assert_eq!(
-        generated::NotaSource::new("42")
-            .parse::<generated::MessageIdentifier>()
-            .expect("message identifier decodes through shared codec"),
-        generated::MessageIdentifier::new(42)
-    );
-    assert_eq!(
-        generated::NotaEncode::to_nota(&generated::MessageIdentifier::new(42)),
-        "42"
-    );
-    assert_ne!(
-        event.origin_route(),
-        generated::OriginRoute::new(event.identifier.payload()),
-        "origin route is minted separately from the message identifier"
-    );
-}
-
-#[derive(Debug, PartialEq, Eq)]
-enum RuntimeError {
-    StateRejected,
-}
-
-impl generated::MessageProcessedHook<generated::Output> for MailHook {
-    type Error = RuntimeError;
-
-    fn message_processed(
-        &mut self,
-        event: generated::MessageProcessed<generated::Output>,
-    ) -> Result<(), Self::Error> {
-        self.processed_events.push(event);
-        Ok(())
-    }
-}
-
-#[test]
-fn generated_processed_mail_events_are_typed_without_root_dispatch_traits() {
-    assert_eq!(RuntimeError::StateRejected, RuntimeError::StateRejected);
-    let mut hook = MailHook::new();
-    let reply = generated::Output::RecordsObserved(generated::RecordSet::new(vec![]));
-
-    let processed = generated::MessageProcessed::new(
-        generated::MessageIdentifier::new(77),
-        generated::OriginRoute::new(701),
-        reply,
-    );
-    processed
-        .push_to(&mut hook)
-        .expect("processed mail event pushes");
-
-    assert_eq!(
-        hook.processed_events,
-        vec![generated::MessageProcessed {
-            identifier: generated::MessageIdentifier::new(77),
-            origin_route: generated::OriginRoute::new(701),
-            reply: generated::Output::RecordsObserved(generated::RecordSet::new(vec![])),
-        }],
-    );
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct PreviousEntry {
     topic: String,
     description: String,
 }
+
+#[derive(Debug, PartialEq, Eq)]
+enum RuntimeError {}
 
 #[cfg(feature = "nota-text")]
 #[derive(Debug, PartialEq, Eq)]
@@ -1411,7 +1254,9 @@ fn generated_upgrade_trait_accepts_previous_schema_objects_observably() {
 #[test]
 fn emits_vec_map_and_option_collection_types_with_shared_codec_traits() {
     let schema = FixtureSchema::new("collections.schema").lower("collections:lib");
-    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
+    let generated = RustEmitter::default()
+        .emit_code_from_true_schema(&schema)
+        .expect("schema emits");
     let code = generated.as_str();
 
     // The generated code imports the shared NOTA codec instead of
@@ -1454,7 +1299,9 @@ fn collection_free_schema_keeps_checked_generated_source_stable() {
     // emits exactly the checked-in fixture, proving the collection work
     // is purely additive.
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated = RustEmitter::default().emit_code_from_true_schema(&schema);
+    let generated = RustEmitter::default()
+        .emit_code_from_true_schema(&schema)
+        .expect("schema emits");
 
     assert_generated_fixture("spirit_generated.rs", generated.as_str());
 }

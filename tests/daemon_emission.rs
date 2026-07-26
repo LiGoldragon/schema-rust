@@ -149,6 +149,11 @@ fn single_listener_daemon_emits_the_async_single_listener_spine() {
     );
     assert_code_contains(code, "read_body_async(self.connection.stream_mut())");
     assert_code_contains(code, "write_body_async(");
+    assert_code_contains(code, "ContractMarker::decode_single_request(&frame)");
+    assert_code_contains(code, "output.encode_reply_frame(exchange)");
+    assert_code_contains(code, "refusal.encode_bound_frame()");
+    assert_code_excludes(code, "decode_signal_frame");
+    assert_code_excludes(code, "encode_signal_frame");
     // The single-listener async daemon has no sync listener, no meta tier, and
     // no listener-tier enum.
     assert_code_excludes(

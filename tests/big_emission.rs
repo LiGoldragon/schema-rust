@@ -81,6 +81,7 @@ impl<'fixture> BigRustFixture<'fixture> {
         let (schema, _) = self.lower();
         RustEmitter::default()
             .emit_code_from_true_schema(&schema)
+            .expect("schema emits")
             .as_str()
             .to_owned()
     }
@@ -257,8 +258,11 @@ fn generated_big_rust_contains_the_current_schema_stack_surfaces() {
 
     assert!(spirit.contains("pub enum Input"));
     assert!(spirit.contains("pub enum Output"));
-    assert!(spirit.contains("pub fn encode_signal_frame"));
+    assert!(!spirit.contains("pub fn encode_signal_frame"));
+    assert!(!spirit.contains("pub mod short_header"));
     assert!(spirit.contains("pub struct OriginRoute"));
+    assert!(spirit.contains("pub struct Signal<Root>"));
+    assert!(spirit.contains("pub fn with_origin_route"));
     assert!(!spirit.contains("pub struct NexusMail<Payload>"));
     assert!(!spirit.contains("pub trait InputNexus"));
     assert!(!spirit.contains("dispatch_mail_with_nexus"));
@@ -286,28 +290,29 @@ fn generated_big_rust_contains_the_current_schema_stack_surfaces() {
 
 #[cfg(feature = "nota-text")]
 #[test]
-fn compiled_large_spirit_generated_rust_parses_frames_and_emits_mail_events() {
+fn compiled_large_spirit_generated_rust_parses_and_wraps_runtime_envelopes() {
     let input = FixtureNota::new("nota/large-record-schema-rust.nota")
         .read()
         .parse::<spirit_large_generated::Input>()
         .expect("large spirit input parses");
-    let frame = input.encode_signal_frame().expect("signal frame encodes");
-    let (route, decoded) =
-        spirit_large_generated::Input::decode_signal_frame(&frame).expect("signal frame decodes");
-    let event = decoded
-        .with_origin_route(spirit_large_generated::OriginRoute::new(7001))
-        .message_sent(spirit_large_generated::MessageIdentifier::new(99));
+    let envelope = input.with_origin_route(spirit_large_generated::OriginRoute::new(7001));
+    let archive =
+        rkyv::to_bytes::<rkyv::rancor::Error>(&envelope).expect("runtime envelope archives");
+    let decoded = rkyv::from_bytes::<
+        spirit_large_generated::Signal<spirit_large_generated::Input>,
+        rkyv::rancor::Error,
+    >(&archive)
+    .expect("runtime envelope decodes");
 
-    assert_eq!(route, spirit_large_generated::InputRoute::Record);
+    assert_eq!(decoded, envelope);
     assert_eq!(
-        event.identifier,
-        spirit_large_generated::MessageIdentifier::new(99)
-    );
-    assert_eq!(
-        event.origin_route,
+        decoded.origin_route(),
         spirit_large_generated::OriginRoute::new(7001)
     );
-    assert_eq!(event.root, spirit_large_generated::MessageRoot::Input);
+    assert!(matches!(
+        decoded.into_root(),
+        spirit_large_generated::Input::Record(_)
+    ));
 }
 
 fn fixture_path(name: &str, extension: &str) -> PathBuf {

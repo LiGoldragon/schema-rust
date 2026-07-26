@@ -26,6 +26,7 @@ fn module(fixture: &str) -> RustModule {
 fn emit(fixture: &str) -> String {
     RustEmitter::new(RustEmissionOptions::binary_only())
         .emit_code_from_true_schema(&lower(fixture))
+        .expect("schema emits")
         .as_str()
         .to_owned()
 }
