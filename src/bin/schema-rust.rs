@@ -238,6 +238,7 @@ struct WireContractRequest {
 enum WireContractFamily {
     SignalSpirit,
     MetaSignalSpirit,
+    SignalSpiritJudge,
 }
 
 impl WireContractFamily {
@@ -245,6 +246,7 @@ impl WireContractFamily {
         match self {
             Self::SignalSpirit => protos::WireContractFamily::SignalSpirit,
             Self::MetaSignalSpirit => protos::WireContractFamily::MetaSignalSpirit,
+            Self::SignalSpiritJudge => protos::WireContractFamily::SignalSpiritJudge,
         }
     }
 }

@@ -91,3 +91,27 @@ fn schema_rust_cli_enforces_single_argument_rule() {
     let stderr = String::from_utf8(output.stderr).expect("stderr is UTF-8");
     assert!(stderr.contains("expected exactly one component argument"));
 }
+
+#[test]
+fn schema_rust_cli_accepts_the_canonical_judge_contract_family() {
+    let manifest_directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let contract_root = manifest_directory.join("tests/fixtures/driver-contract");
+    let request = format!(
+        "Generate.{{ {} driver-contract 0.1.0 [WireContract.{{ SignalSpiritJudge lib }}] [] }}",
+        contract_root.display()
+    );
+
+    let output = Command::new(env!("CARGO_BIN_EXE_schema-rust"))
+        .arg(request)
+        .output()
+        .expect("run schema-rust CLI");
+
+    assert!(
+        output.status.success(),
+        "schema-rust CLI failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("stdout is UTF-8");
+    assert!(stdout.contains("Generated.{"));
+    assert!(stdout.contains("src/schema/lib.rs"));
+}

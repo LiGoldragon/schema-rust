@@ -21,7 +21,7 @@ required-features = ["cli"]
 nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", rev = "89dc3c85a9ff96d4e4d53accfd867df672cae5a8" }
 prettyplease = "0.2"
 proc-macro2 = "1"
-protos = { git = "https://github.com/LiGoldragon/protos.git", rev = "4cb55c87174db23ba21237f5975bf97b4c0690b5" }
+protos = { git = "https://github.com/LiGoldragon/protos.git", rev = "9bce5ed8efadeb157811b256aa69a1f88cd5314f" }
 quote = "1"
 schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "9c217610c4b8d3bdaa9f95542e28c04424a593e3" }
 syn = { version = "2", features = ["full"] }

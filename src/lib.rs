@@ -671,7 +671,7 @@ impl LowerToRust<RustModule> for TrueSchema {
 /// default features off and carry no `nota` in their dependency
 /// closure. The default target is [`RustEmissionTarget::ComponentRuntime`]
 /// so existing all-in-one runtime consumers keep their generated engine traits.
-/// New signal and meta-signal contract repos should opt into
+/// New external signal contract repos should opt into
 /// [`RustEmissionTarget::WireContract`]. Daemon-local signal runtime schemas
 /// should opt into [`RustEmissionTarget::SignalRuntime`]. New daemon decision
 /// and storage plane schemas should opt into [`RustEmissionTarget::NexusRuntime`]
@@ -791,7 +791,7 @@ pub enum RustEmissionTarget {
     /// Schema declarations plus local inherent/codec support, with no root
     /// input/output enums and no Signal/Nexus/SEMA runtime plane.
     DeclarationModule,
-    /// External signal or meta-signal wire vocabulary plus codecs only.
+    /// External signal contract vocabulary plus codecs only.
     WireContract,
     /// Bootstrap all-in-one runtime emission for unsplit schemas.
     ComponentRuntime,

@@ -433,7 +433,7 @@ dependencies = [
 [[package]]
 name = "protos"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/protos.git?rev=4cb55c87174db23ba21237f5975bf97b4c0690b5#4cb55c87174db23ba21237f5975bf97b4c0690b5"
+source = "git+https://github.com/LiGoldragon/protos.git?rev=9bce5ed8efadeb157811b256aa69a1f88cd5314f#9bce5ed8efadeb157811b256aa69a1f88cd5314f"
 dependencies = [
  "content-identity",
  "name-table",

@@ -220,7 +220,7 @@ form.
   What stays is the two-languages distinction (internal effect vocabulary
   vs external wire vocabulary), effect-table match-driven dispatch, and
   actor fan-out expressed as method returns.
-- `RustEmissionTarget::WireContract` emits the external signal or meta-signal
+- `RustEmissionTarget::WireContract` emits an external signal contract
   wire surface: schema nouns, derives, NOTA/rkyv codecs, short-header route
   constants, and the universal `signal-frame` request/reply surface (`Frame`,
   `FrameBody`, `Request`, `ReplyEnvelope`, `RequestBuilder`,
@@ -257,8 +257,8 @@ form.
   for unsplit all-in-one schemas. It emits the old combined Signal/Nexus/SEMA
   runtime support, including the generic plane enum and cross-plane
   projections. New daemon schemas use the per-plane targets instead.
-- Build scripts use the shared driver rather than local emit loops. A signal or
-  meta-signal contract crate uses `build::ContractCrateBuild`, which emits
+- Build scripts use the shared driver rather than local emit loops. An external
+  signal contract crate uses `build::ContractCrateBuild`, which emits
   `schema/lib.schema` through `RustEmissionTarget::WireContract`, writes/checks
   `src/schema/lib.rs`, and publishes `cargo::metadata=schema-dir=...` for
   importers. A daemon crate uses `GenerationPlan::daemon_runtime`, which emits
@@ -500,8 +500,8 @@ form.
   constructors (`::binary_only`, `::feature_gated_nota("...")`,
   `::always_enabled_nota`) set the compatibility target
   `RustEmissionTarget::ComponentRuntime`; callers use `with_target` to select
-  `RustEmissionTarget::WireContract` for external signal and meta-signal
-  contract generation, `RustEmissionTarget::NexusRuntime` for daemon Nexus
+  `RustEmissionTarget::WireContract` for external signal contract generation,
+  `RustEmissionTarget::NexusRuntime` for daemon Nexus
   schemas, and `RustEmissionTarget::SemaRuntime` for daemon SEMA schemas.
   `RustEmissionOptions::default()` and `RustEmitter::default()` both pick
   `NotaSurface::FeatureGated { feature: "nota-text" }` plus
