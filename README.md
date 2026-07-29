@@ -1,9 +1,16 @@
 # schema-rust
 
+**Frozen donor, dead under its old name.** This repo was ruled dead under its
+old name 2026-07-27 (S1R entry 7): the language is Ethos, and legacy schema,
+schema-language, and schema-rust die under their old names. It gains no new
+consumers; the description below is what this frozen donor currently
+implements, not the approved architecture going forward.
+
 `schema-rust` emits source-visible Rust interface code from `schema-language`'s typed
 schema data.
 
-This repository is deliberately not a Rust macro crate. The active path is:
+This repository is deliberately not a Rust macro crate. The active path in
+this frozen donor's own code is:
 authored `.schema` source deserializes into `schema_language::SchemaSource`, lowers into
 semantic `schema_language::TrueSchema`, then emits Rust source under `src/schema/`.
 `TrueSchema` is the canonical decoded semantic layer; generated Rust is only a

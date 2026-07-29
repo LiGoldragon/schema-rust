@@ -1,5 +1,12 @@
 # Architecture
 
+**Frozen donor, dead under its old name.** This repo was ruled dead under its
+old name 2026-07-27 (S1R entry 7): the language is Ethos, and legacy schema,
+schema-language, and schema-rust die under their old names. It gains no new
+consumers. Everything below describes what this frozen donor currently
+implements, not the approved architecture going forward under the Ethos
+name.
+
 `schema-rust` emits Rust interface source from typed schema data and owns the
 shared build-driver orchestrator for generated schema modules. This repository
 owns the Rust code-generation step and that orchestrator; it does not define
@@ -529,6 +536,6 @@ form.
   for current::T` per changed type, materializing the `FieldMigration` directive.
   Correctness is proved by a Layer-2 rustc-subprocess witness that compiles the
   emitted code, not by a grep test. In the target evolution model, structural
-  edits (`AddField`, `ChangeFieldType`, `AddVariant`) change core-schema bytes
+  edits (`AddField`, `ChangeFieldType`, `AddVariant`) change core-ethos bytes
   and emit these historical-to-current `From` implementations, while a `Rename`
   edit touches only the `NameTable` and emits no migration code.
