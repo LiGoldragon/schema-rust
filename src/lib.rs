@@ -193,7 +193,7 @@ impl RustSchemaSourceLowering for SchemaSource {
     ) -> Result<RustModule, RustGenerationError> {
         let schema = engine.lower_schema_source_with_resolver(self, identity, resolver)?;
         let module = schema.lower_to_rust_module(emitter);
-        // Emission boundary: a malformed schema name (NOTA accepts symbol atoms
+        // Emission boundary: a malformed schema name (DOTOS accepts symbol atoms
         // Rust rejects as identifiers) becomes a typed error here instead of a
         // panic at `Ident::new`, and the recognized `{| … |}` catalog subset is
         // verified against the surface the module actually emits.
@@ -442,7 +442,7 @@ impl RustModule {
 
     /// Validate every emitted Rust identifier — type names, field names, enum
     /// variants, generic parameters — as a legal Rust identifier BEFORE any
-    /// `ToTokens` runs. NOTA accepts a far broader symbol atom than Rust accepts
+    /// `ToTokens` runs. DOTOS accepts a far broader symbol atom than Rust accepts
     /// as an identifier (`Foo-Bar`, `2Things`, `A/B` all parse as schema
     /// names), so a malformed name would otherwise reach `Ident::new` and PANIC.
     /// This boundary turns that panic into a typed [`SchemaError`] naming the
@@ -560,8 +560,8 @@ impl RustModule {
         }
         writer.blank();
         writer.emit_imports(&self.imports);
-        writer.emit_nota_support();
-        if writer.nota_surface().emits_nota() {
+        writer.emit_dotos_support();
+        if writer.dotos_surface().emits_dotos() {
             writer.blank();
         }
 
@@ -594,7 +594,7 @@ impl RustModule {
         );
         if writer.emits_root_enums() {
             for root_enum in &self.root_enums {
-                writer.emit_nota_root_enum_support(root_enum);
+                writer.emit_dotos_root_enum_support(root_enum);
                 writer.blank();
             }
         }
@@ -662,13 +662,13 @@ impl LowerToRust<RustModule> for TrueSchema {
 
 /// The emission knobs passed to [`RustEmitter::new`].
 ///
-/// The default is [`NotaSurface::FeatureGated`] with feature name
-/// `"nota-text"`. That is the recommended shape per the codec opt-in
-/// design: rkyv is the universal base, and NOTA encode/decode are an
+/// The default is [`DotosSurface::FeatureGated`] with feature name
+/// `"dotos-text"`. That is the recommended shape per the codec opt-in
+/// design: rkyv is the universal base, and DOTOS encode/decode are an
 /// opt-in surface that text-facing clients (CLIs, launchers, REPLs)
 /// enable through a cargo feature. Binary-only consumers (daemons,
 /// future binary-only clients) build the contract crate with the
-/// default features off and carry no `nota` in their dependency
+/// default features off and carry no `dotos` in their dependency
 /// closure. The default target is [`RustEmissionTarget::ComponentRuntime`]
 /// so existing all-in-one runtime consumers keep their generated engine traits.
 /// New external signal contract repos should opt into
@@ -678,38 +678,38 @@ impl LowerToRust<RustModule> for TrueSchema {
 /// or [`RustEmissionTarget::SemaRuntime`] for per-plane runtime emission.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RustEmissionOptions {
-    pub nota_surface: NotaSurface,
+    pub dotos_surface: DotosSurface,
     pub target: RustEmissionTarget,
     wire_contract_family: Option<protos::WireContractFamily>,
 }
 
 impl Default for RustEmissionOptions {
     fn default() -> Self {
-        Self::feature_gated_nota("nota-text")
+        Self::feature_gated_dotos("dotos-text")
     }
 }
 
 impl RustEmissionOptions {
-    /// Always emit `nota::NotaDecode` / `nota::NotaEncode`
+    /// Always emit `dotos::DotosDecode` / `dotos::DotosEncode`
     /// derives, the root `FromStr` / `Display` impls, and the `use
-    /// nota::*` pull-in — without any cargo-feature gate.
-    pub fn always_enabled_nota() -> Self {
+    /// dotos::*` pull-in — without any cargo-feature gate.
+    pub fn always_enabled_dotos() -> Self {
         Self {
-            nota_surface: NotaSurface::AlwaysEnabled,
+            dotos_surface: DotosSurface::AlwaysEnabled,
             target: RustEmissionTarget::ComponentRuntime,
             wire_contract_family: None,
         }
     }
 
-    /// Emit the NOTA surface guarded by `#[cfg_attr(feature = "<feature>",
+    /// Emit the DOTOS surface guarded by `#[cfg_attr(feature = "<feature>",
     /// derive(...))]` on data types and `#[cfg(feature = "<feature>")]`
-    /// on FromStr/Display impls and the `use nota::*` items.
+    /// on FromStr/Display impls and the `use dotos::*` items.
     /// Consumers enable the feature only in text-facing crates (CLI,
-    /// launcher) and leave it off in daemon-only crates so `nota`
+    /// launcher) and leave it off in daemon-only crates so `dotos`
     /// stays out of the binary-only dependency closure.
-    pub fn feature_gated_nota(feature: impl Into<String>) -> Self {
+    pub fn feature_gated_dotos(feature: impl Into<String>) -> Self {
         Self {
-            nota_surface: NotaSurface::FeatureGated {
+            dotos_surface: DotosSurface::FeatureGated {
                 feature: feature.into(),
             },
             target: RustEmissionTarget::ComponentRuntime,
@@ -717,21 +717,21 @@ impl RustEmissionOptions {
         }
     }
 
-    /// Emit no NOTA surface at all. The generated source contains no
-    /// `nota::*` references, no `FromStr` / `Display` impls
-    /// (since both depend on `NotaDecode` / `NotaEncode`). The resulting
-    /// Rust file compiles without `nota` in the dependency closure.
+    /// Emit no DOTOS surface at all. The generated source contains no
+    /// `dotos::*` references, no `FromStr` / `Display` impls
+    /// (since both depend on `DotosDecode` / `DotosEncode`). The resulting
+    /// Rust file compiles without `dotos` in the dependency closure.
     /// This is the daemon-only / binary-only shape.
     pub fn binary_only() -> Self {
         Self {
-            nota_surface: NotaSurface::Disabled,
+            dotos_surface: DotosSurface::Disabled,
             target: RustEmissionTarget::ComponentRuntime,
             wire_contract_family: None,
         }
     }
 
     pub fn wire_contract(family: protos::WireContractFamily) -> Self {
-        Self::feature_gated_nota("nota-text")
+        Self::feature_gated_dotos("dotos-text")
             .with_target(RustEmissionTarget::WireContract)
             .with_wire_contract_family(family)
     }
@@ -746,8 +746,8 @@ impl RustEmissionOptions {
         self
     }
 
-    fn nota_surface(&self) -> &NotaSurface {
-        &self.nota_surface
+    fn dotos_surface(&self) -> &DotosSurface {
+        &self.dotos_surface
     }
 
     pub fn target(&self) -> RustEmissionTarget {
@@ -993,18 +993,18 @@ impl Plane {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum NotaSurface {
+pub enum DotosSurface {
     AlwaysEnabled,
     FeatureGated { feature: String },
     Disabled,
 }
 
-impl NotaSurface {
-    fn emits_nota(&self) -> bool {
+impl DotosSurface {
+    fn emits_dotos(&self) -> bool {
         !matches!(self, Self::Disabled)
     }
 
-    fn includes_nota_in_derive(&self) -> bool {
+    fn includes_dotos_in_derive(&self) -> bool {
         matches!(self, Self::AlwaysEnabled)
     }
 }
@@ -1606,7 +1606,7 @@ struct RustRenderContext {
     map_key_type_names: Vec<String>,
     ordering_type_names: Vec<String>,
     private_type_names: Vec<String>,
-    nota_surface: NotaSurface,
+    dotos_surface: DotosSurface,
 }
 
 impl RustRenderContext {
@@ -1614,13 +1614,13 @@ impl RustRenderContext {
         map_key_type_names: Vec<String>,
         ordering_type_names: Vec<String>,
         private_type_names: Vec<String>,
-        nota_surface: NotaSurface,
+        dotos_surface: DotosSurface,
     ) -> Self {
         Self {
             map_key_type_names,
             ordering_type_names,
             private_type_names,
-            nota_surface,
+            dotos_surface,
         }
     }
 
@@ -1658,13 +1658,13 @@ impl RustRenderContext {
 
     fn derive_attributes(&self, includes_copy: bool, includes_ordering: bool) -> Vec<TokenStream> {
         let mut attributes = Vec::new();
-        if let NotaSurface::FeatureGated { feature } = &self.nota_surface {
+        if let DotosSurface::FeatureGated { feature } = &self.dotos_surface {
             attributes.push(quote! {
-                #[cfg_attr(feature = #feature, derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode))]
+                #[cfg_attr(feature = #feature, derive(dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode))]
             });
         }
-        let nota_derives = if self.nota_surface.includes_nota_in_derive() {
-            quote! { nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode, }
+        let dotos_derives = if self.dotos_surface.includes_dotos_in_derive() {
+            quote! { dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode, }
         } else {
             TokenStream::new()
         };
@@ -1680,7 +1680,7 @@ impl RustRenderContext {
         };
         attributes.push(quote! {
             #[derive(
-                #nota_derives
+                #dotos_derives
                 rkyv::Archive,
                 rkyv::Serialize,
                 rkyv::Deserialize,
@@ -1707,13 +1707,13 @@ impl RustRenderContext {
         }
     }
 
-    /// The `#[cfg(feature = "<feature>")]` gate applied to NOTA-only
+    /// The `#[cfg(feature = "<feature>")]` gate applied to DOTOS-only
     /// items, as a token attribute. `None` when the surface is always
     /// enabled or disabled (no gate line).
-    fn nota_feature_gate(&self) -> Option<TokenStream> {
-        match &self.nota_surface {
-            NotaSurface::AlwaysEnabled | NotaSurface::Disabled => None,
-            NotaSurface::FeatureGated { feature } => Some(quote! {
+    fn dotos_feature_gate(&self) -> Option<TokenStream> {
+        match &self.dotos_surface {
+            DotosSurface::AlwaysEnabled | DotosSurface::Disabled => None,
+            DotosSurface::FeatureGated { feature } => Some(quote! {
                 #[cfg(feature = #feature)]
             }),
         }
@@ -1782,7 +1782,7 @@ impl<'name> RustIdentifier<'name> {
 
     /// Validate a schema-derived name in a type/variant/parameter position as a
     /// legal Rust identifier, yielding a typed [`SchemaError`] (not a panic)
-    /// when it is not. NOTA accepts symbol atoms (`Foo-Bar`, `A/B`, `2Things`)
+    /// when it is not. DOTOS accepts symbol atoms (`Foo-Bar`, `A/B`, `2Things`)
     /// far broader than Rust identifiers, so this gate is what stops a malformed
     /// schema name from reaching `Ident::new` and aborting the generator.
     fn verify(name: &Name, position: &str) -> Result<(), SchemaError> {
@@ -2293,39 +2293,39 @@ impl<'name> ScreamingName<'name> {
     }
 }
 
-/// How the generated `to_nota` bridge takes its receiver. A `Copy` noun
+/// How the generated `to_dotos` bridge takes its receiver. A `Copy` noun
 /// takes `self` by value and borrows for the encode call; every other noun
 /// borrows `&self`.
 #[derive(Clone, Copy)]
-/// Renders the root-enum `FromStr` + `Display` NOTA surface, each gated by
-/// the context's NOTA feature gate.
-struct NotaRootEnumStringSupportTokens<'name, 'context> {
+/// Renders the root-enum `FromStr` + `Display` DOTOS surface, each gated by
+/// the context's DOTOS feature gate.
+struct DotosRootEnumStringSupportTokens<'name, 'context> {
     name: &'name str,
     context: &'context RustRenderContext,
 }
 
-impl<'name, 'context> NotaRootEnumStringSupportTokens<'name, 'context> {
+impl<'name, 'context> DotosRootEnumStringSupportTokens<'name, 'context> {
     fn new(name: &'name str, context: &'context RustRenderContext) -> Self {
         Self { name, context }
     }
 }
 
-impl ToTokens for NotaRootEnumStringSupportTokens<'_, '_> {
+impl ToTokens for DotosRootEnumStringSupportTokens<'_, '_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let gate = self.context.nota_feature_gate();
+        let gate = self.context.dotos_feature_gate();
         let name = RustIdentifier::new(self.name);
         quote! {
             #gate
             impl std::str::FromStr for #name {
-                type Err = NotaDecodeError;
+                type Err = DotosDecodeError;
                 fn from_str(source: &str) -> Result<Self, Self::Err> {
-                    NotaSource::new(source).parse::<Self>()
+                    DotosSource::new(source).parse::<Self>()
                 }
             }
             #gate
             impl std::fmt::Display for #name {
                 fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    formatter.write_str(&<Self as NotaEncode>::to_nota(self))
+                    formatter.write_str(&<Self as DotosEncode>::to_dotos(self))
                 }
             }
         }
@@ -4155,9 +4155,9 @@ impl ToTokens for ScopeFamilyTokens<'_, '_, '_> {
             .rev()
             .map(|model| ScopeEnumTokens::new(model, self.visibility, self.context));
         let operation_tokens = models.iter().map(ScopeOperationImplTokens::new);
-        let nota_tokens = if self.context.nota_surface.emits_nota() {
+        let dotos_tokens = if self.context.dotos_surface.emits_dotos() {
             let string_support =
-                NotaRootEnumStringSupportTokens::new(self.newtype.name().as_str(), self.context);
+                DotosRootEnumStringSupportTokens::new(self.newtype.name().as_str(), self.context);
             quote! {
                 #string_support
             }
@@ -4167,7 +4167,7 @@ impl ToTokens for ScopeFamilyTokens<'_, '_, '_> {
         quote! {
             #(#enum_tokens)*
             #(#operation_tokens)*
-            #nota_tokens
+            #dotos_tokens
         }
         .to_tokens(tokens);
     }
@@ -4815,7 +4815,7 @@ impl<'schema> CollectionScan<'schema> {
 }
 
 /// The render driver for one generated module. It owns the emission
-/// context (the map-key and private-type name sets, the NOTA surface, and
+/// context (the map-key and private-type name sets, the DOTOS surface, and
 /// the emission target) and accumulates the pretty-printed source text as
 /// each section's token-wrapper noun renders itself through
 /// [`RustModuleRenderer::emit_item_tokens`]. It builds **no** Rust as
@@ -4829,7 +4829,7 @@ struct RustModuleRenderer {
     map_key_types: Vec<String>,
     ordering_types: Vec<String>,
     private_type_names: Vec<String>,
-    nota_surface: NotaSurface,
+    dotos_surface: DotosSurface,
     target: RustEmissionTarget,
     wire_binding: Option<WireBinding>,
 }
@@ -5043,14 +5043,14 @@ impl RustModuleRenderer {
             map_key_types: Vec::new(),
             ordering_types: Vec::new(),
             private_type_names: Vec::new(),
-            nota_surface: options.nota_surface().clone(),
+            dotos_surface: options.dotos_surface().clone(),
             target: options.target(),
             wire_binding,
         })
     }
 
-    fn nota_surface(&self) -> &NotaSurface {
-        &self.nota_surface
+    fn dotos_surface(&self) -> &DotosSurface {
+        &self.dotos_surface
     }
 
     fn emits_runtime_support(&self) -> bool {
@@ -5091,7 +5091,7 @@ impl RustModuleRenderer {
             self.map_key_types.clone(),
             self.ordering_types.clone(),
             self.private_type_names.clone(),
-            self.nota_surface.clone(),
+            self.dotos_surface.clone(),
         )
     }
 
@@ -5156,24 +5156,24 @@ impl RustModuleRenderer {
     }
 
     /// Emits the `Bytes` scalar as a local storage newtype over `Vec<u8>`.
-    /// The inner value is nota's byte scalar, so the generated type can
-    /// derive NOTA codecs instead of emitting a local implementation.
+    /// The inner value is dotos's byte scalar, so the generated type can
+    /// derive DOTOS codecs instead of emitting a local implementation.
     fn emit_bytes_scalar(&mut self) {
-        let nota_gate = match &self.nota_surface {
-            NotaSurface::AlwaysEnabled | NotaSurface::Disabled => quote! {},
-            NotaSurface::FeatureGated { feature } => quote! {
-                #[cfg_attr(feature = #feature, derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode))]
+        let dotos_gate = match &self.dotos_surface {
+            DotosSurface::AlwaysEnabled | DotosSurface::Disabled => quote! {},
+            DotosSurface::FeatureGated { feature } => quote! {
+                #[cfg_attr(feature = #feature, derive(dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode))]
             },
         };
-        let nota_derives = if self.nota_surface.includes_nota_in_derive() {
-            quote! { nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode, }
+        let dotos_derives = if self.dotos_surface.includes_dotos_in_derive() {
+            quote! { dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode, }
         } else {
             quote! {}
         };
         self.emit_item_tokens(quote! {
-            #nota_gate
+            #dotos_gate
             #[derive(
-                #nota_derives
+                #dotos_derives
                 rkyv::Archive,
                 rkyv::Serialize,
                 rkyv::Deserialize,
@@ -5185,11 +5185,11 @@ impl RustModuleRenderer {
                 Ord,
                 Hash,
             )]
-            pub struct Bytes(nota::ByteSequence);
+            pub struct Bytes(dotos::ByteSequence);
 
             impl Bytes {
                 pub fn new(payload: Vec<u8>) -> Self {
-                    Self(nota::ByteSequence::new(payload))
+                    Self(dotos::ByteSequence::new(payload))
                 }
 
                 pub fn payload(&self) -> &[u8] {
@@ -5205,25 +5205,25 @@ impl RustModuleRenderer {
 
     /// Emits the generic fixed-size `FixedBytes<const WIDTH: usize>([u8; WIDTH])`
     /// that `(Bytes N)` references lower to (`FixedBytes<N>`). One generic type
-    /// serves every width; the inner value is nota's fixed byte scalar, so
-    /// the generated type can derive NOTA codecs instead of emitting a local
+    /// serves every width; the inner value is dotos's fixed byte scalar, so
+    /// the generated type can derive DOTOS codecs instead of emitting a local
     /// implementation.
     fn emit_fixed_bytes_scalar(&mut self) {
-        let nota_gate = match &self.nota_surface {
-            NotaSurface::AlwaysEnabled | NotaSurface::Disabled => quote! {},
-            NotaSurface::FeatureGated { feature } => quote! {
-                #[cfg_attr(feature = #feature, derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode))]
+        let dotos_gate = match &self.dotos_surface {
+            DotosSurface::AlwaysEnabled | DotosSurface::Disabled => quote! {},
+            DotosSurface::FeatureGated { feature } => quote! {
+                #[cfg_attr(feature = #feature, derive(dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode))]
             },
         };
-        let nota_derives = if self.nota_surface.includes_nota_in_derive() {
-            quote! { nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode, }
+        let dotos_derives = if self.dotos_surface.includes_dotos_in_derive() {
+            quote! { dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode, }
         } else {
             quote! {}
         };
         self.emit_item_tokens(quote! {
-            #nota_gate
+            #dotos_gate
             #[derive(
-                #nota_derives
+                #dotos_derives
                 rkyv::Archive,
                 rkyv::Serialize,
                 rkyv::Deserialize,
@@ -5235,11 +5235,11 @@ impl RustModuleRenderer {
                 Ord,
                 Hash,
             )]
-            pub struct FixedBytes<const WIDTH: usize>(nota::FixedByteSequence<WIDTH>);
+            pub struct FixedBytes<const WIDTH: usize>(dotos::FixedByteSequence<WIDTH>);
 
             impl<const WIDTH: usize> FixedBytes<WIDTH> {
                 pub fn new(payload: [u8; WIDTH]) -> Self {
-                    Self(nota::FixedByteSequence::new(payload))
+                    Self(dotos::FixedByteSequence::new(payload))
                 }
 
                 pub fn payload(&self) -> &[u8; WIDTH] {
@@ -5279,16 +5279,16 @@ impl RustModuleRenderer {
         );
     }
 
-    fn emit_nota_support(&mut self) {
-        if !self.nota_surface.emits_nota() {
+    fn emit_dotos_support(&mut self) {
+        if !self.dotos_surface.emits_dotos() {
             return;
         }
         let context = self.render_context();
-        let gate = context.nota_feature_gate();
+        let gate = context.dotos_feature_gate();
         self.emit_item_tokens(quote! {
             #gate
-            pub use nota::{
-                NotaDecodeError, NotaEncode, NotaSource,
+            pub use dotos::{
+                DotosDecodeError, DotosEncode, DotosSource,
             };
         });
     }
@@ -5515,13 +5515,13 @@ impl RustModuleRenderer {
         }
     }
 
-    fn emit_nota_root_enum_support(&mut self, root_enum: &RustEnum) {
-        if !self.nota_surface.emits_nota() {
+    fn emit_dotos_root_enum_support(&mut self, root_enum: &RustEnum) {
+        if !self.dotos_surface.emits_dotos() {
             return;
         }
         let context = self.render_context();
         self.emit_item_tokens(
-            NotaRootEnumStringSupportTokens::new(root_enum.name().as_str(), &context)
+            DotosRootEnumStringSupportTokens::new(root_enum.name().as_str(), &context)
                 .into_token_stream(),
         );
     }
@@ -7124,7 +7124,7 @@ impl RustModuleRenderer {
     /// collection variants recurse: `Vector` → `Vec<inner>`, `Map` →
     /// `BTreeMap<key, value>` (the `KeyValue` keyword), `Optional` →
     /// `Option<inner>`. `BTreeMap` is written fully-qualified so no
-    /// `use` is emitted and the ordering is deterministic (rkyv + NOTA
+    /// `use` is emitted and the ordering is deterministic (rkyv + DOTOS
     /// round-trips need a stable key order).
     fn rust_type(&self, reference: &TypeReference) -> String {
         match reference {

@@ -78,10 +78,10 @@ fn generated_standard_impls_compile_and_delegate_to_payloads() {
     assert_eq!(name.as_ref(), "schema");
     assert_eq!(name, "schema");
 
-    let path = generated::FilePath::new("/tmp/schema.nota");
-    assert_eq!(path.to_string(), "/tmp/schema.nota");
-    assert_eq!(path.as_ref(), "/tmp/schema.nota");
-    assert_eq!(path, "/tmp/schema.nota");
+    let path = generated::FilePath::new("/tmp/schema.dotos");
+    assert_eq!(path.to_string(), "/tmp/schema.dotos");
+    assert_eq!(path.as_ref(), "/tmp/schema.dotos");
+    assert_eq!(path, "/tmp/schema.dotos");
 
     let count = generated::Count::new(42);
     assert_eq!(count.to_string(), "42");

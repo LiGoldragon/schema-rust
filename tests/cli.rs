@@ -70,7 +70,7 @@ fn schema_rust_cli_pretty_flag_reflows_the_same_document() {
     // The pretty form re-parses to the same document: collapsing it back to a
     // single line reproduces the canonical output byte-for-byte.
     let reparsed =
-        nota::Document::parse(pretty_stdout.trim()).expect("pretty output is valid nota");
+        dotos::Document::parse(pretty_stdout.trim()).expect("pretty output is valid dotos");
     let collapsed = reparsed
         .root_objects()
         .iter()

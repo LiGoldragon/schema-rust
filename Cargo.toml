@@ -18,26 +18,26 @@ path = "src/bin/schema-rust.rs"
 required-features = ["cli"]
 
 [dependencies]
-nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", rev = "89dc3c85a9ff96d4e4d53accfd867df672cae5a8" }
+dotos = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "80c7b17f7ad3" }
 prettyplease = "0.2"
 proc-macro2 = "1"
 protos = { git = "https://github.com/LiGoldragon/protos.git", rev = "9bce5ed8efadeb157811b256aa69a1f88cd5314f" }
 quote = "1"
-schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "9c217610c4b8d3bdaa9f95542e28c04424a593e3" }
+schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "b834873de2a14c783f4be4f1af2dbb21f17ecd83" }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
 triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "acfb386fa638e2979b33bf2d003bb35fed0ceec0", optional = true }
 
 [features]
-# Activates the `#[cfg(feature = "nota-text")]` blocks inside any
+# Activates the `#[cfg(feature = "dotos-text")]` blocks inside any
 # schema-emitted fixture this crate's tests `include!`. The emitter
 # itself doesn't gate any of its own code on this feature; it only
-# controls whether the included generated source carries its NOTA
+# controls whether the included generated source carries its DOTOS
 # bridges. Defaulting it on keeps the existing test paths
-# (`generated::Input::from_str`, `generated::*::to_nota`, the
-# `nota::*` re-exports) live without per-test cargo flags.
-default   = ["nota-text", "cli"]
-nota-text = []
+# (`generated::Input::from_str`, `generated::*::to_dotos`, the
+# `dotos::*` re-exports) live without per-test cargo flags.
+default   = ["dotos-text", "cli"]
+dotos-text = []
 cli = ["dep:triad-runtime"]
 
 [dev-dependencies]

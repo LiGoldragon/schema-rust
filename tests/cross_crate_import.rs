@@ -40,7 +40,7 @@ fn imported_type_is_referenced_through_a_use_not_redeclared() {
 
     // The consumer must NOT re-declare the imported type: no local
     // struct/enum definition for DatabaseMarker, and no re-emitted
-    // rkyv/NOTA impl block for it.
+    // rkyv/DOTOS impl block for it.
     assert!(
         !code.contains("pub struct DatabaseMarker"),
         "imported type must not be re-declared as a struct, emitted:\n{code}"

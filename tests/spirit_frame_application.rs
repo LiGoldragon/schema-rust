@@ -13,7 +13,7 @@
 //! Work<…>` alias, no `into_next_step` shim. The generated module is `include!`d
 //! below over a local stand-in `reaction` frame module (which still defines the
 //! generic frame enums the `pub use` import lines re-export), compiled, and the
-//! concrete `Input`/`Output` enums round-trip through rkyv and NOTA — including
+//! concrete `Input`/`Output` enums round-trip through rkyv and DOTOS — including
 //! the recursive `Continue(Input)` leg — through the EMITTED constructors.
 
 use schema_language::{ImportResolver, MacroContext, SchemaEngine, SchemaIdentity};
@@ -43,7 +43,7 @@ fn emit_spirit_nexus() -> String {
             &resolver,
         )
         .expect("spirit-nexus lowers through import + root-application");
-    let options = RustEmissionOptions::feature_gated_nota("nota-text")
+    let options = RustEmissionOptions::feature_gated_dotos("dotos-text")
         .with_target(RustEmissionTarget::NexusRuntime);
     RustEmitter::new(options)
         .emit_code_from_true_schema(&schema)
@@ -57,7 +57,7 @@ fn emit_named_spirit_nexus() -> String {
     let schema = SchemaEngine::default()
         .lower_source(&source, SchemaIdentity::new("spirit:nexus", "0.1.0"))
         .expect("spirit-nexus named frame applications lower");
-    let options = RustEmissionOptions::feature_gated_nota("nota-text")
+    let options = RustEmissionOptions::feature_gated_dotos("dotos-text")
         .with_target(RustEmissionTarget::NexusRuntime);
     RustEmitter::new(options)
         .emit_code_from_true_schema(&schema)
@@ -204,7 +204,7 @@ fn write_spirit_nexus_fixture() {
 mod reaction {
     pub mod schema {
         pub mod reaction {
-            #[cfg_attr(feature = "nota-text", derive(nota::NotaDecode, nota::NotaEncode))]
+            #[cfg_attr(feature = "dotos-text", derive(dotos::DotosDecode, dotos::DotosEncode))]
             #[derive(
                 rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq,
             )]
@@ -215,7 +215,7 @@ mod reaction {
                 EffectCompleted(Effect),
             }
 
-            #[cfg_attr(feature = "nota-text", derive(nota::NotaDecode, nota::NotaEncode))]
+            #[cfg_attr(feature = "dotos-text", derive(dotos::DotosDecode, dotos::DotosEncode))]
             #[derive(
                 rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq,
             )]
@@ -279,26 +279,26 @@ fn generated_output_recursive_continue_round_trips_through_rkyv() {
     assert_eq!(next, restored);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn generated_input_output_round_trip_through_nota() {
-    use nota::{NotaEncode, NotaSource};
+fn generated_input_output_round_trip_through_dotos() {
+    use dotos::{DotosEncode, DotosSource};
     use spirit_nexus_generated::{Input, Output, SignalInput};
 
-    // Input round-trips through NOTA text via the derived NotaEncode/NotaDecode
+    // Input round-trips through DOTOS text via the derived DotosEncode/DotosDecode
     // the concrete expanded enum carries.
     let arrived: Input = Input::signal_arrived("recorded".to_owned());
-    let rendered = arrived.to_nota();
-    let parsed = NotaSource::new(&rendered)
+    let rendered = arrived.to_dotos();
+    let parsed = DotosSource::new(&rendered)
         .parse::<Input>()
-        .expect("input parses back from NOTA");
+        .expect("input parses back from DOTOS");
     assert_eq!(arrived, parsed);
 
-    // The recursive Output::Continue(Input) leg round-trips through NOTA too.
+    // The recursive Output::Continue(Input) leg round-trips through DOTOS too.
     let next: Output = Output::Continue(Input::SignalArrived(SignalInput::new("again")));
-    let rendered = next.to_nota();
-    let parsed = NotaSource::new(&rendered)
+    let rendered = next.to_dotos();
+    let parsed = DotosSource::new(&rendered)
         .parse::<Output>()
-        .expect("output continue parses back from NOTA");
+        .expect("output continue parses back from DOTOS");
     assert_eq!(next, parsed);
 }

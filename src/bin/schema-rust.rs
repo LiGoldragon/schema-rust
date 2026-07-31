@@ -4,7 +4,7 @@ use std::{
     process::ExitCode,
 };
 
-use nota::{NotaDecode, NotaDecodeError, NotaEncode, NotaError, NotaSource, PrettyLayout};
+use dotos::{DotosDecode, DotosDecodeError, DotosEncode, DotosError, DotosSource, PrettyLayout};
 use schema_language::{ImportResolver, SchemaEnvironment, SchemaEnvironmentResult};
 use schema_rust::{
     RustEmissionOptions, RustEmissionTarget,
@@ -56,7 +56,7 @@ impl SchemaRustCli {
     }
 }
 
-/// How the generated NOTA document is written to stdout.
+/// How the generated DOTOS document is written to stdout.
 ///
 /// The default `Canonical` form is the single-line encoder output every
 /// consumer and golden depends on. `Pretty`, requested with `--pretty`, reflows
@@ -71,11 +71,11 @@ impl OutputForm {
     const PRETTY_FLAG: &'static str = "--pretty";
 
     fn render(&self, output: &Output) -> Result<String, SchemaRustCliError> {
-        let canonical = output.to_nota();
+        let canonical = output.to_dotos();
         match self {
             Self::Canonical => Ok(canonical),
             Self::Pretty => PrettyLayout::standard()
-                .render_nota(&canonical)
+                .render_dotos(&canonical)
                 .map_err(SchemaRustCliError::Pretty),
         }
     }
@@ -99,9 +99,9 @@ impl RequestText {
     }
 
     fn parse(&self) -> Result<Input, SchemaRustCliError> {
-        NotaSource::new(&self.text)
+        DotosSource::new(&self.text)
             .parse::<Input>()
-            .map_err(SchemaRustCliError::NotaDecode)
+            .map_err(SchemaRustCliError::DotosDecode)
     }
 }
 
@@ -117,14 +117,14 @@ impl RequestFile {
     fn read(self) -> Result<RequestText, SchemaRustCliError> {
         fs::read_to_string(&self.path)
             .map(RequestText::new)
-            .map_err(|source| SchemaRustCliError::ReadNotaFile {
+            .map_err(|source| SchemaRustCliError::ReadDotosFile {
                 path: self.path,
                 source,
             })
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaDecode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosDecode, PartialEq)]
 enum Input {
     Generate(GenerationRequest),
 }
@@ -137,7 +137,7 @@ impl Input {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaDecode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosDecode, PartialEq)]
 struct GenerationRequest {
     crate_root: CrateRoot,
     crate_name: CrateName,
@@ -190,7 +190,7 @@ impl GenerationRequest {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaDecode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosDecode, PartialEq)]
 enum ModuleRequest {
     WireContract(WireContractRequest),
     Declaration(ModuleName),
@@ -211,30 +211,30 @@ impl ModuleRequest {
             Self::SignalRuntime(module) => ModuleEmission::signal_runtime_module(module.as_str()),
             Self::NexusRuntime(module) => ModuleEmission::new(
                 module.as_str(),
-                RustEmissionOptions::feature_gated_nota("nota-text")
+                RustEmissionOptions::feature_gated_dotos("dotos-text")
                     .with_target(RustEmissionTarget::NexusRuntime),
             ),
             Self::SemaRuntime(module) => ModuleEmission::new(
                 module.as_str(),
-                RustEmissionOptions::feature_gated_nota("nota-text")
+                RustEmissionOptions::feature_gated_dotos("dotos-text")
                     .with_target(RustEmissionTarget::SemaRuntime),
             ),
             Self::ComponentRuntime(module) => ModuleEmission::new(
                 module.as_str(),
-                RustEmissionOptions::feature_gated_nota("nota-text")
+                RustEmissionOptions::feature_gated_dotos("dotos-text")
                     .with_target(RustEmissionTarget::ComponentRuntime),
             ),
         }
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaDecode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosDecode, PartialEq)]
 struct WireContractRequest {
     family: WireContractFamily,
     module: ModuleName,
 }
 
-#[derive(Clone, Copy, Debug, Eq, NotaDecode, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, DotosDecode, PartialEq)]
 enum WireContractFamily {
     SignalSpirit,
     MetaSignalSpirit,
@@ -251,7 +251,7 @@ impl WireContractFamily {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaDecode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosDecode, PartialEq)]
 struct DependencyRequest {
     crate_name: CrateName,
     schema_directory: SchemaDirectory,
@@ -276,12 +276,12 @@ impl DependencyRequest {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaEncode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosEncode, PartialEq)]
 enum Output {
     Generated(GenerationFeedbackOutput),
 }
 
-#[derive(Clone, Debug, Eq, NotaEncode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosEncode, PartialEq)]
 struct GenerationFeedbackOutput {
     crate_root: CrateRoot,
     modules: Vec<ModuleFeedbackOutput>,
@@ -300,7 +300,7 @@ impl From<&GenerationFeedback> for GenerationFeedbackOutput {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaEncode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosEncode, PartialEq)]
 struct ModuleFeedbackOutput {
     module: ModuleName,
     source_path: SourcePath,
@@ -321,7 +321,7 @@ impl From<&ModuleFeedback> for ModuleFeedbackOutput {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaDecode, NotaEncode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosDecode, DotosEncode, PartialEq)]
 struct CrateRoot(String);
 
 impl CrateRoot {
@@ -336,7 +336,7 @@ impl From<&Path> for CrateRoot {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaDecode, NotaEncode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosDecode, DotosEncode, PartialEq)]
 struct ModuleName(String);
 
 impl ModuleName {
@@ -349,7 +349,7 @@ impl ModuleName {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaDecode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosDecode, PartialEq)]
 struct SchemaDirectory(String);
 
 impl SchemaDirectory {
@@ -358,7 +358,7 @@ impl SchemaDirectory {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaEncode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosEncode, PartialEq)]
 struct SourcePath(String);
 
 impl From<&Path> for SourcePath {
@@ -367,7 +367,7 @@ impl From<&Path> for SourcePath {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaEncode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosEncode, PartialEq)]
 struct SourceText(String);
 
 impl SourceText {
@@ -376,7 +376,7 @@ impl SourceText {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaEncode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosEncode, PartialEq)]
 struct RustPath(String);
 
 impl RustPath {
@@ -385,7 +385,7 @@ impl RustPath {
     }
 }
 
-#[derive(Clone, Debug, Eq, NotaEncode, PartialEq)]
+#[derive(Clone, Debug, Eq, DotosEncode, PartialEq)]
 struct RustByteCount(u64);
 
 impl From<usize> for RustByteCount {
@@ -399,19 +399,19 @@ enum SchemaRustCliError {
     #[error("component argument error: {0}")]
     Argument(#[from] ArgumentError),
 
-    #[error("failed to read NOTA file {}: {source}", path.display())]
-    ReadNotaFile {
+    #[error("failed to read DOTOS file {}: {source}", path.display())]
+    ReadDotosFile {
         path: PathBuf,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("invalid schema-rust request NOTA: {0}")]
-    NotaDecode(NotaDecodeError),
+    #[error("invalid schema-rust request DOTOS: {0}")]
+    DotosDecode(DotosDecodeError),
 
     #[error("generation failed: {0}")]
     Build(#[from] BuildError),
 
-    #[error("failed to lay out NOTA for reading: {0}")]
-    Pretty(NotaError),
+    #[error("failed to lay out DOTOS for reading: {0}")]
+    Pretty(DotosError),
 }

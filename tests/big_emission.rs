@@ -8,7 +8,7 @@ use schema_rust::RustEmitter;
 
 mod support;
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 use support::FixtureNota;
 
 #[allow(dead_code)]
@@ -288,10 +288,10 @@ fn generated_big_rust_contains_the_current_schema_stack_surfaces() {
     );
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
 fn compiled_large_spirit_generated_rust_parses_and_wraps_runtime_envelopes() {
-    let input = FixtureNota::new("nota/large-record-schema-rust.nota")
+    let input = FixtureNota::new("dotos/large-record-schema-rust.dotos")
         .read()
         .parse::<spirit_large_generated::Input>()
         .expect("large spirit input parses");

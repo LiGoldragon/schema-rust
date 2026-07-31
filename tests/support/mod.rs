@@ -79,7 +79,7 @@ impl FixtureNota {
                 .join("tests/fixtures")
                 .join(&self.relative_path),
         )
-        .expect("read nota fixture")
+        .expect("read dotos fixture")
         .trim()
         .to_owned()
     }

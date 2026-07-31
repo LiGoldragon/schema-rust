@@ -15,7 +15,7 @@ use support::FixtureSchema;
 
 fn emit_reaction_frame() -> String {
     let schema = FixtureSchema::new("reaction/schema/reaction.schema").lower("reaction:reaction");
-    let options = RustEmissionOptions::feature_gated_nota("nota-text")
+    let options = RustEmissionOptions::feature_gated_dotos("dotos-text")
         .with_target(RustEmissionTarget::DeclarationModule);
     RustEmitter::new(options)
         .emit_code_from_true_schema(&schema)
@@ -43,7 +43,7 @@ fn reaction_frame_emits_the_two_generic_data_enums() {
     // The Work enum: four direct type parameters, the proven derive stack.
     assert_contains(
         &code,
-        "derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)",
+        "derive(dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode)",
     );
     assert_contains(
         &code,
@@ -74,7 +74,7 @@ fn reaction_frame_emits_the_two_generic_data_enums() {
 fn reaction_frame_emits_no_bound_attributes_or_runtime_support() {
     let code = emit_reaction_frame();
 
-    // rkyv 0.8 + nota auto-synthesise per-parameter bounds: no
+    // rkyv 0.8 + dotos auto-synthesise per-parameter bounds: no
     // omit_bounds, no archive bound attributes, no explicit where.
     assert!(
         !code.contains("omit_bounds"),

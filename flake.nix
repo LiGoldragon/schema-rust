@@ -19,7 +19,7 @@
         schemaFilter = path: type:
           type == "regular" && (
             pkgs.lib.hasSuffix ".schema" path
-            || pkgs.lib.hasSuffix ".nota" path
+            || pkgs.lib.hasSuffix ".dotos" path
             || pkgs.lib.hasSuffix ".stderr" path
           );
         src = rust.cleanSource {
@@ -113,7 +113,7 @@
             grep -R "accepted previous Entry as" ${src}/tests/emission.rs >/dev/null
             touch $out
           '';
-          generated-nota-boundary = pkgs.runCommand "schema-rust-generated-nota-boundary" { } ''
+          generated-dotos-boundary = pkgs.runCommand "schema-rust-generated-dotos-boundary" { } ''
             grep -R "parse::<generated::Input>" ${src}/tests/emission.rs >/dev/null
             grep -R "impl std::str::FromStr for Input" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
             grep -R "impl std::fmt::Display for Input" ${src}/tests/fixtures/spirit_generated.rs >/dev/null
@@ -157,7 +157,7 @@
               exit 1
             fi
             if grep -R -n -E '\[\[[A-Z]|\((records|kinds|services|Listed) \[[A-Z]|\((byTopic|Projected|nodes) \{[A-Z]' ${src}/tests/fixtures; then
-              echo "schema-rust examples must use typed NOTA composite references: (Vec T), (Map (K V)), (Optional T)" >&2
+              echo "schema-rust examples must use typed DOTOS composite references: (Vec T), (Map (K V)), (Optional T)" >&2
               exit 1
             fi
             if grep -R -n -E '\((Vec|Option|KeyValue|Map) \[' ${src}/tests; then
@@ -193,16 +193,16 @@
             touch $out
           '';
           generated-no-legacy-helper-surface = pkgs.runCommand "schema-rust-generated-no-legacy-helper-surface" { } ''
-            ! grep -R --include='*.generated.rs' "parse_nota_root" ${src}/tests/fixtures
+            ! grep -R --include='*.generated.rs' "parse_dotos_root" ${src}/tests/fixtures
             ! grep -R --include='*.generated.rs' "UnknownHeader { surface" ${src}/tests/fixtures
             ! grep -R "pub struct RustEmitter;" ${src}/src
-            ! grep -R --include='*.generated.rs' "pub struct NotaSource" ${src}/tests/fixtures
-            ! grep -R --include='*.generated.rs' "pub struct NotaBlock" ${src}/tests/fixtures
-            ! grep -R --include='*.generated.rs' "pub struct NotaCollection" ${src}/tests/fixtures
-            grep -R --include='*.generated.rs' "pub use nota" ${src}/tests/fixtures >/dev/null
-            grep -R --include='*.generated.rs' "derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode" ${src}/tests/fixtures >/dev/null
-            ! grep -R --include='*.generated.rs' "impl NotaDecode for Input" ${src}/tests/fixtures
-            ! grep -R --include='*.generated.rs' "impl NotaEncode for Input" ${src}/tests/fixtures
+            ! grep -R --include='*.generated.rs' "pub struct DotosSource" ${src}/tests/fixtures
+            ! grep -R --include='*.generated.rs' "pub struct DotosBlock" ${src}/tests/fixtures
+            ! grep -R --include='*.generated.rs' "pub struct DotosCollection" ${src}/tests/fixtures
+            grep -R --include='*.generated.rs' "pub use dotos" ${src}/tests/fixtures >/dev/null
+            grep -R --include='*.generated.rs' "derive(dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode" ${src}/tests/fixtures >/dev/null
+            ! grep -R --include='*.generated.rs' "impl DotosDecode for Input" ${src}/tests/fixtures
+            ! grep -R --include='*.generated.rs' "impl DotosEncode for Input" ${src}/tests/fixtures
             touch $out
           '';
           doc = craneLib.cargoDoc (commonArguments // {

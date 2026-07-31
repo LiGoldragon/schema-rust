@@ -141,7 +141,7 @@ impl ModuleEmission {
     pub fn daemon_module(module: impl Into<String>, daemon_shape: NexusDaemonShape) -> Self {
         Self {
             module: Name::new(module),
-            options: RustEmissionOptions::feature_gated_nota("nota-text")
+            options: RustEmissionOptions::feature_gated_dotos("dotos-text")
                 .with_target(RustEmissionTarget::SignalRuntime),
             daemon_shape: Some(daemon_shape),
         }
@@ -158,7 +158,7 @@ impl ModuleEmission {
     pub fn declaration_module(module: impl Into<String>) -> Self {
         Self::new(
             module,
-            RustEmissionOptions::feature_gated_nota("nota-text")
+            RustEmissionOptions::feature_gated_dotos("dotos-text")
                 .with_target(RustEmissionTarget::DeclarationModule),
         )
     }
@@ -173,7 +173,7 @@ impl ModuleEmission {
     pub fn nexus_runtime() -> Self {
         Self::new(
             "nexus",
-            RustEmissionOptions::feature_gated_nota("nota-text")
+            RustEmissionOptions::feature_gated_dotos("dotos-text")
                 .with_target(RustEmissionTarget::NexusRuntime),
         )
     }
@@ -185,7 +185,7 @@ impl ModuleEmission {
     pub fn signal_runtime_module(module: impl Into<String>) -> Self {
         Self::new(
             module,
-            RustEmissionOptions::feature_gated_nota("nota-text")
+            RustEmissionOptions::feature_gated_dotos("dotos-text")
                 .with_target(RustEmissionTarget::SignalRuntime),
         )
     }
@@ -193,7 +193,7 @@ impl ModuleEmission {
     pub fn sema_runtime() -> Self {
         Self::new(
             "sema",
-            RustEmissionOptions::feature_gated_nota("nota-text")
+            RustEmissionOptions::feature_gated_dotos("dotos-text")
                 .with_target(RustEmissionTarget::SemaRuntime),
         )
     }
@@ -201,7 +201,7 @@ impl ModuleEmission {
     pub fn lib_component_runtime() -> Self {
         Self::new(
             "lib",
-            RustEmissionOptions::feature_gated_nota("nota-text")
+            RustEmissionOptions::feature_gated_dotos("dotos-text")
                 .with_target(RustEmissionTarget::ComponentRuntime),
         )
     }
@@ -385,7 +385,7 @@ impl GenerationDriver {
     }
 }
 
-#[derive(Clone, Debug, Eq, nota::NotaDecode, PartialEq)]
+#[derive(Clone, Debug, Eq, dotos::DotosDecode, PartialEq)]
 pub struct CrateName(String);
 
 impl CrateName {
@@ -398,7 +398,7 @@ impl CrateName {
     }
 }
 
-#[derive(Clone, Debug, Eq, nota::NotaDecode, PartialEq)]
+#[derive(Clone, Debug, Eq, dotos::DotosDecode, PartialEq)]
 pub struct SchemaVersion(String);
 
 impl SchemaVersion {

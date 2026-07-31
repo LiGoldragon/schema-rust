@@ -1,4 +1,4 @@
-//! Malformed-name boundary (srn-1): NOTA accepts symbol atoms (`Foo-Bar`,
+//! Malformed-name boundary (srn-1): DOTOS accepts symbol atoms (`Foo-Bar`,
 //! `A/B`, `2Things`) far broader than Rust identifiers, so a malformed schema
 //! name reached `Ident::new` and PANICKED. The emission boundary now turns that
 //! into a typed `SchemaError::MalformedSchemaNode` via `RustModule::verify_names`.
@@ -9,7 +9,7 @@ use schema_rust::{RustEmissionOptions, RustGenerationError, RustModule};
 fn lower_source(source: &str) -> TrueSchema {
     SchemaEngine::default()
         .lower_source(source, SchemaIdentity::new("name-validation:lib", "0.1.0"))
-        .expect("NOTA accepts the symbol atom as a schema name")
+        .expect("DOTOS accepts the symbol atom as a schema name")
 }
 
 fn module(source: &str) -> RustModule {
@@ -20,7 +20,7 @@ fn module(source: &str) -> RustModule {
     )
 }
 
-/// A hyphenated type name lowers fine through NOTA (it is a legal symbol atom)
+/// A hyphenated type name lowers fine through DOTOS (it is a legal symbol atom)
 /// but is not a legal Rust identifier — `verify_names` rejects it with a typed
 /// error naming the offending name, instead of panicking at `Ident::new`.
 #[test]
@@ -39,7 +39,7 @@ fn hyphenated_type_name_yields_typed_error_not_panic() {
 }
 
 /// A name starting with a digit is not a valid capitalized type-name prefix, so
-/// the dotted source grammar rejects it at lowering with a typed NOTA error
+/// the dotted source grammar rejects it at lowering with a typed DOTOS error
 /// rather than letting it reach the Rust-name boundary. The malformed-name
 /// boundary moved earlier under the strict positional grammar, but the property
 /// holds: a malformed name is a typed error, never a panic.
@@ -78,7 +78,7 @@ fn source_emission_path_returns_err_for_malformed_name() {
     let engine = SchemaEngine::default();
     let resolver = ImportResolver::default();
     let source = SchemaSource::from_schema_text("{}\n[]\n[]\n{\n  Bad/Name.String\n}\n{}\n{}\n")
-        .expect("NOTA parses the symbol atom name");
+        .expect("DOTOS parses the symbol atom name");
     let emitter = RustEmitter::new(RustEmissionOptions::binary_only());
     let result = emitter.emit_module_from_schema_source(
         &source,

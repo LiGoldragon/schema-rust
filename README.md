@@ -34,8 +34,8 @@ Generated paths mirror crate-local schema modules. A schema identity such as
 namespace segment is the crate boundary and is not repeated inside the crate's
 generated module tree.
 
-The emitted source includes the data types, `nota` codec derives, small
-inherent NOTA bridge methods, rkyv derives, short-header signal frames, Nexus
+The emitted source includes the data types, `dotos` codec derives, small
+inherent DOTOS bridge methods, rkyv derives, short-header signal frames, Nexus
 traits, Nexus mail lifecycle objects, mail-event hooks, family identity
 surfaces, and upgrade/accept traits that runtime crates implement against.
 Public schema declarations emit `pub` Rust nouns; private schema declarations
@@ -49,11 +49,11 @@ positional and typed. A unique component normally uses the bare type name;
 explicit `field.Type` disambiguation is reserved for repeated same-type
 components that need stable field names.
 
-Tests keep meaningful schema and NOTA examples in fixture files under
+Tests keep meaningful schema and DOTOS examples in fixture files under
 `tests/fixtures/`. Rust tests load those fixtures through the support helpers
 instead of hiding the language examples inside Rust string literals.
 
-The `schema-rust` binary is a thin one-argument NOTA client over the shared
+The `schema-rust` binary is a thin one-argument DOTOS client over the shared
 driver. It accepts a `Generate` request, loads the selected modules through
 `SchemaEnvironment`, regenerates from `TrueSchema`, and prints typed feedback
 with the selected canonical source and generated Rust artifact sizes:

@@ -29,7 +29,7 @@ source/true-schema pipeline.
 - `RustEmitter` is the code-generation engine.
 - `RustTrueSchemaLowering` is the entry trait implemented for
   `schema_language::TrueSchema`. The deserialized semantic schema object owns the
-  lowering call; the emitter supplies policy such as target, NOTA surface, and
+  lowering call; the emitter supplies policy such as target, DOTOS surface, and
   generator name. The trait lives in this repository rather than in `schema`
   because `schema` owns schema semantics and must not depend on Rust emission.
 - `RustSchemaSourceLowering` is the trait implemented for
@@ -43,17 +43,17 @@ source/true-schema pipeline.
   reassembled centrally.
 - The Rust renderer uses `proc_macro2::TokenStream` and `quote` through
   context-carrying token wrappers over Rust-model nouns. Plain `ToTokens` has no
-  context parameter, so generation-wide switches such as the NOTA feature gate
+  context parameter, so generation-wide switches such as the DOTOS feature gate
   and private-type visibility flow through `RustRenderContext` wrappers instead
   of being copied into every noun.
 - The string-to-token migration is complete. Every emitted section — the
   declaration surface (aliases, newtypes, structs, fields, enums, variants),
-  the NOTA bridges, the enum payload `From` impls and variant constructors, the
+  the DOTOS bridges, the enum payload `From` impls and variant constructors, the
   signal-frame binary codec, the route enums/impls, the short-header module, the
   cross-plane `into_*` projections, the runtime role-trait impls, the upgrade
   trait surface, and the runtime/plane/runner support — renders itself through a
   `ToTokens` wrapper noun (e.g. `RustScalarAliasTokens`, `NewtypeInherentImplTokens`,
-  `NotaInherentBridgeTokens`, `SignalFrameImplTokens`, `RouteEnumTokens`,
+  `DotosInherentBridgeTokens`, `SignalFrameImplTokens`, `RouteEnumTokens`,
   `RouteImplTokens`, `ShortHeaderModuleTokens`, `EnumVariantConstructorsTokens`).
   These are routed through one `prettyplease` pass at `emit_item_tokens`. No
   emitter code builds Rust source with `format!`/`self.line`; the only direct
@@ -90,7 +90,7 @@ source/true-schema pipeline.
   load/lower/emit/freshness sequence so component `build.rs` files do not
   hand-roll it.
 - `src/bin/schema-rust.rs` is the thin command surface over the same driver.
-  It accepts exactly one NOTA request, loads the selected modules through
+  It accepts exactly one DOTOS request, loads the selected modules through
   `SchemaEnvironment`, calls
   `GenerationDriver::generate_from_environment`, and prints typed generation
   feedback over the selected canonical source and generated Rust artifacts.
@@ -200,7 +200,7 @@ form.
   a brace body holding one bare type — as the checked-in fixtures write it (for
   example `DecisionReceipt.{ Integer }`). The retired `@`-suffixed `Topic@String`
   form and the parenthesized `(Public Topic { String })` form are no longer
-  authored. The generated tuple newtype carries a NOTA-transparent shape so
+  authored. The generated tuple newtype carries a DOTOS-transparent shape so
   `Topic([foo])` and `topic.0` round-trip without a wrapper field name.
 - Generated Rust is source-visible under `src/schema/`; consumers include or
   compile that source rather than hiding the interface in `OUT_DIR` or behind a
@@ -228,7 +228,7 @@ form.
   vs external wire vocabulary), effect-table match-driven dispatch, and
   actor fan-out expressed as method returns.
 - `RustEmissionTarget::WireContract` emits an external signal contract
-  wire surface: schema nouns, derives, NOTA/rkyv codecs, short-header route
+  wire surface: schema nouns, derives, DOTOS/rkyv codecs, short-header route
   constants, and the universal `signal-frame` request/reply surface (`Frame`,
   `FrameBody`, `Request`, `ReplyEnvelope`, `RequestBuilder`,
   `RequestPayload`, `SignalOperationHeads`, `Input::into_frame`, and
@@ -273,8 +273,8 @@ form.
   `schema/sema.schema` through `RustEmissionTarget::SemaRuntime`; daemon crates
   that carry a local Signal runtime module add
   `ModuleEmission::signal_runtime_module("signal")` explicitly. The shared
-  runtime module builders use the same feature-gated `nota-text` surface as
-  contracts: normal binary daemon builds keep `nota` absent, while
+  runtime module builders use the same feature-gated `dotos-text` surface as
+  contracts: normal binary daemon builds keep `dotos` absent, while
   all-feature trace/testing builds can round-trip generated runtime support
   nouns such as `NexusObjectName` and `SemaObjectName`. An unsplit bootstrap
   schema uses
@@ -311,7 +311,7 @@ form.
   `marker-core:mail:DatabaseMarker`, this emitter writes a `pub use
   marker_core::schema::mail::DatabaseMarker as DatabaseMarker;` line and local
   fields or variants reference that alias. The dependency crate owns the
-  imported type's rkyv/NOTA implementations; the consumer only bridges imported
+  imported type's rkyv/DOTOS implementations; the consumer only bridges imported
   decode errors into its own generated error type.
 - Generated schema objects emit `UpgradeFrom<Previous>` and
   `AcceptPrevious<Previous>` trait surfaces. A changed type gets hand-written
@@ -349,7 +349,7 @@ form.
   decoded request with a complete frame: the ordinary output, or that refusal
   when the engine fails, so a caller never has to read a closed socket as
   possible daemon death.
-- Generated signal roots emit rkyv-derived data types, NOTA text conversion,
+- Generated signal roots emit rkyv-derived data types, DOTOS text conversion,
   short-header route triage, binary signal-frame encode/decode methods, and
   the universal `signal-frame` request/reply aliases and builders. Non-streaming
   contracts emit `Frame = signal_frame::ExchangeFrame<Input, Output>`.
@@ -442,12 +442,12 @@ form.
 - Trace remains typed data until the client display boundary. The generated
   `TraceEvent` is the component-specific event noun. Its current emitted shape
   is a transparent tuple newtype over `ObjectName`, so `TraceEvent` serializes
-  to the generated object-name NOTA shape instead of a double-wrapped
+  to the generated object-name DOTOS shape instead of a double-wrapped
   one-field struct. The shared
   `triad-runtime` trace client/log/socket objects are generic over that noun.
   The next emitter target is generating the small component adapters that are
   still mechanical today: `TraceEventFrame` for rkyv trace archives,
-  `Display for TraceEvent` that renders the generated NOTA value at the
+  `Display for TraceEvent` that renders the generated DOTOS value at the
   client edge, and aliases for `TraceLog<TraceEvent>` /
   `TraceClient<TraceEvent>` when a trace surface is emitted. The emitter must
   not generate string-log substrates or a
@@ -474,7 +474,7 @@ form.
 - Scalar references are explicit schema data. `TypeReference::String`,
   `TypeReference::Integer`, `TypeReference::Boolean`, and `TypeReference::Path`
   emit the scalar aliases (`String = std::string::String`, `Integer = u64`,
-  `Boolean = bool`). Binary `rkyv` support is emitted for every consumer; NOTA
+  `Boolean = bool`). Binary `rkyv` support is emitted for every consumer; DOTOS
   codec derives are an optional text-client surface.
   `Plain(Name)` no longer carries scalar special cases; it names an emitted or
   imported schema type.
@@ -487,37 +487,37 @@ form.
   recurses a `TypeReference` by generic kind, never by string name:
   `Vector` → `Vec<inner>`, `Map` →
   `std::collections::BTreeMap<key, value>` (fully qualified, so no `use` and a
-  deterministic key order for rkyv + NOTA), `Optional` → `Option<inner>`. The
+  deterministic key order for rkyv + DOTOS), `Optional` → `Option<inner>`. The
   target `TypeReference` mirrors the closed set of generic kinds (single-type,
   multi-type, const, template) rather than one uniform application variant or a
   per-name variant set, so lowering dispatches on kind (see `schema-language`'s
   `ARCHITECTURE.md`).
-- Generated code can import `nota`'s shared codec surface and derive
-  `nota::NotaDecode` / `nota::NotaEncode` for generated nouns, but
+- Generated code can import `dotos`'s shared codec surface and derive
+  `dotos::DotosDecode` / `dotos::DotosEncode` for generated nouns, but
   that surface is selected by `RustEmissionOptions`: always enabled,
   feature-gated for text clients, or disabled for binary-only consumers. When
-  NOTA is selected, small inherent bridge methods (`from_nota_block`,
-  `to_nota`) stay on the owning noun, but the emitter does not hand-write
-  per-type codec trait implementations. It does not emit private `NotaSource`,
-  `NotaBlock`, or `NotaCollection` helper types. Its NOTA value shapes stay the
+  DOTOS is selected, small inherent bridge methods (`from_dotos_block`,
+  `to_dotos`) stay on the owning noun, but the emitter does not hand-write
+  per-type codec trait implementations. It does not emit private `DotosSource`,
+  `DotosBlock`, or `DotosCollection` helper types. Its DOTOS value shapes stay the
   shared codec shapes: a `Vec` is a square-bracket block `[e1 e2 ...]`, a
   `BTreeMap` is a brace block of `key value` pairs `{k1 v1 ...}`, and an
   `Option` is the atom `None` or the paren `(Some inner)`.
-- `RustEmissionOptions` carries `nota_surface` and `target`. The named
-  constructors (`::binary_only`, `::feature_gated_nota("...")`,
-  `::always_enabled_nota`) set the compatibility target
+- `RustEmissionOptions` carries `dotos_surface` and `target`. The named
+  constructors (`::binary_only`, `::feature_gated_dotos("...")`,
+  `::always_enabled_dotos`) set the compatibility target
   `RustEmissionTarget::ComponentRuntime`; callers use `with_target` to select
   `RustEmissionTarget::WireContract` for external signal contract generation,
   `RustEmissionTarget::NexusRuntime` for daemon Nexus
   schemas, and `RustEmissionTarget::SemaRuntime` for daemon SEMA schemas.
   `RustEmissionOptions::default()` and `RustEmitter::default()` both pick
-  `NotaSurface::FeatureGated { feature: "nota-text" }` plus
-  `ComponentRuntime`. `NotaSurface::Disabled` removes the
-  NOTA surface entirely: no derives, no `use nota::*` items, no
-  `from_nota_block` / `to_nota` bridges, no root `FromStr` / `Display`
-  impls. `NotaSurface::AlwaysEnabled` keeps the older unconditional emission
-  for callers (mostly tests) that always want NOTA on.
-- NOTA owns those value shapes. Schema owns the type-name keywords that select
+  `DotosSurface::FeatureGated { feature: "dotos-text" }` plus
+  `ComponentRuntime`. `DotosSurface::Disabled` removes the
+  DOTOS surface entirely: no derives, no `use dotos::*` items, no
+  `from_dotos_block` / `to_dotos` bridges, no root `FromStr` / `Display`
+  impls. `DotosSurface::AlwaysEnabled` keeps the older unconditional emission
+  for callers (mostly tests) that always want DOTOS on.
+- DOTOS owns those value shapes. Schema owns the type-name keywords that select
   scalar and composite type references in `.schema` files.
 - A type used anywhere as a `BTreeMap` key earns the ordering derives
   (`PartialOrd, Ord` plus the archived `#[rkyv(derive(...))]`); value-only and
@@ -525,10 +525,10 @@ form.
   both the collection-codec emission and the map-key derive set, so a
   collection-free schema stays byte-identical to the current scalar-floor
   fixture when collection support changes.
-- Integration tests load substantive `.schema` and `.nota` language examples
+- Integration tests load substantive `.schema` and `.dotos` language examples
   from `tests/fixtures/` through `tests/support::FixtureSchema` and
   `FixtureNota`. Inline Rust strings remain for short expected generated-code
-  fragments; the actual schema/NOTA input surfaces stay visible as files.
+  fragments; the actual schema/DOTOS input surfaces stay visible as files.
 - `MigrationEmitter` in `src/migration.rs` derives upgrade/compatibility code
   from a `schema_language::UpgradeObject`. It emits a Rust module containing `mod
   historical` (the previous-version field shapes needed to read archived records)

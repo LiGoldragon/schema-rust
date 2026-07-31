@@ -5,16 +5,16 @@ error[E0599]: no associated function or constant named `wire_binding` found for 
   |                                  ^^^^^^^^^^^^ associated function or constant not found in `RustEmissionOptions`
   |
 note: if you're trying to build a new `RustEmissionOptions` consider using one of the following associated functions:
-      RustEmissionOptions::always_enabled_nota
-      RustEmissionOptions::feature_gated_nota
+      RustEmissionOptions::always_enabled_dotos
+      RustEmissionOptions::feature_gated_dotos
       RustEmissionOptions::binary_only
       RustEmissionOptions::wire_contract
  --> src/lib.rs
   |
-  |     pub fn always_enabled_nota() -> Self {
+  |     pub fn always_enabled_dotos() -> Self {
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ...
-  |     pub fn feature_gated_nota(feature: impl Into<String>) -> Self {
+  |     pub fn feature_gated_dotos(feature: impl Into<String>) -> Self {
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ...
   |     pub fn binary_only() -> Self {

@@ -2,14 +2,14 @@ use schema_language::{
     SchemaEngine, SchemaError, SchemaIdentity, SchemaSource, SchemaSourceArtifact,
 };
 use schema_rust::{
-    LowerToRust, NotaSurface, RustEmissionOptions, RustEmissionTarget, RustEmitter,
+    DotosSurface, LowerToRust, RustEmissionOptions, RustEmissionTarget, RustEmitter,
     RustLoweringContext, RustTrueSchemaLowering, RustTypeDeclaration,
 };
 use std::path::PathBuf;
 
 mod support;
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 use support::FixtureNota;
 use support::FixtureSchema;
 
@@ -190,7 +190,7 @@ fn emits_terminal_value_domains_as_scope_all() {
         .emit_code_from_true_schema(&schema)
         .expect("schema emits");
 
-    // Strict positional NOTA: the variant payload is required, so it carries
+    // Strict positional DOTOS: the variant payload is required, so it carries
     // the leaf directly with no `Option` wrapper and no bespoke codec.
     assert_code_contains(generated.as_str(), "Programming(ProgrammingLeaf),");
     assert_code_excludes(generated.as_str(), "Programming(Option<ProgrammingLeaf>)");
@@ -380,12 +380,12 @@ fn generated_objects_expose_named_constructors_and_newtype_payload_accessors() {
 }
 
 #[test]
-fn emission_can_disable_nota_surface_for_binary_only_consumers() {
+fn emission_can_disable_dotos_surface_for_binary_only_consumers() {
     // Binary-only shape — daemons and other binary-only consumers
-    // ship zero NOTA derives and zero `nota::*` references.
+    // ship zero DOTOS derives and zero `dotos::*` references.
     // The emitted source carries only the rkyv-backed internal runtime
     // surface, so the generated module compiles when the consumer does not
-    // depend on either NOTA or the transport framing layer.
+    // depend on either DOTOS or the transport framing layer.
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
     let generated = RustEmitter::new(RustEmissionOptions::binary_only())
         .emit_code_from_true_schema(&schema)
@@ -396,16 +396,16 @@ fn emission_can_disable_nota_surface_for_binary_only_consumers() {
     assert!(!code.contains("pub fn encode_signal_frame"));
     assert!(!code.contains("pub fn decode_signal_frame"));
     assert!(code.contains("pub fn with_origin_route"));
-    assert!(!code.contains("nota"));
-    assert!(!code.contains("NotaDecode"));
-    assert!(!code.contains("NotaEncode"));
-    assert!(!code.contains("from_nota_block"));
-    assert!(!code.contains("to_nota"));
+    assert!(!code.contains("dotos"));
+    assert!(!code.contains("DotosDecode"));
+    assert!(!code.contains("DotosEncode"));
+    assert!(!code.contains("from_dotos_block"));
+    assert!(!code.contains("to_dotos"));
     assert!(!code.contains("FromStr"));
     assert!(!code.contains("impl std::fmt::Display for Input"));
     assert!(!code.contains("impl std::fmt::Display for Output"));
     // No leftover `#[cfg(feature = ...)]` directives either —
-    // `Disabled` removes the whole NOTA surface, it doesn't gate it.
+    // `Disabled` removes the whole DOTOS surface, it doesn't gate it.
     assert!(!code.contains("#[cfg(feature ="));
     assert!(!code.contains("#[cfg_attr(feature ="));
     // Lock in the exact emitted source so any future drift forces a
@@ -414,23 +414,25 @@ fn emission_can_disable_nota_surface_for_binary_only_consumers() {
 }
 
 #[test]
-fn emission_can_gate_nota_surface_behind_text_client_feature() {
-    // Feature-gated shape (the default) — every NOTA surface lands
-    // behind `#[cfg(feature = "nota-text")]` on impls / `use` items
+fn emission_can_gate_dotos_surface_behind_text_client_feature() {
+    // Feature-gated shape (the default) — every DOTOS surface lands
+    // behind `#[cfg(feature = "dotos-text")]` on impls / `use` items
     // and `#[cfg_attr(...)]` on derives, so a single emitted module
     // serves both text-facing CLIs (with the feature on) and
     // binary-only daemons (with the feature off).
     let schema = FixtureSchema::new("spirit-min.schema").lower("spirit:lib");
-    let generated = RustEmitter::new(RustEmissionOptions::feature_gated_nota("nota-text"))
+    let generated = RustEmitter::new(RustEmissionOptions::feature_gated_dotos("dotos-text"))
         .emit_code_from_true_schema(&schema)
         .expect("schema emits");
     let code = generated.as_str();
 
-    assert!(code.contains("derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)"));
+    assert!(
+        code.contains("derive(dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode)")
+    );
     assert!(code.contains("#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize"));
-    assert!(code.contains("#[cfg(feature = \"nota-text\")]\npub use nota::{"));
-    assert!(code.contains("#[cfg(feature = \"nota-text\")]\nimpl std::str::FromStr for Input"));
-    assert!(code.contains("#[cfg(feature = \"nota-text\")]\nimpl std::fmt::Display for Output"));
+    assert!(code.contains("#[cfg(feature = \"dotos-text\")]\npub use dotos::{"));
+    assert!(code.contains("#[cfg(feature = \"dotos-text\")]\nimpl std::str::FromStr for Input"));
+    assert!(code.contains("#[cfg(feature = \"dotos-text\")]\nimpl std::fmt::Display for Output"));
     assert!(!code.contains("pub fn encode_signal_frame"));
     assert!(!code.contains("pub fn decode_signal_frame"));
     assert!(code.contains("pub fn with_origin_route"));
@@ -445,16 +447,16 @@ fn emission_can_gate_nota_surface_behind_text_client_feature() {
 }
 
 #[test]
-fn rust_emission_options_default_is_feature_gated_nota_text() {
+fn rust_emission_options_default_is_feature_gated_dotos_text() {
     // `RustEmissionOptions::default()` and `RustEmitter::default()`
     // both pick the compatibility-oriented opt-in shape per the
-    // codec opt-in design: rkyv is universal, NOTA is gated by the
-    // `nota-text` feature.
+    // codec opt-in design: rkyv is universal, DOTOS is gated by the
+    // `dotos-text` feature.
     let options = RustEmissionOptions::default();
     assert_eq!(
-        options.nota_surface,
-        NotaSurface::FeatureGated {
-            feature: "nota-text".to_owned(),
+        options.dotos_surface,
+        DotosSurface::FeatureGated {
+            feature: "dotos-text".to_owned(),
         },
     );
     assert_eq!(options.target, RustEmissionTarget::ComponentRuntime);
@@ -907,7 +909,7 @@ fn frame_codec_reaches_wire_contract_targets_but_not_internal_planes() {
 fn signal_runtime_target_emits_signal_runtime_without_nexus_or_sema_support() {
     let schema = FixtureSchema::new("plane-triad.schema").lower("spirit:lib");
     let generated = RustEmitter::new(
-        RustEmissionOptions::feature_gated_nota("nota-text")
+        RustEmissionOptions::feature_gated_dotos("dotos-text")
             .with_target(RustEmissionTarget::SignalRuntime),
     )
     .emit_file_from_true_schema(&schema)
@@ -1151,10 +1153,10 @@ fn generated_roots_wrap_into_messages_with_automatic_origin_route() {
     ));
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn generated_input_parses_cli_nota_and_emits_nota() {
-    let source = FixtureNota::new("nota/record-clarified-intent.nota").read();
+fn generated_input_parses_cli_dotos_and_emits_dotos() {
+    let source = FixtureNota::new("dotos/record-clarified-intent.dotos").read();
     let input = source
         .parse::<generated::Input>()
         .expect("parse generated input");
@@ -1175,10 +1177,10 @@ fn generated_input_parses_cli_nota_and_emits_nota() {
     assert_eq!(input.to_string(), source);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn generated_signal_input_round_trips_from_nota_to_rkyv_bytes() {
-    let input = FixtureNota::new("nota/record-component-rkyv.nota")
+fn generated_signal_input_round_trips_from_dotos_to_rkyv_bytes() {
+    let input = FixtureNota::new("dotos/record-component-rkyv.dotos")
         .read()
         .parse::<generated::Input>()
         .expect("parse generated input");
@@ -1199,7 +1201,7 @@ struct PreviousEntry {
 #[derive(Debug, PartialEq, Eq)]
 enum RuntimeError {}
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[derive(Debug, PartialEq, Eq)]
 struct UpgradeEvent {
     description: String,
@@ -1218,7 +1220,7 @@ impl generated::UpgradeFrom<PreviousEntry> for generated::Entry {
     }
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 impl UpgradeEvent {
     fn from_previous_entry(previous: PreviousEntry) -> Result<Self, RuntimeError> {
         let entry =
@@ -1228,13 +1230,13 @@ impl UpgradeEvent {
         Ok(Self {
             description: format!(
                 "accepted previous Entry as {}",
-                generated::NotaEncode::to_nota(&entry)
+                generated::DotosEncode::to_dotos(&entry)
             ),
         })
     }
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
 fn generated_upgrade_trait_accepts_previous_schema_objects_observably() {
     let event = UpgradeEvent::from_previous_entry(PreviousEntry {
@@ -1259,16 +1261,18 @@ fn emits_vec_map_and_option_collection_types_with_shared_codec_traits() {
         .expect("schema emits");
     let code = generated.as_str();
 
-    // The generated code imports the shared NOTA codec instead of
+    // The generated code imports the shared DOTOS codec instead of
     // emitting a local collection-support runtime block. Under the
-    // default `feature_gated_nota("nota-text")` shape, the `use
-    // nota::*` and `cfg_attr(...)` derives sit behind the
-    // `nota-text` feature.
-    assert!(code.contains("#[cfg(feature = \"nota-text\")]\npub use nota::{"));
-    assert!(!code.contains("pub struct NotaCollection"));
-    assert!(code.contains("derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)"));
-    assert!(!code.contains("impl NotaDecode for Cluster"));
-    assert!(!code.contains("impl NotaEncode for Cluster"));
+    // default `feature_gated_dotos("dotos-text")` shape, the `use
+    // dotos::*` and `cfg_attr(...)` derives sit behind the
+    // `dotos-text` feature.
+    assert!(code.contains("#[cfg(feature = \"dotos-text\")]\npub use dotos::{"));
+    assert!(!code.contains("pub struct DotosCollection"));
+    assert!(
+        code.contains("derive(dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode)")
+    );
+    assert!(!code.contains("impl DotosDecode for Cluster"));
+    assert!(!code.contains("impl DotosEncode for Cluster"));
     // Vec / KeyValue->BTreeMap / Option render at the field positions. The new
     // schema-source grammar derives a complex positional field's name from its
     // type (a custom name needs a named newtype), so the inline collection
@@ -1306,11 +1310,11 @@ fn collection_free_schema_keeps_checked_generated_source_stable() {
     assert_generated_fixture("spirit_generated.rs", generated.as_str());
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn generated_collection_struct_round_trips_through_nota() {
+fn generated_collection_struct_round_trips_through_dotos() {
     // Author a Cluster carrying all three collection kinds, encode it
-    // to NOTA, parse it back, and confirm the value survives.
+    // to DOTOS, parse it back, and confirm the value survives.
     let cluster = collections_generated::Cluster {
         service_vector: vec![
             collections_generated::Service::new("dns"),
@@ -1330,7 +1334,7 @@ fn generated_collection_struct_round_trips_through_nota() {
         },
         optional_node_config: Some(collections_generated::NodeConfig::new("warm")),
         healthy: collections_generated::Healthy::new(true),
-        config_path: collections_generated::ConfigPath::new("/tmp/cluster.nota"),
+        config_path: collections_generated::ConfigPath::new("/tmp/cluster.dotos"),
         digest: collections_generated::Digest::new(collections_generated::Bytes::new(vec![
             0xde, 0xad, 0xbe, 0xef,
         ])),
@@ -1339,8 +1343,8 @@ fn generated_collection_struct_round_trips_through_nota() {
         ),
     };
 
-    let encoded = collections_generated::NotaEncode::to_nota(&cluster);
-    let parsed = collections_generated::NotaSource::new(&encoded)
+    let encoded = collections_generated::DotosEncode::to_dotos(&cluster);
+    let parsed = collections_generated::DotosSource::new(&encoded)
         .parse::<collections_generated::Cluster>()
         .expect("cluster decodes");
 
@@ -1351,22 +1355,22 @@ fn generated_collection_struct_round_trips_through_nota() {
         node_config_by_node_name: std::collections::BTreeMap::new(),
         optional_node_config: None,
         healthy: collections_generated::Healthy::new(false),
-        config_path: collections_generated::ConfigPath::new("/tmp/empty.nota"),
+        config_path: collections_generated::ConfigPath::new("/tmp/empty.dotos"),
         digest: collections_generated::Digest::new(collections_generated::Bytes::new(Vec::new())),
         fingerprint: collections_generated::Fingerprint::new(
             collections_generated::FixedBytes::new([0u8; 4]),
         ),
     };
-    let empty_encoded = collections_generated::NotaEncode::to_nota(&empty);
-    let empty_parsed = collections_generated::NotaSource::new(&empty_encoded)
+    let empty_encoded = collections_generated::DotosEncode::to_dotos(&empty);
+    let empty_parsed = collections_generated::DotosSource::new(&empty_encoded)
         .parse::<collections_generated::Cluster>()
         .expect("empty cluster decodes");
     assert_eq!(empty_parsed, empty);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn generated_collection_payload_root_variant_round_trips_to_nota_and_rkyv() {
+fn generated_collection_payload_root_variant_round_trips_to_dotos_and_rkyv() {
     let mut projection = std::collections::BTreeMap::new();
     projection.insert(
         collections_generated::NodeName::new("alpha"),
@@ -1374,8 +1378,8 @@ fn generated_collection_payload_root_variant_round_trips_to_nota_and_rkyv() {
     );
     let output = collections_generated::Output::Projected(projection);
 
-    // NOTA round-trip through the root enum codec.
-    let encoded = collections_generated::NotaEncode::to_nota(&output);
+    // DOTOS round-trip through the root enum codec.
+    let encoded = collections_generated::DotosEncode::to_dotos(&output);
     let parsed = encoded
         .parse::<collections_generated::Output>()
         .expect("projected output parses");

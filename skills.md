@@ -17,7 +17,7 @@ objects. Do not add parser-side shortcuts or hand-written helper APIs beside
 the generated trait path.
 
 Use `RustEmissionTarget::WireContract` for signal and meta-signal contract
-repos: that target emits wire nouns, rkyv/NOTA codecs, and the universal
+repos: that target emits wire nouns, rkyv/DOTOS codecs, and the universal
 `signal-frame` request/reply aliases and traits (`Frame`, `FrameBody`,
 `Request`, `ReplyEnvelope`, `RequestBuilder`, `RequestPayload`,
 `SignalOperationHeads`). Do not hand-write those aliases in contract crates.

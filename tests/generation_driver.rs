@@ -88,12 +88,12 @@ fn daemon_runtime_driver_emits_nexus_and_sema_files_with_plane_targets() {
         "nexus runtime target should emit NexusEngine:\n{nexus}"
     );
     assert!(
-        nexus.contains("#[cfg(feature = \"nota-text\")]\npub use nota::{"),
-        "nexus runtime target should keep its NOTA surface feature-gated:\n{nexus}"
+        nexus.contains("#[cfg(feature = \"dotos-text\")]\npub use dotos::{"),
+        "nexus runtime target should keep its DOTOS surface feature-gated:\n{nexus}"
     );
     assert!(
-        nexus.contains("derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)"),
-        "nexus runtime support nouns should derive NOTA only behind the feature:\n{nexus}"
+        nexus.contains("derive(dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode)"),
+        "nexus runtime support nouns should derive DOTOS only behind the feature:\n{nexus}"
     );
     assert!(
         nexus.contains("pub type NexusRunnerNextStep = triad_runtime::NextStep<")
@@ -144,12 +144,12 @@ fn daemon_runtime_driver_emits_nexus_and_sema_files_with_plane_targets() {
         "sema runtime target should mark its local read input root with the runtime role trait:\n{sema}"
     );
     assert!(
-        sema.contains("#[cfg(feature = \"nota-text\")]\npub use nota::{"),
-        "sema runtime target should keep its NOTA surface feature-gated:\n{sema}"
+        sema.contains("#[cfg(feature = \"dotos-text\")]\npub use dotos::{"),
+        "sema runtime target should keep its DOTOS surface feature-gated:\n{sema}"
     );
     assert!(
-        sema.contains("derive(nota::NotaDecode, nota::NotaDecodeTraced, nota::NotaEncode)"),
-        "sema runtime support nouns should derive NOTA only behind the feature:\n{sema}"
+        sema.contains("derive(dotos::DotosDecode, dotos::DotosDecodeTraced, dotos::DotosEncode)"),
+        "sema runtime support nouns should derive DOTOS only behind the feature:\n{sema}"
     );
     assert!(
         !sema.contains("pub trait NexusEngine"),
