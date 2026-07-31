@@ -49,7 +49,7 @@ impl SchemaRustCli {
     }
 
     fn run(&self) -> Result<(), SchemaRustCliError> {
-        let input = RequestText::from_argument(self.command.nota_argument()?)?.parse()?;
+        let input = RequestText::from_argument(self.command.dotos_argument()?)?.parse()?;
         let output = input.execute()?;
         println!("{}", self.output_form.render(&output)?);
         Ok(())
@@ -92,8 +92,8 @@ impl RequestText {
 
     fn from_argument(argument: ComponentArgument) -> Result<Self, SchemaRustCliError> {
         match argument {
-            ComponentArgument::InlineNota(argument) => Ok(Self::new(argument.into_string())),
-            ComponentArgument::NotaFile(file) => RequestFile::new(file.into_path()).read(),
+            ComponentArgument::InlineDotos(argument) => Ok(Self::new(argument.into_string())),
+            ComponentArgument::DotosFile(file) => RequestFile::new(file.into_path()).read(),
             ComponentArgument::SignalFile(file) => RequestFile::new(file.into_path()).read(),
         }
     }

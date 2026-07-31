@@ -12,10 +12,10 @@ note: if you're trying to build a new `RustEmissionOptions` consider using one o
  --> src/lib.rs
   |
   |     pub fn always_enabled_dotos() -> Self {
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ...
   |     pub fn feature_gated_dotos(feature: impl Into<String>) -> Self {
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ...
   |     pub fn binary_only() -> Self {
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
