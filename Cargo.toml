@@ -21,7 +21,7 @@ required-features = ["cli"]
 dotos = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "80c7b17f7ad3" }
 prettyplease = "0.2"
 proc-macro2 = "1"
-protos = { git = "https://github.com/LiGoldragon/protos.git", rev = "9bce5ed8efadeb157811b256aa69a1f88cd5314f" }
+protos = { git = "https://github.com/LiGoldragon/protos.git", rev = "937dd7df657f685cdd1ebd6f2148ad428a8b36bf" }
 quote = "1"
 schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "b834873de2a14c783f4be4f1af2dbb21f17ecd83" }
 syn = { version = "2", features = ["full"] }

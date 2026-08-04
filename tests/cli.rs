@@ -115,3 +115,29 @@ fn schema_rust_cli_accepts_the_canonical_judge_contract_family() {
     assert!(stdout.contains("Generated.{"));
     assert!(stdout.contains("src/schema/lib.rs"));
 }
+
+#[test]
+fn schema_rust_cli_accepts_the_distinct_lojix_contract_families() {
+    let manifest_directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let contract_root = manifest_directory.join("tests/fixtures/driver-contract");
+
+    for family in ["SignalLojix", "MetaSignalLojix"] {
+        let request = format!(
+            "Generate.{{ {} driver-contract 0.1.0 [WireContract.{{ {family} lib }}] [] }}",
+            contract_root.display()
+        );
+        let output = Command::new(env!("CARGO_BIN_EXE_schema-rust"))
+            .arg(request)
+            .output()
+            .expect("run schema-rust CLI");
+
+        assert!(
+            output.status.success(),
+            "schema-rust CLI failed for {family}:\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).expect("stdout is UTF-8");
+        assert!(stdout.contains("Generated.{"));
+        assert!(stdout.contains("src/schema/lib.rs"));
+    }
+}

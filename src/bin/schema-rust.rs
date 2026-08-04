@@ -239,6 +239,8 @@ enum WireContractFamily {
     SignalSpirit,
     MetaSignalSpirit,
     SignalSpiritJudge,
+    SignalLojix,
+    MetaSignalLojix,
 }
 
 impl WireContractFamily {
@@ -247,6 +249,8 @@ impl WireContractFamily {
             Self::SignalSpirit => protos::WireContractFamily::SignalSpirit,
             Self::MetaSignalSpirit => protos::WireContractFamily::MetaSignalSpirit,
             Self::SignalSpiritJudge => protos::WireContractFamily::SignalSpiritJudge,
+            Self::SignalLojix => protos::WireContractFamily::SignalLojix,
+            Self::MetaSignalLojix => protos::WireContractFamily::MetaSignalLojix,
         }
     }
 }
