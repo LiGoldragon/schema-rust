@@ -113,29 +113,10 @@ dependencies = [
 [[package]]
 name = "dotos"
 version = "0.10.0"
-source = "git+https://github.com/LiGoldragon/dotos.git?rev=80c7b17f7ad3#80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3"
-dependencies = [
- "dotos-derive 0.5.0 (git+https://github.com/LiGoldragon/dotos.git?rev=80c7b17f7ad3)",
- "rkyv",
-]
-
-[[package]]
-name = "dotos"
-version = "0.10.0"
 source = "git+https://github.com/LiGoldragon/dotos.git?rev=80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3#80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3"
 dependencies = [
- "dotos-derive 0.5.0 (git+https://github.com/LiGoldragon/dotos.git?rev=80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3)",
+ "dotos-derive",
  "rkyv",
-]
-
-[[package]]
-name = "dotos-derive"
-version = "0.5.0"
-source = "git+https://github.com/LiGoldragon/dotos.git?rev=80c7b17f7ad3#80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
 ]
 
 [[package]]
@@ -535,10 +516,10 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 [[package]]
 name = "schema-language"
 version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/schema-language.git?rev=b834873de2a14c783f4be4f1af2dbb21f17ecd83#b834873de2a14c783f4be4f1af2dbb21f17ecd83"
+source = "git+https://github.com/LiGoldragon/schema-language.git?rev=5a7c713dd7c1e095970b26149c6ed5553dd1c715#5a7c713dd7c1e095970b26149c6ed5553dd1c715"
 dependencies = [
  "blake3",
- "dotos 0.10.0 (git+https://github.com/LiGoldragon/dotos.git?rev=80c7b17f7ad3)",
+ "dotos",
  "rkyv",
  "thiserror",
 ]
@@ -547,7 +528,7 @@ dependencies = [
 name = "schema-rust"
 version = "0.10.0"
 dependencies = [
- "dotos 0.10.0 (git+https://github.com/LiGoldragon/dotos.git?rev=80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3)",
+ "dotos",
  "prettyplease",
  "proc-macro2",
  "protos",

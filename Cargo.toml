@@ -23,7 +23,7 @@ prettyplease = "0.2"
 proc-macro2 = "1"
 protos = { git = "https://github.com/LiGoldragon/protos.git", rev = "937dd7df657f685cdd1ebd6f2148ad428a8b36bf" }
 quote = "1"
-schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "b834873de2a14c783f4be4f1af2dbb21f17ecd83" }
+schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "5a7c713dd7c1e095970b26149c6ed5553dd1c715" }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
 triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "e44c07dbf314", optional = true }
