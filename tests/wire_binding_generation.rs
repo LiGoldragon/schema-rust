@@ -52,8 +52,16 @@ fn canonical_families_emit_exact_distinct_marker_bindings() {
     let ordinary = wire_source(WireContractFamily::SignalSpirit);
     let meta = wire_source(WireContractFamily::MetaSignalSpirit);
     let judge = wire_source(WireContractFamily::SignalSpiritJudge);
+    let lojix = wire_source(WireContractFamily::SignalLojix);
+    let meta_lojix = wire_source(WireContractFamily::MetaSignalLojix);
 
-    for (source, contract_id) in [(&ordinary, 1_u32), (&meta, 2_u32), (&judge, 3_u32)] {
+    for (source, contract_id) in [
+        (&ordinary, 1_u32),
+        (&meta, 2_u32),
+        (&judge, 3_u32),
+        (&lojix, 5_u32),
+        (&meta_lojix, 6_u32),
+    ] {
         assert!(source.contains("pub enum ContractMarker {}"));
         assert!(source.contains("impl signal_frame::WireContract for ContractMarker"));
         assert!(source.contains(&format!(
@@ -67,11 +75,22 @@ fn canonical_families_emit_exact_distinct_marker_bindings() {
     assert_ne!(ordinary, meta);
     assert_ne!(ordinary, judge);
     assert_ne!(meta, judge);
+    assert_ne!(ordinary, lojix);
+    assert_ne!(ordinary, meta_lojix);
+    assert_ne!(meta, lojix);
+    assert_ne!(meta, meta_lojix);
+    assert_ne!(judge, lojix);
+    assert_ne!(judge, meta_lojix);
+    assert_ne!(lojix, meta_lojix);
     assert!(judge.contains("pub const INPUT_RECORD: u64 = 0x0000000100000003"));
     assert!(judge.contains("pub const OUTPUT_RECORD_ACCEPTED: u64 = 0x0100000100000003"));
     assert!(judge.contains("pub const HANDSHAKE_REQUEST: u64 = 0xFF00000100000003"));
     assert!(judge.contains("pub const HANDSHAKE_REPLY: u64 = 0xFF01000100000003"));
     assert!(judge.contains("pub const ENGINE_REFUSAL: u64 = 0xFF02000100000003"));
+    assert!(lojix.contains("pub const INPUT_RECORD: u64 = 0x0000000100000005"));
+    assert!(lojix.contains("pub const OUTPUT_RECORD_ACCEPTED: u64 = 0x0100000100000005"));
+    assert!(meta_lojix.contains("pub const INPUT_RECORD: u64 = 0x0000000100000006"));
+    assert!(meta_lojix.contains("pub const OUTPUT_RECORD_ACCEPTED: u64 = 0x0100000100000006"));
     assert!(judge.contains(
         "pub type Frame = signal_frame::BoundExchangeFrame<ContractMarker, Input, Output>;"
     ));
