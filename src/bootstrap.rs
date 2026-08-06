@@ -12,7 +12,7 @@ use core_nomos::{
     BootstrapSliceOneLowering, BootstrapSliceOneLoweringError, ExternalStorageProvenance,
 };
 use rust_logos::{RustLogos, RustTypePathResolver};
-use sema_translator::bootstrap::VerifiedBootstrapAssembly;
+use sema_translator::bootstrap::AuthorizedBootstrap;
 
 use crate::build::{BuildError, FreshnessCheck, GeneratedArtifact};
 
@@ -33,7 +33,7 @@ pub const BOOTSTRAP_SEMA_GENERATED_MARKER: &str =
 /// This boundary creates none of those inputs and performs no spelling-based
 /// identity or path inference.
 pub struct BootstrapInterfaceGeneration<'a> {
-    assembly: &'a VerifiedBootstrapAssembly,
+    assembly: &'a AuthorizedBootstrap,
     rust: &'a RustLogos,
     rust_types: &'a dyn RustTypePathResolver,
     source_path: PathBuf,
@@ -43,7 +43,7 @@ pub struct BootstrapInterfaceGeneration<'a> {
 impl<'a> BootstrapInterfaceGeneration<'a> {
     /// Seat the complete authority, Nomos, and Rust projection inputs.
     pub fn new(
-        assembly: &'a VerifiedBootstrapAssembly,
+        assembly: &'a AuthorizedBootstrap,
         rust: &'a RustLogos,
         rust_types: &'a dyn RustTypePathResolver,
         source_path: impl Into<PathBuf>,
@@ -152,7 +152,7 @@ pub enum BootstrapInterfaceGenerationError {
 /// `external_storage` carries owner-and-revision-bound archive fingerprints for
 /// every nonlocal storage leaf. This boundary creates or infers none of them.
 pub struct BootstrapSemaGeneration<'a> {
-    assembly: &'a VerifiedBootstrapAssembly,
+    assembly: &'a AuthorizedBootstrap,
     rust: &'a RustLogos,
     rust_types: &'a dyn RustTypePathResolver,
     external_storage: &'a [ExternalStorageProvenance],
@@ -163,7 +163,7 @@ pub struct BootstrapSemaGeneration<'a> {
 impl<'a> BootstrapSemaGeneration<'a> {
     /// Seat the complete authority, storage, Nomos, and Rust projection inputs.
     pub fn new(
-        assembly: &'a VerifiedBootstrapAssembly,
+        assembly: &'a AuthorizedBootstrap,
         rust: &'a RustLogos,
         rust_types: &'a dyn RustTypePathResolver,
         external_storage: &'a [ExternalStorageProvenance],

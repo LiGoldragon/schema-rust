@@ -9,11 +9,8 @@ use core_ethos::bootstrap::{
 use core_nomos::{
     BootstrapSliceOneLoweringError, ExternalStorageProvenance, StorageProvenanceOwner,
 };
-use name_table::{LocalEncodedId, Name};
-use rust_logos::{
-    FixtureRustVocabulary, FixtureRustVocabularyIds, RustEncodedIdCodec, RustLogos, RustTypePath,
-    RustTypePathResolver,
-};
+use name_table::LocalEncodedId;
+use rust_logos::{RustEncodedIdCodec, RustLogos, RustTypePath, RustTypePathResolver};
 use schema_rust::{
     bootstrap::{
         BOOTSTRAP_INTERFACE_GENERATED_MARKER, BOOTSTRAP_SEMA_GENERATED_MARKER,
@@ -23,11 +20,10 @@ use schema_rust::{
     build::BuildError,
 };
 use sema_translator::bootstrap::{
-    AuthorizedBootstrapTransition, BootstrapAuthorityIdentity, BootstrapAuthorityRevision,
-    BootstrapTransactionAssembler, VerifiedBootstrapAssembly,
+    AuthorizedBootstrap, AuthorizedBootstrapTransition, BootstrapAuthorityIdentity,
+    BootstrapAuthorityRevision, BootstrapTransactionAssembler, SealedRustVocabulary,
 };
 use signal_sema_translator::{VocabularyEncodedId, VocabularyRoot};
-use structural_codec::EncodedNameResolver;
 
 const INTERFACE_SOURCE: &str =
     "Interface.{1 0 0}\n[]\n{[] [] [] [Thing.String Choice.[None Pair.{String Integer}]]}";
@@ -37,11 +33,6 @@ const MANIFEST: &str = include_str!("../Cargo.toml");
 fn id(local: u16) -> VocabularyEncodedId {
     VocabularyEncodedId::new(VocabularyRoot::Universal, vec![LocalEncodedId::new(local)])
         .expect("test authority identity is nonempty")
-}
-
-fn rust_id(local: u16) -> VocabularyEncodedId {
-    VocabularyEncodedId::new(VocabularyRoot::Rust, vec![LocalEncodedId::new(local)])
-        .expect("test Rust vocabulary identity is nonempty")
 }
 
 fn record(
@@ -201,7 +192,7 @@ fn approval(
     )
 }
 
-fn interface_assembly() -> VerifiedBootstrapAssembly {
+fn interface_assembly() -> AuthorizedBootstrap {
     let catalog = base_catalog();
     let choice = id(101);
     let approved = approval(
@@ -219,7 +210,7 @@ fn interface_assembly() -> VerifiedBootstrapAssembly {
         .expect("authority-approved Interface transaction")
 }
 
-fn sema_assembly() -> VerifiedBootstrapAssembly {
+fn sema_assembly() -> AuthorizedBootstrap {
     let catalog = base_catalog();
     let approved = approval(
         &catalog,
@@ -248,52 +239,9 @@ fn external_storage(local: u16, fingerprint: u8) -> ExternalStorageProvenance {
     .expect("Universal external storage identity")
 }
 
-#[derive(Default)]
-struct Names(BTreeMap<VocabularyEncodedId, Name>);
-
-impl Names {
-    fn insert(&mut self, identity: VocabularyEncodedId, spelling: &str) {
-        self.0.insert(identity, Name::new(spelling));
-    }
-}
-
-impl EncodedNameResolver<VocabularyRoot> for Names {
-    fn resolve(&self, encoded_id: &VocabularyEncodedId) -> Option<&Name> {
-        self.0.get(encoded_id)
-    }
-}
-
 fn rust_logos() -> RustLogos {
-    let ids = FixtureRustVocabularyIds::new(
-        rust_id(10),
-        rust_id(11),
-        rust_id(12),
-        rust_id(13),
-        rust_id(14),
-        rust_id(1),
-        rust_id(2),
-        rust_id(3),
-        rust_id(4),
-        rust_id(5),
-    );
-    let mut names = Names::default();
-    for (identity, spelling) in [
-        (rust_id(10), "NewtypeItemRecord"),
-        (rust_id(11), "EnumerationItemRecord"),
-        (rust_id(12), "VariantRecord"),
-        (rust_id(13), "TupleFieldRecord"),
-        (rust_id(14), "TypeReferenceRecord"),
-        (rust_id(1), "struct"),
-        (rust_id(2), "enum"),
-        (rust_id(3), "pub"),
-        (rust_id(4), ","),
-        (rust_id(5), ";"),
-    ] {
-        names.insert(identity, spelling);
-    }
-    RustLogos::new(
-        FixtureRustVocabulary::seal(ids, &names).expect("sealed caller-owned Rust vocabulary"),
-    )
+    RustLogos::from_authority(&SealedRustVocabulary::bootstrap())
+        .expect("authority releases the bootstrap Rust vocabulary")
 }
 
 #[derive(Default)]
@@ -609,8 +557,8 @@ fn strict_bootstrap_lane_pins_one_exact_verified_producer_train() {
     for exact_dependency in [
         "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"43b48c779c54ee9f05cbcc111d5d88074b162461\" }",
         "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"7b60721d199551b648d42a49934a2f0ef950c595\" }",
-        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"081e99596826b15e2ff7f1356ae8d797b18aeffc\" }",
-        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"287fbd728a05b1a6be1dc8a28bcf3ca06d9916b3\", default-features = false, features = [\"bootstrap\"] }",
+        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"82e0e5c10f6efb2d53330d72ba78dd3ac695f38a\" }",
+        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"4bd6e8fa0c3139be94a83c7ca7975bd8153eb9f5\", default-features = false, features = [\"bootstrap\"] }",
         "signal-sema-translator = { git = \"https://github.com/LiGoldragon/signal-sema-translator.git\", rev = \"3f41813dd63904c7e2b3da4382eff64ed1bf12fe\" }",
     ] {
         assert!(

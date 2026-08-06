@@ -455,8 +455,8 @@ dependencies = [
 
 [[package]]
 name = "rust-logos"
-version = "0.30.1"
-source = "git+https://github.com/LiGoldragon/rust-logos.git?rev=081e99596826b15e2ff7f1356ae8d797b18aeffc#081e99596826b15e2ff7f1356ae8d797b18aeffc"
+version = "0.31.0"
+source = "git+https://github.com/LiGoldragon/rust-logos.git?rev=82e0e5c10f6efb2d53330d72ba78dd3ac695f38a#82e0e5c10f6efb2d53330d72ba78dd3ac695f38a"
 dependencies = [
  "bs58",
  "core-logos",
@@ -467,6 +467,7 @@ dependencies = [
  "quote",
  "raw-discovery",
  "rkyv",
+ "sema-translator",
  "signal-sema-translator",
  "structural-codec",
  "syn 2.0.119",
@@ -494,7 +495,7 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "schema-rust"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "core-ethos",
  "core-nomos",
@@ -510,8 +511,8 @@ dependencies = [
 
 [[package]]
 name = "sema-translator"
-version = "0.8.0"
-source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=287fbd728a05b1a6be1dc8a28bcf3ca06d9916b3#287fbd728a05b1a6be1dc8a28bcf3ca06d9916b3"
+version = "0.9.0"
+source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=4bd6e8fa0c3139be94a83c7ca7975bd8153eb9f5#4bd6e8fa0c3139be94a83c7ca7975bd8153eb9f5"
 dependencies = [
  "core-ethos",
  "name-table 0.3.0",
