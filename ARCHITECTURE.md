@@ -7,25 +7,65 @@ consumers. Everything below describes what this frozen donor currently
 implements, not the approved architecture going forward under the Ethos
 name.
 
-`schema-rust` emits Rust interface source from typed schema data and owns the
-shared build-driver orchestrator for generated schema modules. This repository
-owns the Rust code-generation step and that orchestrator; it does not define
-schema semantics, which now come from the build-time `schema-language` crate. Rust emission is a separate step
+`schema-rust` retains Rust interface emission from typed legacy schema data and
+owns the shared build-driver orchestrator for those generated modules. It also
+owns the final checked-artifact orchestration for the strict bootstrap
+Interface lane described below. This repository owns Rust projection and those
+orchestrators; it does not define Ethos or Nomos meaning. Rust emission is a separate step
 from Rust macros: schema generates Rust code first, and macros are a later or
 separate consumption surface. Generated Rust is emitted into the consumer crate
 source tree under `src/schema/`, not hidden in `OUT_DIR`, so source-visible
 generated interfaces stay reviewable and can become committed or
 freshness-checked build artifacts.
 
-Its source-facing input is `schema_language::SchemaSource`, the schema-in-Rust value
+The legacy lane's source-facing input is `schema_language::SchemaSource`, the schema-in-Rust value
 produced when authored `.schema` deserializes into Rust datatypes that fully
 define the schema and serialize through rkyv. Its semantic emission input is
 `schema_language::TrueSchema`, the canonical decoded semantic layer; there is no older
-assembled-schema artifact or parallel semantic model beside that typed
+assembled-schema artifact or parallel semantic model inside that legacy
 source/true-schema pipeline.
+
+## Strict bootstrap Interface lane
+
+`bootstrap::BootstrapInterfaceGeneration` begins only after
+`sema_translator::bootstrap::BootstrapTransactionAssembler` has produced a
+`VerifiedBootstrapAssembly`. That noun carries the matching reader, exact
+authority-branded prepared transaction, verified encoded-name resolver, and
+canonical source projection. The generator accepts no raw source or decoded
+document and performs no authority work.
+
+The generator first admits only `BootstrapBody::Interface`. It then calls
+`core_nomos::BootstrapSliceOneLowering` with the matching reader and transaction,
+so receipt and prepared-model validation occur again immediately before the
+direct transaction-to-`WholeLogos` lowering. Traits, nonempty Interface roles,
+Streams, tables, and requirements retain Nomos's exact typed refusals; this
+layer drops none of them.
+
+Rust projection requires two additional caller-owned inputs: a `RustLogos`
+built from an already sealed structural Rust vocabulary and a
+`RustTypePathResolver` carrying every explicit external path. The generator
+does not create Rust vocabulary identities, derive paths from Ethos spellings,
+or substitute fixture projection tables. Production rust-logos emission encodes
+complete Universal identities according to its canonical codec and reads Rust
+vocabulary names only through the sealed vocabulary.
+
+The output is one `GeneratedBootstrapInterface` containing the canonical
+core-ethos writer projection and the canonical Rust projection. Both artifacts
+must match their checked paths under `assert_checked_in` / `write_or_check`.
+This makes source canonicality and Rust freshness one proof rather than checking
+only the generated Rust file.
+
+This lane has no `schema_language` import and never constructs `SchemaSource`,
+`TrueSchema`, `SchemaEngine`, or a legacy six-slot document. The retained
+legacy build driver remains isolated for consumers not yet on this train; it is
+not an adapter for bootstrap Interface meaning.
 
 ## Interfaces
 
+- `BootstrapInterfaceGeneration` is the strict verified-transaction → Nomos →
+  Logos → Rust orchestration boundary.
+- `GeneratedBootstrapInterface` owns the paired canonical-source and checked-
+  Rust freshness proof.
 - `RustEmitter` is the code-generation engine.
 - `RustTrueSchemaLowering` is the entry trait implemented for
   `schema_language::TrueSchema`. The deserialized semantic schema object owns the

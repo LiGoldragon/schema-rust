@@ -9,6 +9,7 @@ use schema_language::{
     Visibility,
 };
 
+pub mod bootstrap;
 pub mod build;
 pub mod daemon_emit;
 pub mod migration;

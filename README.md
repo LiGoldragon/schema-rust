@@ -6,17 +6,35 @@ schema-language, and schema-rust die under their old names. It gains no new
 consumers; the description below is what this frozen donor currently
 implements, not the approved architecture going forward.
 
-`schema-rust` emits source-visible Rust interface code from `schema-language`'s typed
-schema data.
+The legacy lane emits source-visible Rust interface code from
+`schema-language`'s typed schema data. The strict bootstrap Interface lane is a
+separate boundary:
 
-This repository is deliberately not a Rust macro crate. The active path in
-this frozen donor's own code is:
+```text
+authority-approved Interface source
+  → sema-translator VerifiedBootstrapAssembly
+  → core-nomos BootstrapSliceOneLowering
+  → WholeLogos
+  → caller-sealed RustLogos vocabulary + explicit Rust type paths
+  → checked canonical source and Rust
+```
+
+`BootstrapInterfaceGeneration` accepts only the verified assembly. It cannot
+parse raw source, invent identities, synthesize the Rust vocabulary, or infer
+external Rust paths from spellings. Nomos revalidates the branded transaction;
+nonempty Interface roles remain typed refusals. The canonical core-ethos writer
+projection and the structural rust-logos projection are both freshness-checked.
+The obsolete six-slot source does not enter this lane, and no `SchemaSource` or
+`TrueSchema` compatibility reconstruction connects the two lanes.
+
+This repository is deliberately not a Rust macro crate. The retained legacy
+path in this frozen donor's own code is:
 authored `.schema` source deserializes into `schema_language::SchemaSource`, lowers into
 semantic `schema_language::TrueSchema`, then emits Rust source under `src/schema/`.
 `TrueSchema` is the canonical decoded semantic layer; generated Rust is only a
 projection from it.
 
-The shared build driver is the public orchestration surface. Component
+The legacy shared build driver is one public orchestration surface. Component
 `build.rs` files use `schema_rust::build::GenerationDriver`,
 `GenerationPlan`, and `ModuleEmission` to load selected schema modules through
 `schema_language::SchemaEnvironment`, generate Rust from the environment-carried

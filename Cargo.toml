@@ -1,8 +1,8 @@
 [package]
 name         = "schema-rust"
-version      = "0.10.0"
+version      = "0.11.0"
 edition      = "2024"
-rust-version = "1.88"
+rust-version = "1.89"
 license      = "MIT OR Apache-2.0"
 repository   = "https://github.com/LiGoldragon/schema-rust"
 description  = "Rust source emitter for schema typed schema data."
@@ -18,12 +18,16 @@ path = "src/bin/schema-rust.rs"
 required-features = ["cli"]
 
 [dependencies]
+core-ethos = { git = "https://github.com/LiGoldragon/core-ethos.git", rev = "db5a97a573113202e4de6c97e71b33491bd9666f" }
+core-nomos = { git = "https://github.com/LiGoldragon/core-nomos.git", rev = "22de53fced0eff372930f5b7baec0c667f1a16d5" }
 dotos = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3" }
 prettyplease = "0.2"
 proc-macro2 = "1"
-protos = { git = "https://github.com/LiGoldragon/protos.git", rev = "937dd7df657f685cdd1ebd6f2148ad428a8b36bf" }
+protos = { git = "https://github.com/LiGoldragon/protos.git", rev = "65e7c6d4692a40e1c49deffb3fb4a9a2c3555c5b" }
 quote = "1"
+rust-logos = { git = "https://github.com/LiGoldragon/rust-logos.git", rev = "250e728fa9e5a02e3c9a6d4f0cfee0683863df83" }
 schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "5a7c713dd7c1e095970b26149c6ed5553dd1c715" }
+sema-translator = { git = "https://github.com/LiGoldragon/sema-translator.git", rev = "1da83e03cdc5cea10e529d081d5a10437bd6628e" }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
 triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "e44c07dbf314", optional = true }
@@ -41,8 +45,12 @@ dotos-text = []
 cli = ["dep:triad-runtime"]
 
 [dev-dependencies]
+name-table = { git = "https://github.com/LiGoldragon/name-table.git", rev = "a22f48d8040ab9235f3552ad8654ff8e27b8157d" }
 rkyv = { version = "=0.8.17", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 signal-frame = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "0786fbe8caf27552afcdd5deb85bc82ec6088337" }
+signal-sema-translator = { git = "https://github.com/LiGoldragon/signal-sema-translator.git", rev = "3a26cb43f8ce7f9fe85da64d19aa55aa662943ce" }
+structural-codec = { git = "https://github.com/LiGoldragon/structural-codec.git", rev = "413e3744569ca237e837a1fd57d9ba6ad6adc3de" }
+tempfile = "3"
 tokio = { version = "1", features = ["io-util", "net", "rt-multi-thread"] }
 triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "e44c07dbf314" }
 trybuild = "1"

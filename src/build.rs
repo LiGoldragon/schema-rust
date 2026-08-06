@@ -449,7 +449,7 @@ impl ContractCrateBuild {
             crate_name,
             schema_version,
             module: "lib".to_owned(),
-            update_environment_variable: update_environment_variable.into(),
+            update_environment_variable,
             wire_contract_family,
         }
     }
@@ -816,7 +816,7 @@ impl GeneratedArtifact {
         &self.content
     }
 
-    fn check_with(&self, check: &FreshnessCheck) -> Result<(), BuildError> {
+    pub(crate) fn check_with(&self, check: &FreshnessCheck) -> Result<(), BuildError> {
         if check.updates_files() {
             self.write()?;
             return Ok(());
@@ -853,7 +853,7 @@ impl GeneratedArtifact {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-enum FreshnessCheck {
+pub(crate) enum FreshnessCheck {
     CheckOnly,
     UpdateWhenRequested {
         update_environment_variable: String,
@@ -862,11 +862,11 @@ enum FreshnessCheck {
 }
 
 impl FreshnessCheck {
-    fn check_only() -> Self {
+    pub(crate) fn check_only() -> Self {
         Self::CheckOnly
     }
 
-    fn from_environment(update_environment_variable: impl Into<String>) -> Self {
+    pub(crate) fn from_environment(update_environment_variable: impl Into<String>) -> Self {
         let update_environment_variable = update_environment_variable.into();
         let update_files = env::var_os(&update_environment_variable).is_some();
         Self::UpdateWhenRequested {
