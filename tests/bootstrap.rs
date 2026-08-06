@@ -23,8 +23,8 @@ use schema_rust::{
     build::BuildError,
 };
 use sema_translator::bootstrap::{
-    AuthorizedBootstrapTransition, BootstrapAssemblyError, BootstrapAuthorityIdentity,
-    BootstrapAuthorityRevision, BootstrapTransactionAssembler, VerifiedBootstrapAssembly,
+    AuthorizedBootstrapTransition, BootstrapAuthorityIdentity, BootstrapAuthorityRevision,
+    BootstrapTransactionAssembler, VerifiedBootstrapAssembly,
 };
 use signal_sema_translator::{VocabularyEncodedId, VocabularyRoot};
 use structural_codec::EncodedNameResolver;
@@ -326,7 +326,7 @@ fn verified_interface_transaction_projects_canonical_source_and_rust_with_exact_
     let assembly = interface_assembly();
     let rust = rust_logos();
     let paths = TypePaths::default()
-        .with(id(7), &["std", "string", "String"])
+        .with(id(7), &["fixture", "Text"])
         .with(id(8), &["u64"]);
     let directory = tempfile::tempdir().expect("temporary checked-artifact directory");
     let source_path = directory.path().join("domain.schema");
@@ -350,7 +350,7 @@ fn verified_interface_transaction_projects_canonical_source_and_rust_with_exact_
             .starts_with(BOOTSTRAP_INTERFACE_GENERATED_MARKER)
     );
     assert!(
-        generated.rust().content().contains("std::string::String"),
+        generated.rust().content().contains("fixture::Text"),
         "explicit external type path was not projected:\n{}",
         generated.rust().content()
     );
@@ -392,7 +392,7 @@ fn verified_sema_transaction_projects_stored_rust_and_table_with_paired_freshnes
     let assembly = sema_assembly();
     let rust = rust_logos();
     let paths = TypePaths::default()
-        .with(id(7), &["std", "string", "String"])
+        .with(id(7), &["fixture", "Text"])
         .with(id(8), &["u64"]);
     let external = [external_storage(7, 7), external_storage(8, 8)];
     let directory = tempfile::tempdir().expect("temporary checked-artifact directory");
@@ -491,7 +491,7 @@ fn strict_sema_generation_retains_kind_storage_and_key_refusals() {
     let sema = sema_assembly();
     let rust = rust_logos();
     let paths = TypePaths::default()
-        .with(id(7), &["std", "string", "String"])
+        .with(id(7), &["fixture", "Text"])
         .with(id(8), &["u64"]);
     assert!(matches!(
         BootstrapSemaGeneration::new(&interface, &rust, &paths, &[], "wrong.schema", "wrong.rs")
@@ -548,18 +548,8 @@ fn strict_sema_generation_retains_kind_storage_and_key_refusals() {
 }
 
 #[test]
-fn obsolete_six_slot_source_and_non_interface_transactions_never_enter_generation() {
+fn nexus_transaction_never_enters_interface_generation() {
     let catalog = base_catalog();
-    let approved = approval(
-        &catalog,
-        [record(&["app"], None, "Thing", id(100))],
-        [id(100)],
-    );
-    assert!(matches!(
-        assembler(catalog.clone()).assemble("{}\n[]\n[]\n{}\n{}\n{}", approved),
-        Err(BootstrapAssemblyError::Read(_))
-    ));
-
     let nexus = assembler(catalog.clone())
         .assemble(
             "Nexus.{1 0 0}\n[]\n{[] [Thing.String]}",
@@ -612,23 +602,6 @@ fn nonempty_interface_roles_are_exact_nomos_refusals() {
             }
         )) if target == id(100)
     ));
-}
-
-#[test]
-fn production_bootstrap_lane_has_no_legacy_schema_reconstruction_or_identity_invention() {
-    let source = include_str!("../src/bootstrap.rs");
-    for forbidden in [
-        "schema_language::",
-        "SchemaEngine::",
-        "SchemaSource::",
-        "TrueSchema::",
-        "LocalEncodedId",
-    ] {
-        assert!(
-            !source.contains(forbidden),
-            "strict bootstrap generation must not contain {forbidden}"
-        );
-    }
 }
 
 #[test]

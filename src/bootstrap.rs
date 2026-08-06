@@ -1,11 +1,9 @@
 //! Strict bootstrap Interface and Sema generation.
 //!
 //! This lane begins after the sole naming authority has authenticated an exact
-//! bootstrap transaction. It does not accept source text, a decoded document,
-//! `SchemaSource`, `TrueSchema`, or caller-invented name bindings. The matching
-//! reader is revalidated by Nomos, and Rust is projected from the resulting
-//! `WholeLogos` through a caller-supplied sealed Rust vocabulary and explicit
-//! external type-path resolver.
+//! bootstrap transaction. The matching reader is revalidated by Nomos, and
+//! Rust is projected from the resulting `WholeLogos` through a caller-supplied
+//! sealed Rust vocabulary and explicit external type-path resolver.
 
 use std::path::PathBuf;
 

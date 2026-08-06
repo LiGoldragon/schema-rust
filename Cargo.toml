@@ -1,59 +1,37 @@
 [package]
 name         = "schema-rust"
-version      = "0.13.0"
+version      = "0.14.0"
 edition      = "2024"
 rust-version = "1.89"
 license      = "MIT OR Apache-2.0"
 repository   = "https://github.com/LiGoldragon/schema-rust"
-description  = "Rust source emitter for schema typed schema data."
+description  = "Verified bootstrap Ethos generation through Nomos and Rust Logos."
 publish      = false
+autobins     = false
+autoexamples = false
+autotests    = false
 
 [lib]
 name = "schema_rust"
 path = "src/lib.rs"
 
-[[bin]]
-name = "schema-rust"
-path = "src/bin/schema-rust.rs"
-required-features = ["cli"]
-
 [dependencies]
 core-ethos = { git = "https://github.com/LiGoldragon/core-ethos.git", rev = "427fd74a8217f557cfabdfe0ff23b784c855bf85" }
 core-nomos = { git = "https://github.com/LiGoldragon/core-nomos.git", rev = "ff675b264e3650afb88291036ec2bdd97292a2e7" }
-dotos = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3" }
-prettyplease = "0.2"
-proc-macro2 = "1"
-protos = { git = "https://github.com/LiGoldragon/protos.git", rev = "65e7c6d4692a40e1c49deffb3fb4a9a2c3555c5b" }
-quote = "1"
 rust-logos = { git = "https://github.com/LiGoldragon/rust-logos.git", rev = "55501fddc2d7e154d71fff1659386cbbba712267" }
-schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "5a7c713dd7c1e095970b26149c6ed5553dd1c715" }
 sema-translator = { git = "https://github.com/LiGoldragon/sema-translator.git", rev = "6b5499c0d25c801b56582fdcd8e021c3293a6d4d", default-features = false, features = ["bootstrap"] }
-syn = { version = "2", features = ["full"] }
 thiserror = "2"
-triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "e44c07dbf314", optional = true }
-
-[features]
-# Activates the `#[cfg(feature = "dotos-text")]` blocks inside any
-# schema-emitted fixture this crate's tests `include!`. The emitter
-# itself doesn't gate any of its own code on this feature; it only
-# controls whether the included generated source carries its DOTOS
-# bridges. Defaulting it on keeps the existing test paths
-# (`generated::Input::from_str`, `generated::*::to_dotos`, the
-# `dotos::*` re-exports) live without per-test cargo flags.
-default   = ["dotos-text", "cli"]
-dotos-text = []
-cli = ["dep:triad-runtime"]
 
 [dev-dependencies]
 name-table = { git = "https://github.com/LiGoldragon/name-table.git", rev = "a22f48d8040ab9235f3552ad8654ff8e27b8157d" }
-rkyv = { version = "=0.8.17", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
-signal-frame = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "0786fbe8caf27552afcdd5deb85bc82ec6088337" }
 signal-sema-translator = { git = "https://github.com/LiGoldragon/signal-sema-translator.git", rev = "3a26cb43f8ce7f9fe85da64d19aa55aa662943ce" }
 structural-codec = { git = "https://github.com/LiGoldragon/structural-codec.git", rev = "879d76f91facedd6d5cbca79e282260e1beb9478" }
+syn = { version = "2", features = ["full"] }
 tempfile = "3"
-tokio = { version = "1", features = ["io-util", "net", "rt-multi-thread"] }
-triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "e44c07dbf314" }
-trybuild = "1"
+
+[[test]]
+name = "bootstrap"
+path = "tests/bootstrap.rs"
 
 [lints.rust]
 unsafe_code = "forbid"

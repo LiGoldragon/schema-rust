@@ -1,92 +1,18 @@
 # schema-rust
 
-**Frozen donor, dead under its old name.** This repo was ruled dead under its
-old name 2026-07-27 (S1R entry 7): the language is Ethos, and legacy schema,
-schema-language, and schema-rust die under their old names. It gains no new
-consumers; the description below is what this frozen donor currently
-implements, not the approved architecture going forward.
+`schema-rust` is the verified bootstrap generation boundary for Interface and
+Sema Ethos documents.
 
-The legacy lane emits source-visible Rust interface code from
-`schema-language`'s typed schema data. The strict bootstrap Interface and Sema
-lanes are a separate boundary:
+An authority-sealed transaction is revalidated and lowered by Core Nomos into
+Whole Logos. Rust Logos then owns the sole structural projection into Rust
+text. The caller supplies the sealed Rust vocabulary and every external Rust
+type path explicitly; this crate infers no Rust spelling from an Ethos name.
 
-```text
-authority-approved Interface or Sema source
-  → sema-translator VerifiedBootstrapAssembly
-  → core-nomos BootstrapSliceOneLowering
-  → WholeLogos
-  → caller-sealed RustLogos vocabulary + explicit Rust type paths
-  → for Sema, explicit revision-bearing external storage provenance
-  → checked canonical source and Rust
-```
+The generated Ethos and Rust artifacts are checked together. Build scripts may
+update them only through an explicit component-owned environment variable.
 
-`BootstrapInterfaceGeneration` and `BootstrapSemaGeneration` accept only the
-verified assembly. They cannot
-parse raw source, invent identities, synthesize the Rust vocabulary, or infer
-external Rust paths from spellings. Nomos revalidates the branded transaction.
-Nonempty Interface roles remain typed refusals. Sema uses a separate
-storage-aware lowering: table records and newtype keys must be declared by the
-exact document, and every nonlocal leaf must carry an owner, immutable revision,
-and archive fingerprint. Its generated Rust contains stored rkyv declarations
-and first-class `sema_engine::TableSpecification` implementations. The canonical
-core-ethos writer projection and structural rust-logos projection are paired in
-one freshness proof. The obsolete six-slot source does not enter either lane,
-and no `SchemaSource` or `TrueSchema` compatibility reconstruction connects
-them.
-
-This repository is deliberately not a Rust macro crate. The retained legacy
-path in this frozen donor's own code is:
-authored `.schema` source deserializes into `schema_language::SchemaSource`, lowers into
-semantic `schema_language::TrueSchema`, then emits Rust source under `src/schema/`.
-`TrueSchema` is the canonical decoded semantic layer; generated Rust is only a
-projection from it.
-
-The legacy shared build driver is one public orchestration surface. Component
-`build.rs` files use `schema_rust::build::GenerationDriver`,
-`GenerationPlan`, and `ModuleEmission` to load selected schema modules through
-`schema_language::SchemaEnvironment`, generate Rust from the environment-carried
-`TrueSchema`, and freshness-check the checked-in Rust files.
-
-Emission is still two-step inside the crate: true schema data lowers into a
-`RustModule`, and `RustModule::render()` produces `RustCode`. The module object
-carries scalar aliases, imports, declarations, roots, and support metadata, so
-tests can inspect the code-generation model before comparing rendered source
-snapshots.
-
-Generated paths mirror crate-local schema modules. A schema identity such as
-`spirit:lib` emits to `src/schema/lib.rs`; an identity such as
-`spirit:signal:public` emits to `src/schema/signal/public.rs`. The first
-namespace segment is the crate boundary and is not repeated inside the crate's
-generated module tree.
-
-The emitted source includes the data types, `dotos` codec derives, small
-inherent DOTOS bridge methods, rkyv derives, short-header signal frames, Nexus
-traits, Nexus mail lifecycle objects, mail-event hooks, family identity
-surfaces, and upgrade/accept traits that runtime crates implement against.
-Public schema declarations emit `pub` Rust nouns; private schema declarations
-emit `pub(crate)` module-local nouns so inline PascalCase schema sugar does not
-become an exported API by accident.
-
-Composite type references come from typed datatype objects in the authored
-schema, written as dotted positional application: `Vector.Topic`,
-`Map.(Topic RecordIdentifier)`, and `Optional.Topic`. Product components are
-positional and typed. A unique component normally uses the bare type name;
-explicit `field.Type` disambiguation is reserved for repeated same-type
-components that need stable field names.
-
-Tests keep meaningful schema and DOTOS examples in fixture files under
-`tests/fixtures/`. Rust tests load those fixtures through the support helpers
-instead of hiding the language examples inside Rust string literals.
-
-The `schema-rust` binary is a thin one-argument DOTOS client over the shared
-driver. It accepts a `Generate` request, loads the selected modules through
-`SchemaEnvironment`, regenerates from `TrueSchema`, and prints typed feedback
-with the selected canonical source and generated Rust artifact sizes:
+The durable gate is:
 
 ```sh
-cargo run --bin schema-rust -- "(Generate (<crate-root> <crate-name> <version> [(NexusRuntime nexus) (SemaRuntime sema)] [(dependency-crate <dependency-schema-dir> <version>)]))"
+nix flake check -L
 ```
-
-The older `emit_schema` example remains a low-level local debugging tool for a
-single schema file. The binary is the command surface that follows the current
-build-driver path.
