@@ -27,6 +27,7 @@ reader/transaction pairing through Nomos validation before Rust projection.
 Rust naming policy exists only inside Rust Logos. This crate performs no other
 generation.
 
-`build` contains only checked-artifact freshness and Cargo schema-directory
-metadata. Component repositories own their Ethos sources, authority manifests,
-generated Rust, and the explicit update request for those checked artifacts.
+`build` contains only checked-artifact freshness and the Cargo discovery
+contract for explicit component-owned Ethos source directories. Component
+repositories own those sources, their authority manifests, generated Rust, and
+the explicit update request for those checked artifacts.

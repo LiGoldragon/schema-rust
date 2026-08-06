@@ -10,34 +10,23 @@ Read the workspace Rust and schema skills before editing this repo:
 - `skills/abstractions.md`
 - `skills/actor-systems.md`
 
-This repo emits Rust nouns from `schema_language::TrueSchema` data. Generated Signal,
-Nexus, and SEMA traits are the runtime method surface; component crates supply
-non-default algorithms by implementing those traits on data-bearing runtime
-objects. Do not add parser-side shortcuts or hand-written helper APIs beside
-the generated trait path.
+This repository owns only verified bootstrap projection for authority-sealed
+Interface and Sema Ethos transactions. `BootstrapInterfaceGeneration` and
+`BootstrapSemaGeneration` retain the reader/transaction pairing through Core
+Nomos validation, then delegate the only structural Rust text projection to
+Rust Logos with explicit type paths.
 
-Use `RustEmissionTarget::WireContract` for signal and meta-signal contract
-repos: that target emits wire nouns, rkyv/DOTOS codecs, and the universal
-`signal-frame` request/reply aliases and traits (`Frame`, `FrameBody`,
-`Request`, `ReplyEnvelope`, `RequestBuilder`, `RequestPayload`,
-`SignalOperationHeads`). Do not hand-write those aliases in contract crates.
-Use
-`RustEmissionTarget::NexusRuntime` for daemon-crate `schema/nexus.schema` files
-and `RustEmissionTarget::SemaRuntime` for `schema/sema.schema` files. Those
-per-plane runtime schemas import contract roots where needed.
-`RustEmissionTarget::ComponentRuntime` is the compatibility/bootstrap target
-for unsplit all-in-one schemas, not the canonical daemon shape.
+Component repositories own their canonical Ethos source, authority manifest,
+checked Rust projection, and explicit update request. Use the paired generated
+artifacts in `schema_rust::bootstrap`; do not introduce another parser,
+lowering route, naming table, inferred Rust spelling, or unchecked emission
+path.
 
-Component `build.rs` files should use `schema_rust::build` rather than
-hand-rolling package loading, lowering, emission, or checked-in freshness
-logic. Use `GenerationPlan::wire_contract` for contract crates,
-`GenerationPlan::daemon_runtime` for daemon `nexus.schema` + `sema.schema`,
-and `GenerationPlan::component_runtime_compatibility` only for current
-all-in-one bootstrap schemas. Register imported contract schemas through
-`DependencySchema` entries sourced from Cargo build metadata, not hard-coded
-local checkout paths.
-
-Contract crates that declare a Cargo `links` name should publish their
-`schema/` directory with `CargoSchemaMetadata::emit_schema_directory` after
-the schema freshness check. Daemon crates consume that same convention with
-`DependencySchema::from_cargo_metadata`.
+`schema_rust::build` owns checked-artifact freshness and one Cargo discovery
+contract. A component with a Cargo `links` name may publish an explicitly
+chosen Ethos source directory through `CargoEthosSourceMetadata`; the API must
+never infer a directory spelling from the crate root. A dependent build may
+resolve that directory and emit its exact rerun instruction before verifying
+its own authority-sealed transaction. The metadata carries only the canonical
+textual-source location—never schema family, version, parsing, lowering,
+generation, runtime, or wire policy.

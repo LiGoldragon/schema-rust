@@ -29,6 +29,14 @@
             test "$(find ${src}/src -maxdepth 1 -type f -name '*.rs' -printf '%f\n' | sort | tr '\n' ' ')" = "bootstrap.rs build.rs lib.rs "
             test "$(find ${src}/tests -maxdepth 1 -type f -name '*.rs' -printf '%f\n')" = "bootstrap.rs"
             test "$(grep -R -l 'RUST_NAMING_TRANSLATIONS' ${src}/src ${src}/tests | wc -l)" -eq 0
+            retired_type="Cargo""SchemaMetadata"
+            retired_key="schema""-dir"
+            retired_variable="SCHEMA""_DIR"
+            ! grep -R -E "$retired_type|$retired_key|$retired_variable" ${src}/src ${src}/tests ${./ARCHITECTURE.md} ${./skills.md}
+            grep -q 'pub struct CargoEthosSourceMetadata' ${src}/src/build.rs
+            grep -q 'cargo::metadata=ethos-source-dir=' ${src}/src/build.rs
+            grep -q 'DEP_{}_ETHOS_SOURCE_DIR' ${src}/src/build.rs
+            grep -q 'cargo::rerun-if-env-changed={}' ${src}/src/build.rs
             touch $out
           '';
           doc = craneLib.cargoDoc (commonArguments // {

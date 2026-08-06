@@ -6,38 +6,51 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// Cargo build-script metadata for a component-owned Ethos source directory.
+/// Cargo's discovery contract for component-owned Ethos source directories.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CargoSchemaMetadata {
+pub struct CargoEthosSourceMetadata {
     links_name: String,
 }
 
-impl CargoSchemaMetadata {
-    /// Bind metadata to one Cargo `links` name.
+impl CargoEthosSourceMetadata {
+    /// Bind dependency discovery to one Cargo `links` name.
     pub fn new(links_name: impl Into<String>) -> Self {
         Self {
             links_name: links_name.into(),
         }
     }
 
-    /// Publish the owning component's `schema` directory to dependants.
-    pub fn emit_schema_directory(&self, crate_root: &Path) {
-        let schema_directory = crate_root.join("schema");
-        println!("cargo::metadata=schema-dir={}", schema_directory.display());
+    /// Publish an explicit directory owned by the component running this build script.
+    pub fn publish_owned_source_directory(&self, source_directory: impl AsRef<Path>) {
+        println!(
+            "cargo::metadata=ethos-source-dir={}",
+            source_directory.as_ref().display()
+        );
     }
 
-    /// Read the dependency-provided schema directory when present.
-    pub fn schema_directory(&self) -> Option<PathBuf> {
-        env::var_os(self.schema_directory_variable()).map(PathBuf::from)
+    /// Read one dependency's published Ethos source directory when present.
+    pub fn dependency_source_directory(&self) -> Option<PathBuf> {
+        env::var_os(self.dependency_source_directory_variable()).map(PathBuf::from)
     }
 
-    /// Exact Cargo environment variable used for this dependency.
-    pub fn schema_directory_variable(&self) -> String {
-        format!("DEP_{}_SCHEMA_DIR", self.normalized_links_name())
+    /// Exact Cargo environment variable for one dependency's Ethos source directory.
+    pub fn dependency_source_directory_variable(&self) -> String {
+        format!(
+            "DEP_{}_ETHOS_SOURCE_DIR",
+            Self::normalized_links_name(&self.links_name)
+        )
     }
 
-    fn normalized_links_name(&self) -> String {
-        self.links_name
+    /// Rebuild when Cargo reseats the dependency's published Ethos directory.
+    pub fn emit_dependency_rerun_instruction(&self) {
+        println!(
+            "cargo::rerun-if-env-changed={}",
+            self.dependency_source_directory_variable()
+        );
+    }
+
+    fn normalized_links_name(links_name: &str) -> String {
+        links_name
             .chars()
             .map(|character| match character {
                 '-' => '_',
@@ -201,10 +214,10 @@ mod tests {
     }
 
     #[test]
-    fn cargo_metadata_normalizes_the_links_name() {
+    fn ethos_source_metadata_normalizes_the_links_name() {
         assert_eq!(
-            CargoSchemaMetadata::new("signal-domain").schema_directory_variable(),
-            "DEP_SIGNAL_DOMAIN_SCHEMA_DIR"
+            CargoEthosSourceMetadata::new("signal-domain").dependency_source_directory_variable(),
+            "DEP_SIGNAL_DOMAIN_ETHOS_SOURCE_DIR"
         );
     }
 }
