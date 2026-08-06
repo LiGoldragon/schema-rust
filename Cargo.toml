@@ -1,6 +1,6 @@
 [package]
 name         = "schema-rust"
-version      = "0.16.0"
+version      = "0.17.0"
 edition      = "2024"
 rust-version = "1.89"
 license      = "MIT OR Apache-2.0"
@@ -18,8 +18,8 @@ path = "src/lib.rs"
 [dependencies]
 core-ethos = { git = "https://github.com/LiGoldragon/core-ethos.git", rev = "43b48c779c54ee9f05cbcc111d5d88074b162461" }
 core-nomos = { git = "https://github.com/LiGoldragon/core-nomos.git", rev = "7b60721d199551b648d42a49934a2f0ef950c595" }
-rust-logos = { git = "https://github.com/LiGoldragon/rust-logos.git", rev = "82e0e5c10f6efb2d53330d72ba78dd3ac695f38a" }
-sema-translator = { git = "https://github.com/LiGoldragon/sema-translator.git", rev = "4bd6e8fa0c3139be94a83c7ca7975bd8153eb9f5", default-features = false, features = ["bootstrap"] }
+rust-logos = { git = "https://github.com/LiGoldragon/rust-logos.git", rev = "65d5534c28213cd7022d4e6ed1c7a977a51d77fc" }
+sema-translator = { git = "https://github.com/LiGoldragon/sema-translator.git", rev = "deb9f04475268d5ec29bb7010f953cafdc0ef398", default-features = false, features = ["bootstrap"] }
 thiserror = "2"
 
 [dev-dependencies]

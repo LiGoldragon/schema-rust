@@ -20,8 +20,7 @@ use schema_rust::{
     build::BuildError,
 };
 use sema_translator::bootstrap::{
-    AuthorizedBootstrap, AuthorizedBootstrapTransition, BootstrapAuthorityIdentity,
-    BootstrapAuthorityRevision, BootstrapTransactionAssembler, SealedRustVocabulary,
+    AuthorizedBootstrap, BootstrapAuthorityContract, SealedRustVocabulary, authorize_bootstrap,
 };
 use signal_sema_translator::{VocabularyEncodedId, VocabularyRoot};
 
@@ -160,26 +159,21 @@ fn base_catalog() -> BootstrapCatalog {
     .expect("valid bootstrap catalog")
 }
 
-fn assembler(catalog: BootstrapCatalog) -> BootstrapTransactionAssembler {
-    BootstrapTransactionAssembler::new(
-        BootstrapAuthorityIdentity::new([0x68; 32]),
-        BootstrapAuthorityRevision::new(5),
+fn contract(
+    catalog: BootstrapCatalog,
+    records: impl IntoIterator<Item = TextualMetadataRecord>,
+    identities: impl IntoIterator<Item = VocabularyEncodedId>,
+) -> BootstrapAuthorityContract {
+    let mut after = catalog.metadata().records().to_vec();
+    after.extend(records);
+    BootstrapAuthorityContract::new(
+        [0x68; 32],
+        5,
         BootstrapGrammarIdentities {
             document: id(900),
             syntax: id(901),
         },
         catalog,
-    )
-}
-
-fn approval(
-    catalog: &BootstrapCatalog,
-    records: impl IntoIterator<Item = TextualMetadataRecord>,
-    identities: impl IntoIterator<Item = VocabularyEncodedId>,
-) -> AuthorizedBootstrapTransition {
-    let mut after = catalog.metadata().records().to_vec();
-    after.extend(records);
-    AuthorizedBootstrapTransition::new(
         TextualMetadataSnapshot::new(after).expect("authority projection is exact"),
         identities
             .into_iter()
@@ -195,35 +189,37 @@ fn approval(
 fn interface_assembly() -> AuthorizedBootstrap {
     let catalog = base_catalog();
     let choice = id(101);
-    let approved = approval(
-        &catalog,
-        [
-            record(&["app"], None, "Thing", id(100)),
-            record(&["app"], None, "Choice", choice.clone()),
-            record(&["app"], Some(choice.clone()), "None", id(102)),
-            record(&["app"], Some(choice), "Pair", id(103)),
-        ],
-        [id(100), id(101), id(102), id(103)],
-    );
-    assembler(catalog)
-        .assemble(INTERFACE_SOURCE, approved)
-        .expect("authority-approved Interface transaction")
+    authorize_bootstrap(
+        INTERFACE_SOURCE,
+        contract(
+            catalog,
+            [
+                record(&["app"], None, "Thing", id(100)),
+                record(&["app"], None, "Choice", choice.clone()),
+                record(&["app"], Some(choice.clone()), "None", id(102)),
+                record(&["app"], Some(choice), "Pair", id(103)),
+            ],
+            [id(100), id(101), id(102), id(103)],
+        ),
+    )
+    .expect("authority-approved Interface transaction")
 }
 
 fn sema_assembly() -> AuthorizedBootstrap {
     let catalog = base_catalog();
-    let approved = approval(
-        &catalog,
-        [
-            record(&["app"], None, "Domain", id(100)),
-            record(&["app"], None, "StoredRecord", id(101)),
-            record(&["app"], None, "records", id(102)),
-        ],
-        [id(100), id(101), id(102)],
-    );
-    assembler(catalog)
-        .assemble(SEMA_SOURCE, approved)
-        .expect("authority-approved Sema transaction")
+    authorize_bootstrap(
+        SEMA_SOURCE,
+        contract(
+            catalog,
+            [
+                record(&["app"], None, "Domain", id(100)),
+                record(&["app"], None, "StoredRecord", id(101)),
+                record(&["app"], None, "records", id(102)),
+            ],
+            [id(100), id(101), id(102)],
+        ),
+    )
+    .expect("authority-approved Sema transaction")
 }
 
 fn external_storage(local: u16, fingerprint: u8) -> ExternalStorageProvenance {
@@ -464,19 +460,18 @@ fn strict_sema_generation_retains_kind_storage_and_key_refusals() {
     ));
 
     let catalog = base_catalog();
-    let product_key = assembler(catalog.clone())
-        .assemble(
-            "Sema.{1 0 0}\n[]\n{[Key.{String Integer} StoredRecord.String] [records.{StoredRecord Key}]}",
-            approval(
-                &catalog,
+    let product_key = authorize_bootstrap(
+        "Sema.{1 0 0}\n[]\n{[Key.{String Integer} StoredRecord.String] [records.{StoredRecord Key}]}",
+        contract(
+            catalog,
                 [
                     record(&["app"], None, "Key", id(100)),
                     record(&["app"], None, "StoredRecord", id(101)),
                     record(&["app"], None, "records", id(102)),
                 ],
                 [id(100), id(101), id(102)],
-            ),
-        )
+        ),
+    )
         .expect("authority-approved Sema product key");
     let external = [external_storage(7, 7), external_storage(8, 8)];
     assert!(matches!(
@@ -498,16 +493,15 @@ fn strict_sema_generation_retains_kind_storage_and_key_refusals() {
 #[test]
 fn nexus_transaction_never_enters_interface_generation() {
     let catalog = base_catalog();
-    let nexus = assembler(catalog.clone())
-        .assemble(
-            "Nexus.{1 0 0}\n[]\n{[] [Thing.String]}",
-            approval(
-                &catalog,
-                [record(&["app"], None, "Thing", id(100))],
-                [id(100)],
-            ),
-        )
-        .expect("authority may seal a Nexus transaction");
+    let nexus = authorize_bootstrap(
+        "Nexus.{1 0 0}\n[]\n{[] [Thing.String]}",
+        contract(
+            catalog,
+            [record(&["app"], None, "Thing", id(100))],
+            [id(100)],
+        ),
+    )
+    .expect("authority may seal a Nexus transaction");
     let rust = rust_logos();
     let paths = TypePaths::default();
     assert!(matches!(
@@ -522,16 +516,15 @@ fn nexus_transaction_never_enters_interface_generation() {
 #[test]
 fn nonempty_interface_roles_are_exact_nomos_refusals() {
     let catalog = base_catalog();
-    let assembly = assembler(catalog.clone())
-        .assemble(
-            "Interface.{1 0 0}\n[]\n{[InputValue.String] [] [] []}",
-            approval(
-                &catalog,
-                [record(&["app"], None, "InputValue", id(100))],
-                [id(100)],
-            ),
-        )
-        .expect("authority-approved Interface role transaction");
+    let assembly = authorize_bootstrap(
+        "Interface.{1 0 0}\n[]\n{[InputValue.String] [] [] []}",
+        contract(
+            catalog,
+            [record(&["app"], None, "InputValue", id(100))],
+            [id(100)],
+        ),
+    )
+    .expect("authority-approved Interface role transaction");
     let rust = rust_logos();
     let paths = TypePaths::default();
     assert!(matches!(
@@ -557,8 +550,8 @@ fn strict_bootstrap_lane_pins_one_exact_verified_producer_train() {
     for exact_dependency in [
         "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"43b48c779c54ee9f05cbcc111d5d88074b162461\" }",
         "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"7b60721d199551b648d42a49934a2f0ef950c595\" }",
-        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"82e0e5c10f6efb2d53330d72ba78dd3ac695f38a\" }",
-        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"4bd6e8fa0c3139be94a83c7ca7975bd8153eb9f5\", default-features = false, features = [\"bootstrap\"] }",
+        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"65d5534c28213cd7022d4e6ed1c7a977a51d77fc\" }",
+        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"deb9f04475268d5ec29bb7010f953cafdc0ef398\", default-features = false, features = [\"bootstrap\"] }",
         "signal-sema-translator = { git = \"https://github.com/LiGoldragon/signal-sema-translator.git\", rev = \"3f41813dd63904c7e2b3da4382eff64ed1bf12fe\" }",
     ] {
         assert!(
