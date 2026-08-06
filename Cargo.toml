@@ -1,6 +1,6 @@
 [package]
 name         = "schema-rust"
-version      = "0.12.0"
+version      = "0.12.1"
 edition      = "2024"
 rust-version = "1.89"
 license      = "MIT OR Apache-2.0"
@@ -27,7 +27,7 @@ protos = { git = "https://github.com/LiGoldragon/protos.git", rev = "65e7c6d4692
 quote = "1"
 rust-logos = { git = "https://github.com/LiGoldragon/rust-logos.git", rev = "250e728fa9e5a02e3c9a6d4f0cfee0683863df83" }
 schema-language = { git = "https://github.com/LiGoldragon/schema-language.git", rev = "5a7c713dd7c1e095970b26149c6ed5553dd1c715" }
-sema-translator = { git = "https://github.com/LiGoldragon/sema-translator.git", rev = "4675e5ddfdd0d24144498ec9b7d2e5b9cb422249" }
+sema-translator = { git = "https://github.com/LiGoldragon/sema-translator.git", rev = "4675e5ddfdd0d24144498ec9b7d2e5b9cb422249", default-features = false, features = ["bootstrap"] }
 syn = { version = "2", features = ["full"] }
 thiserror = "2"
 triad-runtime = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "e44c07dbf314", optional = true }

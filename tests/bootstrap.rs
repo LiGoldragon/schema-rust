@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, fs};
+use std::{collections::BTreeMap, fs, process::Command};
 
 use core_ethos::bootstrap::{
     BootstrapCatalog, BootstrapGrammarIdentities, BootstrapPriorIdentities,
@@ -636,11 +636,37 @@ fn strict_bootstrap_lane_pins_one_exact_verified_producer_train() {
     for exact_dependency in [
         "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"7a1384874f3747de97c6ccbb4ae6fa2149b27330\" }",
         "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"4758e8db3c72e7c84c30c1a0b597b6d9ed65d35d\" }",
-        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"4675e5ddfdd0d24144498ec9b7d2e5b9cb422249\" }",
+        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"4675e5ddfdd0d24144498ec9b7d2e5b9cb422249\", default-features = false, features = [\"bootstrap\"] }",
     ] {
         assert!(
             MANIFEST.contains(exact_dependency),
             "strict bootstrap manifest omitted exact producer {exact_dependency}"
         );
     }
+}
+
+#[test]
+fn strict_bootstrap_normal_graph_excludes_the_sema_engine_runtime() {
+    let output = Command::new(env!("CARGO"))
+        .args([
+            "tree",
+            "--package",
+            "schema-rust",
+            "--edges",
+            "normal",
+            "--no-default-features",
+        ])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .expect("cargo tree runs");
+    assert!(
+        output.status.success(),
+        "cargo tree failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let tree = String::from_utf8(output.stdout).expect("cargo tree output is UTF-8");
+    assert!(
+        !tree.contains("sema-engine"),
+        "strict bootstrap generation must not close through its runtime consumer:\n{tree}"
+    );
 }

@@ -533,7 +533,7 @@ source = "git+https://github.com/LiGoldragon/protos.git?rev=65e7c6d4692a40e1c49d
 dependencies = [
  "content-identity 0.5.0",
  "rkyv",
- "signal-frame 0.4.0",
+ "signal-frame",
 ]
 
 [[package]]
@@ -588,15 +588,6 @@ dependencies = [
  "content-identity 0.3.0",
  "rkyv",
  "thiserror",
-]
-
-[[package]]
-name = "redb"
-version = "4.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e925444704b5f17d32bf42f5b6e2df050bceebc3dcd6e71cc73dafe8092e839"
-dependencies = [
- "libc",
 ]
 
 [[package]]
@@ -690,7 +681,7 @@ dependencies = [
 
 [[package]]
 name = "schema-rust"
-version = "0.12.0"
+version = "0.12.1"
 dependencies = [
  "core-ethos",
  "core-nomos",
@@ -704,7 +695,7 @@ dependencies = [
  "rust-logos",
  "schema-language",
  "sema-translator",
- "signal-frame 0.4.0",
+ "signal-frame",
  "signal-sema-translator",
  "structural-codec",
  "syn 2.0.119",
@@ -716,43 +707,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "sema"
-version = "0.1.1"
-source = "git+https://github.com/LiGoldragon/sema.git?rev=51d7927c872f0df12791bad8d39a4db6433b01a1#51d7927c872f0df12791bad8d39a4db6433b01a1"
-dependencies = [
- "redb",
- "rkyv",
- "thiserror",
-]
-
-[[package]]
-name = "sema-engine"
-version = "0.11.2"
-source = "git+https://github.com/LiGoldragon/sema-engine.git?rev=94d2f7ee7b81d0bf3b6f1a111f6bbbc398c0e7a3#94d2f7ee7b81d0bf3b6f1a111f6bbbc398c0e7a3"
-dependencies = [
- "blake3",
- "rkyv",
- "sema",
- "signal-frame 0.3.0",
- "signal-sema",
- "thiserror",
-]
-
-[[package]]
 name = "sema-translator"
 version = "0.6.0"
 source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=4675e5ddfdd0d24144498ec9b7d2e5b9cb422249#4675e5ddfdd0d24144498ec9b7d2e5b9cb422249"
 dependencies = [
- "blake3",
  "core-ethos",
  "name-table 0.3.0",
- "rkyv",
- "sema-engine",
- "signal-frame 0.4.0",
  "signal-sema-translator",
  "structural-codec",
  "thiserror",
- "tokio",
 ]
 
 [[package]]
@@ -815,23 +778,12 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 
 [[package]]
 name = "signal-frame"
-version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?rev=f46872e7e8edae5264c892443d415a273b231234#f46872e7e8edae5264c892443d415a273b231234"
-dependencies = [
- "paste",
- "rkyv",
- "signal-frame-macros 0.1.1 (git+https://github.com/LiGoldragon/signal-frame.git?rev=f46872e7e8edae5264c892443d415a273b231234)",
- "thiserror",
-]
-
-[[package]]
-name = "signal-frame"
 version = "0.4.0"
 source = "git+https://github.com/LiGoldragon/signal-frame.git?rev=0786fbe8caf27552afcdd5deb85bc82ec6088337#0786fbe8caf27552afcdd5deb85bc82ec6088337"
 dependencies = [
  "paste",
  "rkyv",
- "signal-frame-macros 0.1.1 (git+https://github.com/LiGoldragon/signal-frame.git?rev=0786fbe8caf27552afcdd5deb85bc82ec6088337)",
+ "signal-frame-macros",
  "thiserror",
 ]
 
@@ -843,25 +795,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
-]
-
-[[package]]
-name = "signal-frame-macros"
-version = "0.1.1"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?rev=f46872e7e8edae5264c892443d415a273b231234#f46872e7e8edae5264c892443d415a273b231234"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
-name = "signal-sema"
-version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/signal-sema.git?rev=4f3a24e6677ab9d200672851016c4c760c1e36e8#4f3a24e6677ab9d200672851016c4c760c1e36e8"
-dependencies = [
- "rkyv",
- "thiserror",
 ]
 
 [[package]]
@@ -873,7 +806,7 @@ dependencies = [
  "name-table 0.3.0",
  "protos",
  "rkyv",
- "signal-frame 0.4.0",
+ "signal-frame",
  "thiserror",
 ]
 
@@ -1101,7 +1034,7 @@ dependencies = [
  "kameo",
  "rkyv",
  "rustix",
- "signal-frame 0.4.0",
+ "signal-frame",
  "thiserror",
  "tokio",
 ]
