@@ -122,8 +122,8 @@ dependencies = [
 
 [[package]]
 name = "core-ethos"
-version = "0.26.0"
-source = "git+https://github.com/LiGoldragon/core-ethos.git?rev=db5a97a573113202e4de6c97e71b33491bd9666f#db5a97a573113202e4de6c97e71b33491bd9666f"
+version = "0.28.0"
+source = "git+https://github.com/LiGoldragon/core-ethos.git?rev=7a1384874f3747de97c6ccbb4ae6fa2149b27330#7a1384874f3747de97c6ccbb4ae6fa2149b27330"
 dependencies = [
  "content-identity 0.3.0",
  "content-identity 0.5.0",
@@ -157,8 +157,8 @@ dependencies = [
 
 [[package]]
 name = "core-nomos"
-version = "0.39.0"
-source = "git+https://github.com/LiGoldragon/core-nomos.git?rev=22de53fced0eff372930f5b7baec0c667f1a16d5#22de53fced0eff372930f5b7baec0c667f1a16d5"
+version = "0.40.0"
+source = "git+https://github.com/LiGoldragon/core-nomos.git?rev=4758e8db3c72e7c84c30c1a0b597b6d9ed65d35d#4758e8db3c72e7c84c30c1a0b597b6d9ed65d35d"
 dependencies = [
  "content-identity 0.3.0",
  "content-identity 0.5.0",
@@ -690,7 +690,7 @@ dependencies = [
 
 [[package]]
 name = "schema-rust"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "core-ethos",
  "core-nomos",
@@ -740,8 +740,8 @@ dependencies = [
 
 [[package]]
 name = "sema-translator"
-version = "0.4.0"
-source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=1da83e03cdc5cea10e529d081d5a10437bd6628e#1da83e03cdc5cea10e529d081d5a10437bd6628e"
+version = "0.6.0"
+source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=4675e5ddfdd0d24144498ec9b7d2e5b9cb422249#4675e5ddfdd0d24144498ec9b7d2e5b9cb422249"
 dependencies = [
  "blake3",
  "core-ethos",

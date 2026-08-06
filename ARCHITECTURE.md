@@ -10,7 +10,7 @@ name.
 `schema-rust` retains Rust interface emission from typed legacy schema data and
 owns the shared build-driver orchestrator for those generated modules. It also
 owns the final checked-artifact orchestration for the strict bootstrap
-Interface lane described below. This repository owns Rust projection and those
+Interface and Sema lanes described below. This repository owns Rust projection and those
 orchestrators; it does not define Ethos or Nomos meaning. Rust emission is a separate step
 from Rust macros: schema generates Rust code first, and macros are a later or
 separate consumption surface. Generated Rust is emitted into the consumer crate
@@ -25,7 +25,7 @@ define the schema and serialize through rkyv. Its semantic emission input is
 assembled-schema artifact or parallel semantic model inside that legacy
 source/true-schema pipeline.
 
-## Strict bootstrap Interface lane
+## Strict bootstrap generation lanes
 
 `bootstrap::BootstrapInterfaceGeneration` begins only after
 `sema_translator::bootstrap::BootstrapTransactionAssembler` has produced a
@@ -41,6 +41,17 @@ direct transaction-to-`WholeLogos` lowering. Traits, nonempty Interface roles,
 Streams, tables, and requirements retain Nomos's exact typed refusals; this
 layer drops none of them.
 
+`bootstrap::BootstrapSemaGeneration` admits only `BootstrapBody::Sema` and
+calls the separate `BootstrapSliceOneLowering::lower_sema` operation. The
+generic Nomos `lower` operation continues to refuse Sema. The Sema request
+supplies explicit `ExternalStorageProvenance` for every reachable nonlocal leaf;
+each entry binds the exact identity and archive fingerprint to a producer source
+and immutable revision. Nomos requires table records and keys to belong to the
+exact document, requires keys to be newtypes, derives recursive local storage
+fingerprints through the shared structural domain, and emits first-class Logos
+tables. Missing, duplicate, or conflicting provenance and invalid table
+relationships remain typed refusals.
+
 Rust projection requires two additional caller-owned inputs: a `RustLogos`
 built from an already sealed structural Rust vocabulary and a
 `RustTypePathResolver` carrying every explicit external path. The generator
@@ -49,8 +60,9 @@ or substitute fixture projection tables. Production rust-logos emission encodes
 complete Universal identities according to its canonical codec and reads Rust
 vocabulary names only through the sealed vocabulary.
 
-The output is one `GeneratedBootstrapInterface` containing the canonical
-core-ethos writer projection and the canonical Rust projection. Both artifacts
+The output is a kind-specific `GeneratedBootstrapInterface` or
+`GeneratedBootstrapSema` containing the canonical core-ethos writer projection
+and the canonical Rust projection. Both artifacts
 must match their checked paths under `assert_checked_in` / `write_or_check`.
 This makes source canonicality and Rust freshness one proof rather than checking
 only the generated Rust file.
@@ -58,14 +70,18 @@ only the generated Rust file.
 This lane has no `schema_language` import and never constructs `SchemaSource`,
 `TrueSchema`, `SchemaEngine`, or a legacy six-slot document. The retained
 legacy build driver remains isolated for consumers not yet on this train; it is
-not an adapter for bootstrap Interface meaning.
+not an adapter for bootstrap Interface or Sema meaning.
 
 ## Interfaces
 
 - `BootstrapInterfaceGeneration` is the strict verified-transaction → Nomos →
   Logos → Rust orchestration boundary.
+- `BootstrapSemaGeneration` is the strict verified-transaction + explicit
+  storage provenance → Nomos → Logos → stored Rust/table orchestration boundary.
 - `GeneratedBootstrapInterface` owns the paired canonical-source and checked-
   Rust freshness proof.
+- `GeneratedBootstrapSema` owns the same paired proof for Sema without sharing
+  a public compatibility carrier with Interface.
 - `RustEmitter` is the code-generation engine.
 - `RustTrueSchemaLowering` is the entry trait implemented for
   `schema_language::TrueSchema`. The deserialized semantic schema object owns the

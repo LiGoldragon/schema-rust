@@ -7,25 +7,32 @@ consumers; the description below is what this frozen donor currently
 implements, not the approved architecture going forward.
 
 The legacy lane emits source-visible Rust interface code from
-`schema-language`'s typed schema data. The strict bootstrap Interface lane is a
-separate boundary:
+`schema-language`'s typed schema data. The strict bootstrap Interface and Sema
+lanes are a separate boundary:
 
 ```text
-authority-approved Interface source
+authority-approved Interface or Sema source
   → sema-translator VerifiedBootstrapAssembly
   → core-nomos BootstrapSliceOneLowering
   → WholeLogos
   → caller-sealed RustLogos vocabulary + explicit Rust type paths
+  → for Sema, explicit revision-bearing external storage provenance
   → checked canonical source and Rust
 ```
 
-`BootstrapInterfaceGeneration` accepts only the verified assembly. It cannot
+`BootstrapInterfaceGeneration` and `BootstrapSemaGeneration` accept only the
+verified assembly. They cannot
 parse raw source, invent identities, synthesize the Rust vocabulary, or infer
-external Rust paths from spellings. Nomos revalidates the branded transaction;
-nonempty Interface roles remain typed refusals. The canonical core-ethos writer
-projection and the structural rust-logos projection are both freshness-checked.
-The obsolete six-slot source does not enter this lane, and no `SchemaSource` or
-`TrueSchema` compatibility reconstruction connects the two lanes.
+external Rust paths from spellings. Nomos revalidates the branded transaction.
+Nonempty Interface roles remain typed refusals. Sema uses a separate
+storage-aware lowering: table records and newtype keys must be declared by the
+exact document, and every nonlocal leaf must carry an owner, immutable revision,
+and archive fingerprint. Its generated Rust contains stored rkyv declarations
+and first-class `sema_engine::TableSpecification` implementations. The canonical
+core-ethos writer projection and structural rust-logos projection are paired in
+one freshness proof. The obsolete six-slot source does not enter either lane,
+and no `SchemaSource` or `TrueSchema` compatibility reconstruction connects
+them.
 
 This repository is deliberately not a Rust macro crate. The retained legacy
 path in this frozen donor's own code is:

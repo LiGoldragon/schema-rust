@@ -6,15 +6,19 @@ use core_ethos::bootstrap::{
     IdentitySchema, IdentitySchemaCatalog, InterfaceRole, NomosSchema, SchemaRole,
     TextualMetadataRecord, TextualMetadataSnapshot, TextualProjectionAddress,
 };
-use core_nomos::BootstrapSliceOneLoweringError;
+use core_nomos::{
+    BootstrapSliceOneLoweringError, ExternalStorageProvenance, StorageProvenanceOwner,
+};
 use name_table::{LocalEncodedId, Name};
 use rust_logos::{
-    FixtureRustVocabulary, FixtureRustVocabularyIds, RustLogos, RustTypePath, RustTypePathResolver,
+    FixtureRustVocabulary, FixtureRustVocabularyIds, RustEncodedIdCodec, RustLogos, RustTypePath,
+    RustTypePathResolver,
 };
 use schema_rust::{
     bootstrap::{
-        BOOTSTRAP_INTERFACE_GENERATED_MARKER, BootstrapInterfaceGeneration,
-        BootstrapInterfaceGenerationError,
+        BOOTSTRAP_INTERFACE_GENERATED_MARKER, BOOTSTRAP_SEMA_GENERATED_MARKER,
+        BootstrapInterfaceGeneration, BootstrapInterfaceGenerationError, BootstrapSemaGeneration,
+        BootstrapSemaGenerationError,
     },
     build::BuildError,
 };
@@ -27,6 +31,8 @@ use structural_codec::EncodedNameResolver;
 
 const INTERFACE_SOURCE: &str =
     "Interface.{1 0 0}\n[]\n{[] [] [] [Thing.String Choice.[None Pair.{String Integer}]]}";
+const SEMA_SOURCE: &str = "Sema.{1 0 0}\n[]\n{[Domain.String StoredRecord.{Domain Integer}] [records.{StoredRecord Domain}]}";
+const MANIFEST: &str = include_str!("../Cargo.toml");
 
 fn id(local: u16) -> VocabularyEncodedId {
     VocabularyEncodedId::new(VocabularyRoot::Universal, vec![LocalEncodedId::new(local)])
@@ -213,6 +219,35 @@ fn interface_assembly() -> VerifiedBootstrapAssembly {
         .expect("authority-approved Interface transaction")
 }
 
+fn sema_assembly() -> VerifiedBootstrapAssembly {
+    let catalog = base_catalog();
+    let approved = approval(
+        &catalog,
+        [
+            record(&["app"], None, "Domain", id(100)),
+            record(&["app"], None, "StoredRecord", id(101)),
+            record(&["app"], None, "records", id(102)),
+        ],
+        [id(100), id(101), id(102)],
+    );
+    assembler(catalog)
+        .assemble(SEMA_SOURCE, approved)
+        .expect("authority-approved Sema transaction")
+}
+
+fn external_storage(local: u16, fingerprint: u8) -> ExternalStorageProvenance {
+    ExternalStorageProvenance::new(
+        id(local),
+        [fingerprint; 32],
+        StorageProvenanceOwner::new(
+            "https://github.com/LiGoldragon/bootstrap-storage-fixture".to_owned(),
+            format!("revision-{fingerprint}"),
+        )
+        .expect("explicit revision-bearing storage owner"),
+    )
+    .expect("Universal external storage identity")
+}
+
 #[derive(Default)]
 struct Names(BTreeMap<VocabularyEncodedId, Name>);
 
@@ -353,6 +388,166 @@ fn verified_interface_transaction_projects_canonical_source_and_rust_with_exact_
 }
 
 #[test]
+fn verified_sema_transaction_projects_stored_rust_and_table_with_paired_freshness() {
+    let assembly = sema_assembly();
+    let rust = rust_logos();
+    let paths = TypePaths::default()
+        .with(id(7), &["std", "string", "String"])
+        .with(id(8), &["u64"]);
+    let external = [external_storage(7, 7), external_storage(8, 8)];
+    let directory = tempfile::tempdir().expect("temporary checked-artifact directory");
+    let source_path = directory.path().join("storage.schema");
+    let rust_path = directory.path().join("storage.rs");
+    let generated = BootstrapSemaGeneration::new(
+        &assembly,
+        &rust,
+        &paths,
+        &external,
+        &source_path,
+        &rust_path,
+    )
+    .generate()
+    .expect("strict Sema transaction lowers and projects");
+
+    assert_eq!(generated.source().content(), assembly.canonical_source());
+    assert!(
+        generated
+            .source()
+            .content()
+            .starts_with("Sema.{1 0 0}\n[]\n")
+    );
+    assert!(
+        generated
+            .rust()
+            .content()
+            .starts_with(BOOTSTRAP_SEMA_GENERATED_MARKER)
+    );
+    assert_eq!(
+        generated.rust().content().matches("rkyv::Archive").count(),
+        2,
+        "{}",
+        generated.rust().content()
+    );
+    for required in [
+        "impl sema_engine::TableSpecification",
+        "type Record =",
+        "type Key =",
+        "key.payload().to_string()",
+    ] {
+        assert!(
+            generated.rust().content().contains(required),
+            "strict Sema projection omitted {required:?}:\n{}",
+            generated.rust().content()
+        );
+    }
+    let table_coordinate = RustEncodedIdCodec::encode(&id(102));
+    assert!(
+        generated.rust().content().contains(&format!(
+            "sema_engine::TableName::new(\"{table_coordinate}\")"
+        )),
+        "table coordinate must be the stable encoded identity:\n{}",
+        generated.rust().content()
+    );
+    assert!(
+        !generated.rust().content().contains("records"),
+        "the operational table spelling belongs to canonical Sema, not persisted Rust coordinates"
+    );
+    syn::parse_file(generated.rust().content()).expect("canonical projection is Rust syntax");
+
+    let repeated = BootstrapSemaGeneration::new(
+        &assembly,
+        &rust,
+        &paths,
+        &external,
+        &source_path,
+        &rust_path,
+    )
+    .generate()
+    .expect("same exact Sema inputs project again");
+    assert_eq!(generated, repeated);
+
+    fs::write(&source_path, generated.source().content()).expect("seat canonical Sema source");
+    fs::write(&rust_path, generated.rust().content()).expect("seat canonical Sema Rust");
+    generated
+        .assert_checked_in()
+        .expect("both Sema artifacts are fresh");
+
+    fs::write(&source_path, "stale Sema source").expect("make Sema source stale");
+    assert!(matches!(
+        generated.assert_checked_in(),
+        Err(BuildError::StaleGeneratedArtifact { path }) if path == source_path
+    ));
+    fs::write(&source_path, generated.source().content()).expect("restore Sema source");
+    fs::write(&rust_path, "stale Sema Rust").expect("make Sema Rust stale");
+    assert!(matches!(
+        generated.assert_checked_in(),
+        Err(BuildError::StaleGeneratedArtifact { path }) if path == rust_path
+    ));
+}
+
+#[test]
+fn strict_sema_generation_retains_kind_storage_and_key_refusals() {
+    let interface = interface_assembly();
+    let sema = sema_assembly();
+    let rust = rust_logos();
+    let paths = TypePaths::default()
+        .with(id(7), &["std", "string", "String"])
+        .with(id(8), &["u64"]);
+    assert!(matches!(
+        BootstrapSemaGeneration::new(&interface, &rust, &paths, &[], "wrong.schema", "wrong.rs")
+            .generate(),
+        Err(BootstrapSemaGenerationError::WrongFileKind {
+            found: core_ethos::bootstrap::EthosKind::Interface
+        })
+    ));
+    assert!(matches!(
+        BootstrapSemaGeneration::new(
+            &sema,
+            &rust,
+            &paths,
+            &[external_storage(8, 8)],
+            "missing.schema",
+            "missing.rs"
+        )
+        .generate(),
+        Err(BootstrapSemaGenerationError::Lowering(
+            BootstrapSliceOneLoweringError::MissingExternalStorageProvenance { identity }
+        )) if identity == id(7)
+    ));
+
+    let catalog = base_catalog();
+    let product_key = assembler(catalog.clone())
+        .assemble(
+            "Sema.{1 0 0}\n[]\n{[Key.{String Integer} StoredRecord.String] [records.{StoredRecord Key}]}",
+            approval(
+                &catalog,
+                [
+                    record(&["app"], None, "Key", id(100)),
+                    record(&["app"], None, "StoredRecord", id(101)),
+                    record(&["app"], None, "records", id(102)),
+                ],
+                [id(100), id(101), id(102)],
+            ),
+        )
+        .expect("authority-approved Sema product key");
+    let external = [external_storage(7, 7), external_storage(8, 8)];
+    assert!(matches!(
+        BootstrapSemaGeneration::new(
+            &product_key,
+            &rust,
+            &paths,
+            &external,
+            "product.schema",
+            "product.rs"
+        )
+        .generate(),
+        Err(BootstrapSemaGenerationError::Lowering(
+            BootstrapSliceOneLoweringError::SemaTableKeyNotNewtype { key, .. }
+        )) if key == id(100)
+    ));
+}
+
+#[test]
 fn obsolete_six_slot_source_and_non_interface_transactions_never_enter_generation() {
     let catalog = base_catalog();
     let approved = approval(
@@ -432,6 +627,20 @@ fn production_bootstrap_lane_has_no_legacy_schema_reconstruction_or_identity_inv
         assert!(
             !source.contains(forbidden),
             "strict bootstrap generation must not contain {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn strict_bootstrap_lane_pins_one_exact_verified_producer_train() {
+    for exact_dependency in [
+        "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"7a1384874f3747de97c6ccbb4ae6fa2149b27330\" }",
+        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"4758e8db3c72e7c84c30c1a0b597b6d9ed65d35d\" }",
+        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"4675e5ddfdd0d24144498ec9b7d2e5b9cb422249\" }",
+    ] {
+        assert!(
+            MANIFEST.contains(exact_dependency),
+            "strict bootstrap manifest omitted exact producer {exact_dependency}"
         );
     }
 }
