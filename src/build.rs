@@ -86,16 +86,6 @@ impl GeneratedArtifact {
         &self.content
     }
 
-    pub(crate) fn check_with(&self, check: &FreshnessCheck) -> Result<(), BuildError> {
-        if check.updates_files() {
-            return self.write();
-        }
-        if self.matches_existing()? {
-            return Ok(());
-        }
-        Err(check.stale_generated_artifact_error(self.path.clone()))
-    }
-
     fn matches_existing(&self) -> Result<bool, BuildError> {
         match fs::read_to_string(&self.path) {
             Ok(existing) => Ok(existing == self.content),
@@ -107,65 +97,44 @@ impl GeneratedArtifact {
         }
     }
 
-    fn write(&self) -> Result<(), BuildError> {
-        if let Some(parent) = self.path.parent() {
+    /// Require this artifact's checked-in content to equal its canonical
+    /// projection.
+    pub fn assert_matches_existing(&self) -> Result<(), BuildError> {
+        if self.matches_existing()? {
+            Ok(())
+        } else {
+            Err(BuildError::StaleGeneratedArtifact {
+                path: self.path.clone(),
+            })
+        }
+    }
+
+    /// Write this artifact's canonical content to an explicit target path,
+    /// creating parent directories as needed.
+    pub fn write_to(&self, target: &Path) -> Result<(), BuildError> {
+        if let Some(parent) = target.parent() {
             fs::create_dir_all(parent).map_err(|source| BuildError::WriteGeneratedArtifact {
                 path: parent.to_path_buf(),
                 source,
             })?;
         }
-        fs::write(&self.path, &self.content).map_err(|source| BuildError::WriteGeneratedArtifact {
-            path: self.path.clone(),
+        fs::write(target, &self.content).map_err(|source| BuildError::WriteGeneratedArtifact {
+            path: target.to_path_buf(),
             source,
         })
     }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum FreshnessCheck {
-    CheckOnly,
-    UpdateWhenRequested {
-        update_environment_variable: String,
-        update_files: bool,
-    },
-}
-
-impl FreshnessCheck {
-    pub(crate) const fn check_only() -> Self {
-        Self::CheckOnly
+    /// The sibling `.pending` path used during atomic installation.
+    pub fn pending_path(&self) -> PathBuf {
+        let mut name = self
+            .path
+            .file_name()
+            .expect("artifact path has a file name")
+            .to_os_string();
+        name.push(".pending");
+        self.path.with_file_name(name)
     }
 
-    pub(crate) fn from_environment(update_environment_variable: impl Into<String>) -> Self {
-        let update_environment_variable = update_environment_variable.into();
-        let update_files = env::var_os(&update_environment_variable).is_some();
-        Self::UpdateWhenRequested {
-            update_environment_variable,
-            update_files,
-        }
-    }
-
-    fn updates_files(&self) -> bool {
-        matches!(
-            self,
-            Self::UpdateWhenRequested {
-                update_files: true,
-                ..
-            }
-        )
-    }
-
-    fn stale_generated_artifact_error(&self, path: PathBuf) -> BuildError {
-        match self {
-            Self::CheckOnly => BuildError::StaleGeneratedArtifact { path },
-            Self::UpdateWhenRequested {
-                update_environment_variable,
-                ..
-            } => BuildError::StaleGeneratedArtifactUpdateAvailable {
-                path,
-                update_environment_variable: update_environment_variable.clone(),
-            },
-        }
-    }
 }
 
 /// Failure while comparing or updating one canonical projection.
@@ -186,14 +155,6 @@ pub enum BuildError {
     /// Checked-in content differs and this invocation cannot update it.
     #[error("generated artifact {path:?} is stale")]
     StaleGeneratedArtifact { path: PathBuf },
-    /// Checked-in content differs and names the explicit update request.
-    #[error(
-        "generated artifact {path:?} is stale; set {update_environment_variable}=1 to update it"
-    )]
-    StaleGeneratedArtifactUpdateAvailable {
-        path: PathBuf,
-        update_environment_variable: String,
-    },
 }
 
 #[cfg(test)]
@@ -201,16 +162,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn check_only_staleness_has_no_update_instruction() {
-        let path = PathBuf::from("schema-rust-freshness-check-only-missing.rs");
+    fn missing_artifact_is_stale() {
+        let path = PathBuf::from("schema-rust-freshness-missing.rs");
         let error = GeneratedArtifact::new(&path, "generated")
-            .check_with(&FreshnessCheck::check_only())
+            .assert_matches_existing()
             .expect_err("missing artifact is stale");
 
         assert!(
             matches!(&error, BuildError::StaleGeneratedArtifact { path: found } if found == &path)
         );
-        assert!(!error.to_string().contains("set "));
     }
 
     #[test]

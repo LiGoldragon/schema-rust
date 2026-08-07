@@ -4,9 +4,8 @@ use core_ethos::bootstrap::EthosKind;
 use rust_logos::{RustLogos, RustTypePath, RustTypePathResolver};
 use schema_rust::{
     bootstrap::{
-        BOOTSTRAP_INTERFACE_GENERATED_MARKER, BOOTSTRAP_SEMA_GENERATED_MARKER,
-        BootstrapInterfaceGeneration, BootstrapInterfaceGenerationError, BootstrapSemaGeneration,
-        BootstrapSemaGenerationError,
+        BOOTSTRAP_GENERATED_MARKER, ArtifactSet, BootstrapGeneration, BootstrapGenerationError,
+        CommitBootstrap,
     },
     build::BuildError,
 };
@@ -39,20 +38,33 @@ impl RustTypePathResolver for NoTypePaths {
     }
 }
 
-#[test]
-fn authority_owned_interface_projects_canonical_source_with_exact_freshness() {
+fn generate_interface() -> ArtifactSet {
     let assembly = authorize(INTERFACE_SOURCE);
     let rust = RustLogos::new();
     let paths = NoTypePaths;
     let directory = tempfile::tempdir().expect("temporary checked-artifact directory");
     let source_path = directory.path().join("domain.ethos");
     let rust_path = directory.path().join("domain.rs");
-    let generated =
-        BootstrapInterfaceGeneration::new(&assembly, &rust, &paths, &source_path, &rust_path)
-            .generate()
-            .expect("authority-approved Interface lowers and projects");
+    BootstrapGeneration::new(&assembly, &rust, &paths, &[], &source_path, &rust_path)
+        .generate()
+        .expect("authority-approved Interface lowers and projects")
+}
 
-    assert_eq!(generated.source().content(), assembly.canonical_source());
+fn generate_sema() -> ArtifactSet {
+    let assembly = authorize(SEMA_SOURCE);
+    let rust = RustLogos::new();
+    let paths = NoTypePaths;
+    let directory = tempfile::tempdir().expect("temporary checked-artifact directory");
+    let source_path = directory.path().join("storage.ethos");
+    let rust_path = directory.path().join("storage.rs");
+    BootstrapGeneration::new(&assembly, &rust, &paths, &[], &source_path, &rust_path)
+        .generate()
+        .expect("authority-approved empty Sema lowers and projects")
+}
+
+#[test]
+fn unified_pipeline_generates_interface_with_canonical_source_and_rust() {
+    let generated = generate_interface();
     assert!(
         generated
             .source()
@@ -63,37 +75,14 @@ fn authority_owned_interface_projects_canonical_source_with_exact_freshness() {
         generated
             .rust()
             .content()
-            .starts_with(BOOTSTRAP_INTERFACE_GENERATED_MARKER)
+            .starts_with(BOOTSTRAP_GENERATED_MARKER)
     );
     syn::parse_file(generated.rust().content()).expect("canonical projection is Rust syntax");
-
-    fs::write(&source_path, generated.source().content()).expect("seat canonical source");
-    fs::write(&rust_path, generated.rust().content()).expect("seat canonical Rust");
-    generated
-        .assert_checked_in()
-        .expect("both artifacts are fresh");
-
-    fs::write(&source_path, "stale source").expect("make source stale");
-    assert!(matches!(
-        generated.assert_checked_in(),
-        Err(BuildError::StaleGeneratedArtifact { path }) if path == source_path
-    ));
 }
 
 #[test]
-fn authority_owned_sema_projects_canonical_source_with_exact_freshness() {
-    let assembly = authorize(SEMA_SOURCE);
-    let rust = RustLogos::new();
-    let paths = NoTypePaths;
-    let directory = tempfile::tempdir().expect("temporary checked-artifact directory");
-    let source_path = directory.path().join("storage.ethos");
-    let rust_path = directory.path().join("storage.rs");
-    let generated =
-        BootstrapSemaGeneration::new(&assembly, &rust, &paths, &[], &source_path, &rust_path)
-            .generate()
-            .expect("authority-approved empty Sema lowers and projects");
-
-    assert_eq!(generated.source().content(), assembly.canonical_source());
+fn unified_pipeline_generates_sema_with_canonical_source_and_rust() {
+    let generated = generate_sema();
     assert!(
         generated
             .source()
@@ -104,39 +93,88 @@ fn authority_owned_sema_projects_canonical_source_with_exact_freshness() {
         generated
             .rust()
             .content()
-            .starts_with(BOOTSTRAP_SEMA_GENERATED_MARKER)
+            .starts_with(BOOTSTRAP_GENERATED_MARKER)
     );
     syn::parse_file(generated.rust().content()).expect("canonical projection is Rust syntax");
+}
 
+#[test]
+fn commit_bootstrap_asserts_freshness_after_atomic_install() {
+    let assembly = authorize(INTERFACE_SOURCE);
+    let rust = RustLogos::new();
+    let paths = NoTypePaths;
+    let directory = tempfile::tempdir().expect("temporary checked-artifact directory");
+    let source_path = directory.path().join("domain.ethos");
+    let rust_path = directory.path().join("domain.rs");
+    let generated =
+        BootstrapGeneration::new(&assembly, &rust, &paths, &[], &source_path, &rust_path)
+            .generate()
+            .expect("authority-approved Interface lowers and projects");
+
+    // Manually write both files to simulate a prior commit.
     fs::write(&source_path, generated.source().content()).expect("seat canonical source");
     fs::write(&rust_path, generated.rust().content()).expect("seat canonical Rust");
-    generated
-        .assert_checked_in()
-        .expect("both artifacts are fresh");
 
-    fs::write(&rust_path, "stale Rust").expect("make Rust stale");
+    let commit = CommitBootstrap::single(generated.clone());
+    commit
+        .assert_checked_in()
+        .expect("both artifacts are fresh after seating");
+
+    // Corrupt one file; the commit must refuse.
+    fs::write(&source_path, "stale source").expect("make source stale");
     assert!(matches!(
-        generated.assert_checked_in(),
-        Err(BuildError::StaleGeneratedArtifact { path }) if path == rust_path
+        commit.assert_checked_in(),
+        Err(BuildError::StaleGeneratedArtifact { path }) if path == source_path
     ));
 }
 
 #[test]
-fn generation_refuses_an_authorized_transaction_of_the_wrong_kind() {
+fn commit_bootstrap_atomic_write_leaves_no_partial_state() {
+    let assembly = authorize(INTERFACE_SOURCE);
+    let rust = RustLogos::new();
+    let paths = NoTypePaths;
+    let directory = tempfile::tempdir().expect("temporary checked-artifact directory");
+    let source_path = directory.path().join("domain.ethos");
+    let rust_path = directory.path().join("domain.rs");
+    let generated =
+        BootstrapGeneration::new(&assembly, &rust, &paths, &[], &source_path, &rust_path)
+            .generate()
+            .expect("authority-approved Interface lowers and projects");
+
+    // Neither file exists yet.
+    assert!(!source_path.exists());
+    assert!(!rust_path.exists());
+
+    // Atomic commit installs both artifacts.
+    let commit = CommitBootstrap::single(generated.clone());
+    commit
+        .commit()
+        .expect("atomic commit installs both artifacts");
+
+    // Both files now exist with canonical content.
+    assert_eq!(
+        fs::read_to_string(&source_path).expect("read source"),
+        generated.source().content()
+    );
+    assert_eq!(
+        fs::read_to_string(&rust_path).expect("read Rust"),
+        generated.rust().content()
+    );
+
+    // No pending files remain.
+    assert!(!source_path.with_file_name("domain.ethos.pending").exists());
+    assert!(!rust_path.with_file_name("domain.rs.pending").exists());
+}
+
+#[test]
+fn generation_refuses_nexus_file_kind() {
     let assembly = authorize(NEXUS_SOURCE);
     let rust = RustLogos::new();
     let paths = NoTypePaths;
     assert!(matches!(
-        BootstrapInterfaceGeneration::new(&assembly, &rust, &paths, "nexus.ethos", "nexus.rs")
+        BootstrapGeneration::new(&assembly, &rust, &paths, &[], "nexus.ethos", "nexus.rs")
             .generate(),
-        Err(BootstrapInterfaceGenerationError::WrongFileKind {
-            found: EthosKind::Nexus
-        })
-    ));
-    assert!(matches!(
-        BootstrapSemaGeneration::new(&assembly, &rust, &paths, &[], "nexus.ethos", "nexus.rs")
-            .generate(),
-        Err(BootstrapSemaGenerationError::WrongFileKind {
+        Err(BootstrapGenerationError::UnsupportedFileKind {
             found: EthosKind::Nexus
         })
     ));
@@ -147,7 +185,7 @@ fn empty_sema_needs_no_caller_storage_provenance() {
     let assembly = authorize(SEMA_SOURCE);
     let rust = RustLogos::new();
     let paths = NoTypePaths;
-    BootstrapSemaGeneration::new(&assembly, &rust, &paths, &[], "sema.ethos", "sema.rs")
+    BootstrapGeneration::new(&assembly, &rust, &paths, &[], "sema.ethos", "sema.rs")
         .generate()
         .expect("an empty source needs no caller-created storage provenance");
 }
