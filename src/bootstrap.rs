@@ -2,8 +2,8 @@
 //!
 //! This lane begins after the sole naming authority has authenticated an exact
 //! bootstrap transaction. The matching reader is revalidated by Nomos, and
-//! Rust is projected from the resulting `WholeLogos` through a caller-supplied
-//! sealed Rust vocabulary and explicit external type-path resolver.
+//! Rust is projected from the resulting `WholeLogos` through the authority's
+//! sealed read-only name view and an explicit external type-path resolver.
 
 use std::path::PathBuf;
 
@@ -28,10 +28,9 @@ pub const BOOTSTRAP_SEMA_GENERATED_MARKER: &str =
 
 /// One complete, explicit bootstrap Interface generation request.
 ///
-/// `assembly` owns the verified encoded-name resolver. `rust` owns the sealed
-/// structural Rust vocabulary. `rust_types` owns every external Rust path.
-/// This boundary creates none of those inputs and performs no spelling-based
-/// identity or path inference.
+/// `assembly` owns the verified read-only name view. `rust_types` owns every
+/// external Rust path. This boundary creates neither names nor name metadata,
+/// and performs no spelling-based identity or path inference.
 pub struct BootstrapInterfaceGeneration<'a> {
     assembly: &'a AuthorizedBootstrap,
     rust: &'a RustLogos,
@@ -81,7 +80,7 @@ impl<'a> BootstrapInterfaceGeneration<'a> {
             .lower(self.assembly.reader(), self.assembly.transaction())?;
         let projected =
             self.rust
-                .emit_with_type_paths(&logos, self.assembly.resolver(), self.rust_types)?;
+                .emit_with_type_paths(&logos, self.assembly.name_view(), self.rust_types)?;
         let mut rust_source =
             String::with_capacity(BOOTSTRAP_INTERFACE_GENERATED_MARKER.len() + projected.len());
         rust_source.push_str(BOOTSTRAP_INTERFACE_GENERATED_MARKER);
@@ -147,10 +146,10 @@ pub enum BootstrapInterfaceGenerationError {
 
 /// One complete, explicit bootstrap Sema generation request.
 ///
-/// `assembly` owns the verified encoded-name resolver. `rust` owns the sealed
-/// structural Rust vocabulary. `rust_types` owns every external Rust path.
-/// `external_storage` carries owner-and-revision-bound archive fingerprints for
-/// every nonlocal storage leaf. This boundary creates or infers none of them.
+/// `assembly` owns the verified read-only name view. `rust_types` owns every
+/// external Rust path. `external_storage` carries owner-and-revision-bound
+/// archive fingerprints for every nonlocal storage leaf. This boundary creates
+/// or infers none of those inputs.
 pub struct BootstrapSemaGeneration<'a> {
     assembly: &'a AuthorizedBootstrap,
     rust: &'a RustLogos,
@@ -196,7 +195,7 @@ impl<'a> BootstrapSemaGeneration<'a> {
         )?;
         let projected =
             self.rust
-                .emit_with_type_paths(&logos, self.assembly.resolver(), self.rust_types)?;
+                .emit_with_type_paths(&logos, self.assembly.name_view(), self.rust_types)?;
         let mut rust_source =
             String::with_capacity(BOOTSTRAP_SEMA_GENERATED_MARKER.len() + projected.len());
         rust_source.push_str(BOOTSTRAP_SEMA_GENERATED_MARKER);
