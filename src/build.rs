@@ -135,6 +135,21 @@ impl GeneratedArtifact {
         self.path.with_file_name(name)
     }
 
+    /// Blake3 hex digest of the file content at this artifact's path on disk,
+    /// or `None` when the file does not exist.
+    pub(crate) fn on_disk_blake3_hex(&self) -> Result<Option<String>, BuildError> {
+        match fs::read_to_string(&self.path) {
+            Ok(content) => Ok(Some(
+                format!("{}", blake3::hash(content.as_bytes()).to_hex()),
+            )),
+            Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
+            Err(source) => Err(BuildError::ReadGeneratedArtifact {
+                path: self.path.clone(),
+                source,
+            }),
+        }
+    }
+
 }
 
 /// Failure while comparing or updating one canonical projection.
