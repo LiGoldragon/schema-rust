@@ -11,7 +11,7 @@ use schema_rust::{
 };
 use sema_translator::bootstrap::{SemaBootstrapAuthority, SourcePlacement};
 
-const INTERFACE_SOURCE: &str = "Interface.{1 0 0}\n[]\n{[] [] [] []}";
+const INTERFACE_SOURCE: &str = "Interface.{1 0 0}\n[]\n{[] [] [] [] []}";
 const SEMA_SOURCE: &str = "Sema.{1 0 0}\n[]\n{[] []}";
 const NEXUS_SOURCE: &str = "Nexus.{1 0 0}\n[]\n{[] []}";
 const MANIFEST: &str = include_str!("../Cargo.toml");
@@ -193,10 +193,10 @@ fn empty_sema_needs_no_caller_storage_provenance() {
 #[test]
 fn strict_bootstrap_lane_pins_the_current_verified_producer_train() {
     for exact_dependency in [
-        "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"581c833\" }",
-        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"068ff9f\" }",
+        "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"aa83187\" }",
+        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"cc9a683\" }",
         "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"728647e\" }",
-        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"2030385\", default-features = false, features = [\"bootstrap\"] }",
+        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"23d4762\", default-features = false, features = [\"bootstrap\"] }",
     ] {
         assert!(
             MANIFEST.contains(exact_dependency),

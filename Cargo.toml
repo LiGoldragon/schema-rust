@@ -17,10 +17,10 @@ path = "src/lib.rs"
 
 [dependencies]
 blake3   = "1"
-core-ethos = { git = "https://github.com/LiGoldragon/core-ethos.git", rev = "581c833" }
-core-nomos = { git = "https://github.com/LiGoldragon/core-nomos.git", rev = "068ff9f" }
+core-ethos = { git = "https://github.com/LiGoldragon/core-ethos.git", rev = "aa83187" }
+core-nomos = { git = "https://github.com/LiGoldragon/core-nomos.git", rev = "cc9a683" }
 rust-logos = { git = "https://github.com/LiGoldragon/rust-logos.git", rev = "728647e" }
-sema-translator = { git = "https://github.com/LiGoldragon/sema-translator.git", rev = "2030385", default-features = false, features = ["bootstrap"] }
+sema-translator = { git = "https://github.com/LiGoldragon/sema-translator.git", rev = "23d4762", default-features = false, features = ["bootstrap"] }
 thiserror = "2"
 
 [dev-dependencies]
