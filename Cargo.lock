@@ -149,7 +149,7 @@ dependencies = [
 [[package]]
 name = "core-nomos"
 version = "0.41.1"
-source = "git+https://github.com/LiGoldragon/core-nomos.git?rev=cc9a683#cc9a68320dc1e2b420dfc645779b639aaf790670"
+source = "git+https://github.com/LiGoldragon/core-nomos.git?rev=419dcba#419dcba898efc60ad455c80f62cb6f31004f54df"
 dependencies = [
  "content-identity 0.5.0",
  "core-ethos",
@@ -505,7 +505,7 @@ dependencies = [
 [[package]]
 name = "sema-translator"
 version = "0.11.0"
-source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=23d4762#23d4762a26a6a1c5bda902a982a3bfb7c1e99296"
+source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=25fd070#25fd070f61531e102b5b066f05a9596e3e643a94"
 dependencies = [
  "content-identity 0.6.0 (git+https://github.com/LiGoldragon/content-identity.git?rev=df1d25c7cd9e822ae03255e04ede59a00b78480b)",
  "core-ethos",

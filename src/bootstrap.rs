@@ -20,6 +20,7 @@ use std::{
 use core_ethos::bootstrap::{BootstrapBody, EthosKind};
 use core_nomos::{
     BootstrapSliceOneLowering, BootstrapSliceOneLoweringError, ExternalStorageProvenance,
+    InterfaceRoleTraitIdentities,
 };
 use rust_logos::{RustLogos, RustTypePathResolver};
 use sema_translator::bootstrap::AuthorizedBootstrap;
@@ -44,11 +45,13 @@ const SOURCE_DIGEST_PREFIX: &str = "// source-digest: blake3:";
 ///
 /// The same type handles Interface and Sema file kinds. Core Nomos dispatches
 /// the lowering; callers supply only authority-sealed state.
+// psyche-grasp: slightly-reviewed (2026-08-07)
 pub struct BootstrapGeneration<'a> {
     assembly: &'a AuthorizedBootstrap,
     rust: &'a RustLogos,
     rust_types: &'a dyn RustTypePathResolver,
     external_storage: &'a [ExternalStorageProvenance],
+    role_traits: Option<&'a InterfaceRoleTraitIdentities>,
     source_path: PathBuf,
     rust_path: PathBuf,
 }
@@ -68,9 +71,20 @@ impl<'a> BootstrapGeneration<'a> {
             rust,
             rust_types,
             external_storage,
+            role_traits: None,
             source_path: source_path.into(),
             rust_path: rust_path.into(),
         }
+    }
+
+    /// Supply the positional role trait identities for Interface generation.
+    ///
+    /// When set, the Interface lowering emits trait implementations mapping
+    /// each role-section entry to its universal trait (Input/Output/Refusal/
+    /// Stream). Without this, Interface sources with role entries are refused.
+    pub fn with_role_traits(mut self, role_traits: &'a InterfaceRoleTraitIdentities) -> Self {
+        self.role_traits = Some(role_traits);
+        self
     }
 
     /// Revalidate and lower the exact prepared transaction through the
@@ -79,8 +93,15 @@ impl<'a> BootstrapGeneration<'a> {
     pub fn generate(&self) -> Result<ArtifactSet, BootstrapGenerationError> {
         let body = &self.assembly.transaction().decoded().document.body;
         let logos = match body {
-            BootstrapBody::Interface(_) => BootstrapSliceOneLowering::new()
-                .lower(self.assembly.reader(), self.assembly.transaction())?,
+            BootstrapBody::Interface(_) => match self.role_traits {
+                Some(role_traits) => BootstrapSliceOneLowering::new().lower_interface(
+                    self.assembly.reader(),
+                    self.assembly.transaction(),
+                    role_traits,
+                )?,
+                None => BootstrapSliceOneLowering::new()
+                    .lower(self.assembly.reader(), self.assembly.transaction())?,
+            },
             BootstrapBody::Sema(_) => BootstrapSliceOneLowering::new().lower_sema(
                 self.assembly.reader(),
                 self.assembly.transaction(),

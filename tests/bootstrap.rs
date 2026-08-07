@@ -1,6 +1,7 @@
 use std::{fs, process::Command};
 
 use core_ethos::bootstrap::EthosKind;
+use core_nomos::InterfaceRoleTraitIdentities;
 use rust_logos::{RustLogos, RustTypePath, RustTypePathResolver};
 use schema_rust::{
     bootstrap::{
@@ -194,9 +195,9 @@ fn empty_sema_needs_no_caller_storage_provenance() {
 fn strict_bootstrap_lane_pins_the_current_verified_producer_train() {
     for exact_dependency in [
         "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"aa83187\" }",
-        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"cc9a683\" }",
+        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"419dcba\" }",
         "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"728647e\" }",
-        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"23d4762\", default-features = false, features = [\"bootstrap\"] }",
+        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"25fd070\", default-features = false, features = [\"bootstrap\"] }",
     ] {
         assert!(
             MANIFEST.contains(exact_dependency),
@@ -228,5 +229,52 @@ fn strict_bootstrap_normal_graph_excludes_the_sema_engine_runtime() {
     assert!(
         !tree.contains("sema-engine"),
         "strict bootstrap generation must not close through its runtime consumer:\n{tree}"
+    );
+}
+
+#[test]
+fn interface_with_role_entries_emits_trait_implementations() {
+    let source = "Interface.{1 0 0}\n[]\n{[Command.String] [Event.String] [] [Observation.String] []}";
+    let mut authority = SemaBootstrapAuthority::new().expect("empty authority");
+    let priors = authority.prior_identities().clone();
+    let assembly = authority
+        .authorize(source, placement())
+        .expect("authorize Interface with role entries");
+    let role_traits = InterfaceRoleTraitIdentities::new(
+        priors.input_role,
+        priors.output_role,
+        priors.refusal_role,
+        priors.stream_role,
+    );
+    let rust = RustLogos::new();
+    let paths = NoTypePaths;
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let source_path = directory.path().join("observer.ethos");
+    let rust_path = directory.path().join("observer.rs");
+    let generated = BootstrapGeneration::new(
+        &assembly,
+        &rust,
+        &paths,
+        &[],
+        &source_path,
+        &rust_path,
+    )
+    .with_role_traits(&role_traits)
+    .generate()
+    .expect("Interface with role traits lowers and projects");
+
+    let rust_content = generated.rust().content();
+    syn::parse_file(rust_content).expect("generated role-trait Rust is valid syntax");
+    assert!(
+        rust_content.contains("impl Input for Command"),
+        "generated Rust must implement Input for Input-section entry:\n{rust_content}"
+    );
+    assert!(
+        rust_content.contains("impl Output for Event"),
+        "generated Rust must implement Output for Output-section entry:\n{rust_content}"
+    );
+    assert!(
+        rust_content.contains("impl Stream for Observation"),
+        "generated Rust must implement Stream for Stream-section entry:\n{rust_content}"
     );
 }
