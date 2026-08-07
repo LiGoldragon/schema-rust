@@ -193,10 +193,10 @@ fn empty_sema_needs_no_caller_storage_provenance() {
 #[test]
 fn strict_bootstrap_lane_pins_the_current_verified_producer_train() {
     for exact_dependency in [
-        "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"d9cd87095cce\" }",
-        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"d9dacbcf4842\" }",
+        "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"581c833\" }",
+        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"068ff9f\" }",
         "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"72f7f7b9affa\" }",
-        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"42f14f0aa3e8\", default-features = false, features = [\"bootstrap\"] }",
+        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"2030385\", default-features = false, features = [\"bootstrap\"] }",
     ] {
         assert!(
             MANIFEST.contains(exact_dependency),
