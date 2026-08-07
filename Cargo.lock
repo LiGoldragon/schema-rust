@@ -505,7 +505,7 @@ dependencies = [
 [[package]]
 name = "sema-translator"
 version = "0.11.0"
-source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=25fd070#25fd070f61531e102b5b066f05a9596e3e643a94"
+source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=7dc4153#7dc4153b97c4a49b8e5010594ac2caa20b7c2c76"
 dependencies = [
  "content-identity 0.6.0 (git+https://github.com/LiGoldragon/content-identity.git?rev=df1d25c7cd9e822ae03255e04ede59a00b78480b)",
  "core-ethos",
