@@ -156,8 +156,8 @@ fn empty_sema_needs_no_caller_storage_provenance() {
 fn strict_bootstrap_lane_pins_the_current_verified_producer_train() {
     for exact_dependency in [
         "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"d9cd87095cce\" }",
-        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"051a3b93b8fd\" }",
-        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"e9cac049c1d5\" }",
+        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"d9dacbcf4842\" }",
+        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"72f7f7b9affa\" }",
         "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"42f14f0aa3e8\", default-features = false, features = [\"bootstrap\"] }",
     ] {
         assert!(

@@ -137,7 +137,7 @@ dependencies = [
 [[package]]
 name = "core-logos"
 version = "0.27.0"
-source = "git+https://github.com/LiGoldragon/core-logos.git?rev=29d6635caadc#29d6635caadc58a34e92e8b6c162f629206ac6ac"
+source = "git+https://github.com/LiGoldragon/core-logos.git?rev=b9bf013f6013#b9bf013f6013847315219a2518ec7f4e1905c2f9"
 dependencies = [
  "content-identity 0.5.0",
  "name-table",
@@ -149,7 +149,7 @@ dependencies = [
 [[package]]
 name = "core-nomos"
 version = "0.41.1"
-source = "git+https://github.com/LiGoldragon/core-nomos.git?rev=051a3b93b8fd#051a3b93b8fd612dba419af50b5e7e7580f548c6"
+source = "git+https://github.com/LiGoldragon/core-nomos.git?rev=d9dacbcf4842#d9dacbcf4842bf3e1ffd835e4695feb2f8c8837f"
 dependencies = [
  "content-identity 0.5.0",
  "core-ethos",
@@ -450,7 +450,7 @@ dependencies = [
 [[package]]
 name = "rust-logos"
 version = "0.32.0"
-source = "git+https://github.com/LiGoldragon/rust-logos.git?rev=e9cac049c1d5#e9cac049c1d57eb0b50cad3ccf6837c1e6acce43"
+source = "git+https://github.com/LiGoldragon/rust-logos.git?rev=72f7f7b9affa#72f7f7b9affaf5388b578044daf4381312499fab"
 dependencies = [
  "core-logos",
  "name-table",
