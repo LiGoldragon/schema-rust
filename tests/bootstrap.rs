@@ -155,10 +155,10 @@ fn empty_sema_needs_no_caller_storage_provenance() {
 #[test]
 fn strict_bootstrap_lane_pins_the_current_verified_producer_train() {
     for exact_dependency in [
-        "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"cc32c507da45998a18682af939915d192d902b9f\" }",
-        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"a982f4d8ceea0bb41718ba000fd492b2802c3a74\" }",
-        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"6805e1e570cb5a853d47484c5ad9148e6d2d238\" }",
-        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"813600d85d414b4bc43c20a2e6f280d1814c8320\", default-features = false, features = [\"bootstrap\"] }",
+        "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"d9cd87095cce\" }",
+        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"051a3b93b8fd\" }",
+        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"e9cac049c1d5\" }",
+        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"42f14f0aa3e8\", default-features = false, features = [\"bootstrap\"] }",
     ] {
         assert!(
             MANIFEST.contains(exact_dependency),
