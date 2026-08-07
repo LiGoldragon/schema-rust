@@ -17,7 +17,7 @@ use std::{
     path::PathBuf,
 };
 
-use core_ethos::bootstrap::{BootstrapBody, EthosKind};
+use core_ethos::bootstrap::{BootstrapBody, EthosKind, InterfaceRole};
 use core_nomos::{
     BootstrapSliceOneLowering, BootstrapSliceOneLoweringError, ExternalStorageProvenance,
     InterfaceRoleTraitIdentities,
@@ -113,9 +113,23 @@ impl<'a> BootstrapGeneration<'a> {
                 });
             }
         };
+        // When role traits are present, configure the emitter to generate
+        // Display and std::error::Error for types implementing the Refusal
+        // role trait. The Refusal trait requires std::error::Error, which
+        // the emitter satisfies through a derive(Debug) preamble plus these
+        // generated implementations.
+        let configured_rust;
+        let emitter: &RustLogos = match self.role_traits {
+            Some(role_traits) => {
+                configured_rust = RustLogos::new().with_refusal_display_trait(
+                    *role_traits.trait_identity(InterfaceRole::Refusal),
+                );
+                &configured_rust
+            }
+            None => self.rust,
+        };
         let projected =
-            self.rust
-                .emit_with_type_paths(&logos, self.assembly.name_view(), self.rust_types)?;
+            emitter.emit_with_type_paths(&logos, self.assembly.name_view(), self.rust_types)?;
         let canonical_source = self.assembly.canonical_source();
         let source_digest_hex =
             format!("{}", blake3::hash(canonical_source.as_bytes()).to_hex());
