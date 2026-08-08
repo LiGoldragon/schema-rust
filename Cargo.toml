@@ -19,7 +19,7 @@ path = "src/lib.rs"
 blake3   = "1"
 core-ethos = { git = "https://github.com/LiGoldragon/core-ethos.git", rev = "aa83187" }
 core-nomos = { git = "https://github.com/LiGoldragon/core-nomos.git", rev = "e57728e" }
-rust-logos = { git = "https://github.com/LiGoldragon/rust-logos.git", rev = "47e3d1b" }
+rust-logos = { git = "https://github.com/LiGoldragon/rust-logos.git", rev = "0687449" }
 sema-translator = { git = "https://github.com/LiGoldragon/sema-translator.git", rev = "118d7a3", default-features = false, features = ["bootstrap"] }
 thiserror = "2"
 

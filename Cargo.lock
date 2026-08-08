@@ -460,7 +460,7 @@ dependencies = [
 [[package]]
 name = "rust-logos"
 version = "0.32.0"
-source = "git+https://github.com/LiGoldragon/rust-logos.git?rev=47e3d1b#47e3d1bb84d6e851b5d252b1e05d9c4a5efe2bb9"
+source = "git+https://github.com/LiGoldragon/rust-logos.git?rev=0687449#06874499afa447ca9106df7a122fcfc21563756f"
 dependencies = [
  "core-logos",
  "name-table",

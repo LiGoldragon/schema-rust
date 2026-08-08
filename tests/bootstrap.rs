@@ -196,7 +196,7 @@ fn strict_bootstrap_lane_pins_the_current_verified_producer_train() {
     for exact_dependency in [
         "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"aa83187\" }",
         "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"e57728e\" }",
-        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"47e3d1b\" }",
+        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"0687449\" }",
         "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"118d7a3\", default-features = false, features = [\"bootstrap\"] }",
     ] {
         assert!(
