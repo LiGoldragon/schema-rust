@@ -194,10 +194,10 @@ fn empty_memory_needs_no_caller_storage_provenance() {
 #[test]
 fn strict_bootstrap_lane_pins_the_current_verified_producer_train() {
     for exact_dependency in [
-        "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"aa83187\" }",
-        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"e57728e\" }",
-        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"0687449\" }",
-        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"118d7a3\", default-features = false, features = [\"bootstrap\"] }",
+        "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"2828bf8d94b92ad394c1c16cccdca61f28599c2e\" }",
+        "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"a7a27fc6d7ce85796e2128b39f243e3a31a4e195\" }",
+        "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"7e1ca50e79ce1dc67e2ef0794f09cec8201fcb2d\" }",
+        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"bb38be4f408a0c8cb82beb12f8e3530e0166493e\", default-features = false, features = [\"bootstrap\"] }",
     ] {
         assert!(
             MANIFEST.contains(exact_dependency),
