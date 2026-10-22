@@ -478,16 +478,16 @@ dependencies = [
  "core-nomos",
  "name-table",
  "rust-logos",
- "sema-translator",
+ "memory-translator",
  "syn 2.0.119",
  "tempfile",
  "thiserror",
 ]
 
 [[package]]
-name = "sema-translator"
+name = "memory-translator"
 version = "0.11.0"
-source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=bb38be4f408a0c8cb82beb12f8e3530e0166493e#bb38be4f408a0c8cb82beb12f8e3530e0166493e"
+source = "git+https://github.com/LiGoldragon/memory-translator.git?rev=bb38be4f408a0c8cb82beb12f8e3530e0166493e#bb38be4f408a0c8cb82beb12f8e3530e0166493e"
 dependencies = [
  "content-identity 0.6.0 (git+https://github.com/LiGoldragon/content-identity.git?rev=df1d25c7cd9e822ae03255e04ede59a00b78480b)",
  "core-ethos",

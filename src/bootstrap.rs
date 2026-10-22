@@ -23,7 +23,7 @@ use core_nomos::{
     InterfaceRoleTraitIdentities,
 };
 use rust_logos::{RustLogos, RustTypePathResolver};
-use sema_translator::bootstrap::AuthorizedBootstrap;
+use memory_translator::bootstrap::AuthorizedBootstrap;
 
 use crate::build::{BuildError, GeneratedArtifact};
 

@@ -10,7 +10,7 @@ use schema_rust::{
     },
     build::BuildError,
 };
-use sema_translator::bootstrap::{SemaBootstrapAuthority, SourcePlacement};
+use memory_translator::bootstrap::{MemoryBootstrapAuthority, SourcePlacement};
 
 const INTERFACE_SOURCE: &str = "Interface.{1 0 0}\n[]\n{[] [] [] [] []}";
 const MEMORY_SOURCE: &str = "Memory.{1 0 0}\n[]\n{[] []}";
@@ -24,8 +24,8 @@ fn placement() -> SourcePlacement {
     )
 }
 
-fn authorize(source: &str) -> sema_translator::bootstrap::AuthorizedBootstrap {
-    let mut authority = SemaBootstrapAuthority::new().expect("empty authority owns its seed");
+fn authorize(source: &str) -> memory_translator::bootstrap::AuthorizedBootstrap {
+    let mut authority = MemoryBootstrapAuthority::new().expect("empty authority owns its seed");
     authority
         .authorize(source, placement())
         .expect("authority mints and seals source-local declarations")
@@ -197,7 +197,7 @@ fn strict_bootstrap_lane_pins_the_current_verified_producer_train() {
         "core-ethos = { git = \"https://github.com/LiGoldragon/core-ethos.git\", rev = \"2828bf8d94b92ad394c1c16cccdca61f28599c2e\" }",
         "core-nomos = { git = \"https://github.com/LiGoldragon/core-nomos.git\", rev = \"a7a27fc6d7ce85796e2128b39f243e3a31a4e195\" }",
         "rust-logos = { git = \"https://github.com/LiGoldragon/rust-logos.git\", rev = \"7e1ca50e79ce1dc67e2ef0794f09cec8201fcb2d\" }",
-        "sema-translator = { git = \"https://github.com/LiGoldragon/sema-translator.git\", rev = \"bb38be4f408a0c8cb82beb12f8e3530e0166493e\", default-features = false, features = [\"bootstrap\"] }",
+        "memory-translator = { git = \"https://github.com/LiGoldragon/memory-translator.git\", rev = \"bb38be4f408a0c8cb82beb12f8e3530e0166493e\", default-features = false, features = [\"bootstrap\"] }",
     ] {
         assert!(
             MANIFEST.contains(exact_dependency),
@@ -235,7 +235,7 @@ fn strict_bootstrap_normal_graph_excludes_the_memory_engine_runtime() {
 #[test]
 fn interface_with_role_entries_emits_trait_implementations() {
     let source = "Interface.{1 0 0}\n[]\n{[Command.String] [Event.String] [] [Observation.String] []}";
-    let mut authority = SemaBootstrapAuthority::new().expect("empty authority");
+    let mut authority = MemoryBootstrapAuthority::new().expect("empty authority");
     let priors = authority.prior_identities().clone();
     let assembly = authority
         .authorize(source, placement())
