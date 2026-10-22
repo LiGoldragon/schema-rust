@@ -19,9 +19,8 @@ RustLogos + explicit external type paths
 checked structural Rust projection
 ```
 
-`BootstrapInterfaceGeneration` admits only an authority-sealed Interface.
-`BootstrapSemaGeneration` admits only an authority-sealed Sema and requires
-explicit storage provenance for every nonlocal stored type. Both retain the
+`BootstrapGeneration` accepts an authority-sealed Interface or Memory assembly
+and explicit storage provenance for every nonlocal stored type. It retains the
 reader/transaction pairing through Nomos validation before Rust projection.
 
 Rust naming policy exists only inside Rust Logos. This crate performs no other

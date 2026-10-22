@@ -43,7 +43,7 @@ const SOURCE_DIGEST_PREFIX: &str = "// source-digest: blake3:";
 /// archive provenance for every nonlocal storage leaf. This boundary creates
 /// or infers none of those inputs.
 ///
-/// The same type handles Interface and Sema file kinds. Core Nomos dispatches
+/// The same type handles Interface and Memory file kinds. Core Nomos dispatches
 /// the lowering; callers supply only authority-sealed state.
 // psyche-grasp: slightly-reviewed (2026-08-07)
 pub struct BootstrapGeneration<'a> {
@@ -102,7 +102,7 @@ impl<'a> BootstrapGeneration<'a> {
                 None => BootstrapSliceOneLowering::new()
                     .lower(self.assembly.reader(), self.assembly.transaction())?,
             },
-            BootstrapBody::Sema(_) => BootstrapSliceOneLowering::new().lower_sema(
+            BootstrapBody::Memory(_) => BootstrapSliceOneLowering::new().lower_memory(
                 self.assembly.reader(),
                 self.assembly.transaction(),
                 self.external_storage,

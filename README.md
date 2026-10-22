@@ -1,9 +1,9 @@
 # schema-rust
 
 `schema-rust` is the verified bootstrap generation boundary for Interface and
-Sema Ethos documents.
+Memory Ethos documents.
 
-A caller starts an empty Sema bootstrap authority and provides only source text
+A caller starts an empty Memory bootstrap authority and provides only source text
 and its placement. The resulting opaque authority transaction is revalidated
 and lowered by Core Nomos into Whole Logos. Rust Logos then projects it through
 the authority's sealed read-only name view. This crate creates no identities,

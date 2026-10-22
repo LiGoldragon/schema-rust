@@ -11,8 +11,7 @@ Read the workspace Rust and schema skills before editing this repo:
 - `skills/actor-systems.md`
 
 This repository owns only verified bootstrap projection for authority-sealed
-Interface and Sema Ethos transactions. `BootstrapInterfaceGeneration` and
-`BootstrapSemaGeneration` retain the reader/transaction pairing through Core
+Interface and Memory Ethos transactions. `BootstrapGeneration` retains the reader/transaction pairing through Core
 Nomos validation, then delegate the only structural Rust text projection to
 Rust Logos with explicit type paths.
 

@@ -124,7 +124,7 @@ dependencies = [
 [[package]]
 name = "core-ethos"
 version = "0.31.0"
-source = "git+https://github.com/LiGoldragon/core-ethos.git?rev=aa83187#aa831873b3c4a40bf5f6e87367585e5f3cc3b5bb"
+source = "git+https://github.com/LiGoldragon/core-ethos.git?rev=2828bf8d94b92ad394c1c16cccdca61f28599c2e#2828bf8d94b92ad394c1c16cccdca61f28599c2e"
 dependencies = [
  "content-identity 0.6.0 (git+https://github.com/LiGoldragon/content-identity.git?rev=df1d25c7cd9e822ae03255e04ede59a00b78480b)",
  "name-table",
@@ -136,12 +136,10 @@ dependencies = [
 
 [[package]]
 name = "core-logos"
-version = "0.27.0"
-source = "git+https://github.com/LiGoldragon/core-logos.git?rev=b9bf013f6013#b9bf013f6013847315219a2518ec7f4e1905c2f9"
+version = "0.28.0"
+source = "git+https://github.com/LiGoldragon/core-logos.git?rev=c9025b70dbce85ebc9211d58ba4a641c5a189266#c9025b70dbce85ebc9211d58ba4a641c5a189266"
 dependencies = [
- "content-identity 0.5.0",
  "name-table",
- "protos",
  "rkyv",
  "thiserror",
 ]
@@ -149,7 +147,7 @@ dependencies = [
 [[package]]
 name = "core-nomos"
 version = "0.41.1"
-source = "git+https://github.com/LiGoldragon/core-nomos.git?rev=e57728e#e57728e8fff0ee52bbf3d678b57a23cfafe62cfb"
+source = "git+https://github.com/LiGoldragon/core-nomos.git?rev=a7a27fc6d7ce85796e2128b39f243e3a31a4e195#a7a27fc6d7ce85796e2128b39f243e3a31a4e195"
 dependencies = [
  "content-identity 0.5.0",
  "core-ethos",
@@ -318,12 +316,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
-name = "paste"
-version = "1.0.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
-
-[[package]]
 name = "pin-project-lite"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -336,16 +328,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "protos"
-version = "0.5.1"
-source = "git+https://github.com/LiGoldragon/protos.git?rev=cdc74bd28187bdb39b8ddc2228eef4934873dd45#cdc74bd28187bdb39b8ddc2228eef4934873dd45"
-dependencies = [
- "content-identity 0.5.0",
- "rkyv",
- "signal-frame",
 ]
 
 [[package]]
@@ -460,7 +442,7 @@ dependencies = [
 [[package]]
 name = "rust-logos"
 version = "0.32.0"
-source = "git+https://github.com/LiGoldragon/rust-logos.git?rev=0687449#06874499afa447ca9106df7a122fcfc21563756f"
+source = "git+https://github.com/LiGoldragon/rust-logos.git?rev=7e1ca50e79ce1dc67e2ef0794f09cec8201fcb2d#7e1ca50e79ce1dc67e2ef0794f09cec8201fcb2d"
 dependencies = [
  "core-logos",
  "name-table",
@@ -505,7 +487,7 @@ dependencies = [
 [[package]]
 name = "sema-translator"
 version = "0.11.0"
-source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=118d7a3#118d7a35198c6a44d007964ace4629e2b589a3a8"
+source = "git+https://github.com/LiGoldragon/sema-translator.git?rev=bb38be4f408a0c8cb82beb12f8e3530e0166493e#bb38be4f408a0c8cb82beb12f8e3530e0166493e"
 dependencies = [
  "content-identity 0.6.0 (git+https://github.com/LiGoldragon/content-identity.git?rev=df1d25c7cd9e822ae03255e04ede59a00b78480b)",
  "core-ethos",
@@ -520,27 +502,6 @@ name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
-
-[[package]]
-name = "signal-frame"
-version = "0.3.1"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?rev=8aa0bcaeb29fe9e461a11706a469638d2fd109ac#8aa0bcaeb29fe9e461a11706a469638d2fd109ac"
-dependencies = [
- "paste",
- "rkyv",
- "signal-frame-macros",
- "thiserror",
-]
-
-[[package]]
-name = "signal-frame-macros"
-version = "0.1.2"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?rev=8aa0bcaeb29fe9e461a11706a469638d2fd109ac#8aa0bcaeb29fe9e461a11706a469638d2fd109ac"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
 
 [[package]]
 name = "simdutf8"

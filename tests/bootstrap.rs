@@ -13,7 +13,7 @@ use schema_rust::{
 use sema_translator::bootstrap::{SemaBootstrapAuthority, SourcePlacement};
 
 const INTERFACE_SOURCE: &str = "Interface.{1 0 0}\n[]\n{[] [] [] [] []}";
-const SEMA_SOURCE: &str = "Sema.{1 0 0}\n[]\n{[] []}";
+const MEMORY_SOURCE: &str = "Memory.{1 0 0}\n[]\n{[] []}";
 const NEXUS_SOURCE: &str = "Nexus.{1 0 0}\n[]\n{[] []}";
 const MANIFEST: &str = include_str!("../Cargo.toml");
 
@@ -51,8 +51,8 @@ fn generate_interface() -> ArtifactSet {
         .expect("authority-approved Interface lowers and projects")
 }
 
-fn generate_sema() -> ArtifactSet {
-    let assembly = authorize(SEMA_SOURCE);
+fn generate_memory() -> ArtifactSet {
+    let assembly = authorize(MEMORY_SOURCE);
     let rust = RustLogos::new();
     let paths = NoTypePaths;
     let directory = tempfile::tempdir().expect("temporary checked-artifact directory");
@@ -60,7 +60,7 @@ fn generate_sema() -> ArtifactSet {
     let rust_path = directory.path().join("storage.rs");
     BootstrapGeneration::new(&assembly, &rust, &paths, &[], &source_path, &rust_path)
         .generate()
-        .expect("authority-approved empty Sema lowers and projects")
+        .expect("authority-approved empty Memory lowers and projects")
 }
 
 #[test]
@@ -82,13 +82,13 @@ fn unified_pipeline_generates_interface_with_canonical_source_and_rust() {
 }
 
 #[test]
-fn unified_pipeline_generates_sema_with_canonical_source_and_rust() {
-    let generated = generate_sema();
+fn unified_pipeline_generates_memory_with_canonical_source_and_rust() {
+    let generated = generate_memory();
     assert!(
         generated
             .source()
             .content()
-            .starts_with("Sema.{1 0 0}\n[]\n")
+            .starts_with("Memory.{1 0 0}\n[]\n")
     );
     assert!(
         generated
@@ -182,11 +182,11 @@ fn generation_refuses_nexus_file_kind() {
 }
 
 #[test]
-fn empty_sema_needs_no_caller_storage_provenance() {
-    let assembly = authorize(SEMA_SOURCE);
+fn empty_memory_needs_no_caller_storage_provenance() {
+    let assembly = authorize(MEMORY_SOURCE);
     let rust = RustLogos::new();
     let paths = NoTypePaths;
-    BootstrapGeneration::new(&assembly, &rust, &paths, &[], "sema.ethos", "sema.rs")
+    BootstrapGeneration::new(&assembly, &rust, &paths, &[], "memory.ethos", "memory.rs")
         .generate()
         .expect("an empty source needs no caller-created storage provenance");
 }
@@ -207,7 +207,7 @@ fn strict_bootstrap_lane_pins_the_current_verified_producer_train() {
 }
 
 #[test]
-fn strict_bootstrap_normal_graph_excludes_the_sema_engine_runtime() {
+fn strict_bootstrap_normal_graph_excludes_the_memory_engine_runtime() {
     let output = Command::new(env!("CARGO"))
         .args([
             "tree",
@@ -227,7 +227,7 @@ fn strict_bootstrap_normal_graph_excludes_the_sema_engine_runtime() {
     );
     let tree = String::from_utf8(output.stdout).expect("cargo tree output is UTF-8");
     assert!(
-        !tree.contains("sema-engine"),
+        !tree.contains("memory-engine"),
         "strict bootstrap generation must not close through its runtime consumer:\n{tree}"
     );
 }
